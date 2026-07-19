@@ -288,16 +288,27 @@ function resolverItemDaMensagem(message) {
 }
 
 /**
- * Classes de destaque do sistema para o total de um ataque (verde no crítico,
- * vermelho na falha), usando a margem de crítico/falha GRAVADA na própria
- * rolagem (`dice[0].options.critical/fumble`) — mesma fonte do sistema base.
- * Retorna [] para rolagens que não são ataque.
+ * Margem de crítico da rolagem. A rolagem pode perder `dice[0].options.critical`
+ * (o `clone()` da rerolagem re-parseia a fórmula e descarta as options do dado),
+ * então o valor confiável vem do flag `tormenta20.itemData.criticoM`, gravado
+ * pela arma no momento do teste. Ordem: options do dado → flag → 20.
  */
-function classesDeDestaqueAtaque(roll) {
+function margemCritico(message, roll) {
+  return Number(roll?.dice?.[0]?.options?.critical)
+    || Number(message?.getFlag?.('tormenta20', 'itemData')?.criticoM)
+    || 20;
+}
+
+/**
+ * Classes de destaque do sistema para o total de um ataque (verde no crítico,
+ * vermelho na falha), usando as mesmas classes do sistema base. Retorna [] para
+ * rolagens que não são ataque.
+ */
+function classesDeDestaqueAtaque(message, roll) {
   const d = roll?.dice?.[0];
   if (roll?.options?.type !== 'attack' || d?.faces !== 20) return [];
   const total = Number(d.total);
-  const crit = Number(d.options?.critical) || 20;
+  const crit = margemCritico(message, roll);
   const fumble = Number(d.options?.fumble) || 1;
   if (total >= crit) return ['success', 'critical'];
   if (total <= fumble) return ['failure', 'fumble'];
@@ -334,8 +345,8 @@ async function substituicoesDeDanoPorCritico(message, index, novaAtaque, ataqueO
   const cls = classificarRolagens(message);
   if (index !== cls.ataque || cls.dano === -1) return [];
 
-  // Margem de crítico gravada na rolagem (não depende de resolver o item).
-  const critM = Number(novaAtaque.dice?.[0]?.options?.critical) || 20;
+  // Margem de crítico confiável (options do dado ou flag da arma na mensagem).
+  const critM = margemCritico(message, novaAtaque);
   const antesCrit = (Number(ataqueOriginal.dice?.[0]?.total) || 0) >= critM;
   const agoraCrit = (Number(novaAtaque.dice?.[0]?.total) || 0) >= critM;
   if (antesCrit === agoraCrit) return [];
@@ -379,7 +390,7 @@ async function rerolarResultado(message, index) {
   const subs = [{
     index, nova, totalAnterior, animar: true,
     indicador: { icone: 'fa-rotate', dica: game.i18n.localize('T20HaydGMTools.TipRerolled') },
-    classesTotal: classesDeDestaqueAtaque(nova)
+    classesTotal: classesDeDestaqueAtaque(message, nova)
   }];
   // Se o ataque virou/deixou de ser crítico, recalcula o dano automaticamente.
   subs.push(...await substituicoesDeDanoPorCritico(message, index, nova, original));
@@ -440,7 +451,7 @@ async function inserirResultadoManual(message, index) {
   const subs = [{
     index, nova, totalAnterior, animar: false,
     indicador: { icone: 'fa-hand-pointer', dica: game.i18n.localize('T20HaydGMTools.TipManual') },
-    classesTotal: classesDeDestaqueAtaque(nova)
+    classesTotal: classesDeDestaqueAtaque(message, nova)
   }];
   // Se o ataque virou/deixou de ser crítico, recalcula o dano automaticamente.
   subs.push(...await substituicoesDeDanoPorCritico(message, index, nova, original));
