@@ -29,3 +29,25 @@
   vertical-align: middle;
   color: var(--t20a-chat-cor, #c0392b);
 }
+
+/* --- Diálogo de inserção manual do resultado ---------------------------- */
+.t20g-inserir {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.t20g-inserir-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+.t20g-inserir-campo label {
+  font-size: 0.8em;
+  opacity: 0.8;
+}
+.t20g-inserir-campo input[type="number"] {
+  width: 64px;
+  text-align: center;
+}

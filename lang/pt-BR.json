@@ -4,6 +4,21 @@
     "HideFormula": "Esconder fórmula dos jogadores",
     "RerollResult": "Rerolar resultado",
     "RerollAttack": "Rerolar ataque",
-    "RerollDamage": "Rerolar dano"
+    "RerollDamage": "Rerolar dano",
+    "InsertResult": "Inserir resultado",
+    "InsertAttack": "Inserir resultado do ataque",
+    "InsertDamage": "Inserir resultado do dano",
+    "SettingRerollName": "Jogadores podem rerolar",
+    "SettingRerollHint": "Permite que jogadores rerolem os resultados das próprias rolagens pelo menu de contexto do chat. O Mestre pode sempre rerolar.",
+    "SettingManualName": "Jogadores podem inserir resultado manual",
+    "SettingManualHint": "Permite que jogadores definam manualmente o resultado do dado das próprias rolagens (para poderes que escolhem a rolagem). O Mestre pode sempre inserir.",
+    "InsertTitle": "Inserir resultado do dado",
+    "InsertHelp": "Escolha o resultado natural de cada dado (dentro da faixa). Bônus e modificadores são mantidos.",
+    "InsertApply": "Aplicar",
+    "InsertNoDice": "Esta rolagem não tem dados para definir manualmente.",
+    "TipRerolled": "Resultado rerolado",
+    "TipManual": "Resultado definido manualmente",
+    "WelcomeTitle": "Dica: rerolar e inserir resultados",
+    "WelcomeBody": "Clique com o botão direito em uma mensagem de rolagem no chat para rerolar o resultado — ou inserir um resultado manualmente (útil para poderes que definem o valor do dado)."
   }
 }

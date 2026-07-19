@@ -12,18 +12,28 @@ Quando uma rolagem ou ficha vem de um ator do tipo **NPC**, **Perigo** (`hazard`
 
 Quem é **dono ou observador** da criatura continua vendo tudo. Fichas e rolagens de personagens jogadores nunca são afetadas.
 
-### Rerolar resultados (Mestre)
+### Rerolar e escolher resultados
 
-Clicando com o botão direito em qualquer mensagem de rolagem no chat, o Mestre pode **rerolar o resultado**:
+Clicando com o botão direito em uma mensagem de rolagem no chat:
 
 - **Rerolar resultado** — em testes de perícia/atributo, re-rola os dados mantendo todos os bônus (perícia, atributos, situacionais). O custo de mana **não** é cobrado de novo.
 - **Rerolar ataque** / **Rerolar dano** — em cards de arma (que têm o teste de ataque e a rolagem de dano), cada fórmula pode ser rerolada **separadamente**.
+- **Inserir resultado** — define manualmente o resultado natural do(s) dado(s), dentro da faixa válida (para poderes que permitem escolher a rolagem por uma condição especial). Bônus e modificadores são mantidos e o total é recalculado. Em armas, o ataque e o dano têm inserção separada.
 
-Uma rolagem rerolada ganha um **símbolo** (⟳) e mostra o(s) **resultado(s) anterior(es) riscado(s)** ao lado do novo total. O símbolo herda a cor de destaque do t20-hayd-ui (quando ativo) para não se confundir com o fundo. A animação do Dice So Nice é reproduzida na rerolagem (e continua oculta dos jogadores em rolagens de criaturas do Mestre).
+Uma rolagem alterada ganha um **símbolo** ao lado do novo total e mostra o(s) **resultado(s) anterior(es) riscado(s)** — ⟳ para rerolagem e ✋ para resultado inserido manualmente. O símbolo herda a cor de destaque do t20-hayd-ui (quando ativo) para não se confundir com o fundo.
 
 ## Como usar
 
-Funciona automaticamente após ativar o módulo — não há configurações. O Mestre pode revelar ou reocultar uma rolagem específica, ou rerolá-la, **clicando com o botão direito na mensagem do chat**.
+Ocultar detalhes das criaturas do Mestre funciona automaticamente após ativar o módulo. Para rerolar, inserir um resultado ou revelar/reocultar uma fórmula, **clique com o botão direito na mensagem do chat**.
+
+## Configurações
+
+Em *Configurar → Configurações → T20 Hayd GMTools* (escopo do mundo — o Mestre pode sempre rerolar/inserir):
+
+| Configuração | Padrão | Descrição |
+|---|---|---|
+| Jogadores podem rerolar | Ligado | Permite que jogadores rerolem os resultados das **próprias** rolagens. |
+| Jogadores podem inserir resultado manual | Ligado | Permite que jogadores definam manualmente o resultado do dado das **próprias** rolagens. |
 
 ## Requisitos
 

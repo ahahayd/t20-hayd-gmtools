@@ -186,21 +186,12 @@ function classificarRolagens(message) {
 }
 
 /**
- * Rerola a rolagem de índice `index` de uma mensagem.
- *
- * `Roll#reroll()` clona a rolagem com a MESMA fórmula e dados (todos os bônus,
- * perícia, atributos e situacionais permanecem) e apenas re-rola os dados. O
- * custo de mana é gasto no momento da rolagem original — nunca faz parte do
- * objeto Roll — então rerolar não desconta mana novamente. Apenas o bloco de
- * dados correspondente é substituído no card; o restante (nome, botão de mana,
- * efeitos) é preservado.
+ * Injeta o indicador num bloco `.dice-roll`: um símbolo e os totais anteriores
+ * riscados/apagados, logo ao lado do novo total. `anteriores` vem do mais
+ * recente para o mais antigo; `icone`/`dica` definem o símbolo (rerolagem vs
+ * inserção manual usam ícones diferentes).
  */
-/**
- * Injeta o indicador de rerolagem num bloco `.dice-roll`: um símbolo (⟳) e os
- * totais anteriores riscados/apagados, logo ao lado do novo total. `anteriores`
- * vem do mais recente para o mais antigo.
- */
-function injetarIndicadorReroll(diceRoll, anteriores) {
+function injetarIndicador(diceRoll, anteriores, { icone, dica }) {
   const total = diceRoll?.querySelector('.dice-total');
   if (!total) return;
   total.classList.add('t20g-rerolled');
@@ -212,35 +203,33 @@ function injetarIndicadorReroll(diceRoll, anteriores) {
     total.appendChild(span);
   }
   const icon = document.createElement('i');
-  icon.className = 'fas fa-rotate t20g-reroll-icon';
-  icon.setAttribute('data-tooltip', 'Resultado rerolado');
+  icon.className = `fas ${icone} t20g-reroll-icon`;
+  icon.setAttribute('data-tooltip', dica);
   total.appendChild(icon);
 }
 
-async function rerolarResultado(message, index) {
-  const rolls = message?.rolls;
-  const original = rolls?.[index];
-  if (!original || typeof original.reroll !== 'function') return;
+/**
+ * Aplica uma rolagem substituta `nova` no índice `index` da mensagem: acumula o
+ * total anterior no histórico, (opcionalmente) anima os dados, substitui apenas
+ * o bloco `.dice-roll` correspondente injetando o indicador, e persiste tudo no
+ * conteúdo/flags da mensagem.
+ */
+async function aplicarNovaRolagem(message, index, nova, totalAnterior, indicador, { animar = true } = {}) {
+  const rolls = message.rolls;
 
-  const totalAnterior = original.total;
-  const nova = await original.reroll();
-
-  // Histórico de totais anteriores por índice de rolagem (mais recente primeiro),
-  // guardado num flag para acumular entre rerolagens sucessivas.
+  // Histórico de totais anteriores por índice (mais recente primeiro).
   const historico = foundry.utils.deepClone(message.getFlag(MODULE_ID, 'rerolls') ?? {});
   const anteriores = [totalAnterior, ...(historico[index] ?? [])];
   historico[index] = anteriores;
 
-  // Animação dos dados (Dice So Nice), respeitando o ocultamento para jogadores.
-  if (game.dice3d) {
+  if (animar && game.dice3d) {
     try {
       await game.dice3d.showForRoll(nova, game.user, true, null, false, message.id, message.speaker);
     } catch (err) {
-      console.warn('T20 Hayd GMTools | Dice So Nice falhou na rerolagem', err);
+      console.warn('T20 Hayd GMTools | Dice So Nice falhou', err);
     }
   }
 
-  // Substitui apenas o bloco .dice-roll de mesmo índice e injeta o indicador.
   const wrapper = document.createElement('div');
   wrapper.innerHTML = message.content;
   const blocos = wrapper.querySelectorAll('.dice-roll');
@@ -248,7 +237,7 @@ async function rerolarResultado(message, index) {
     const temp = document.createElement('div');
     temp.innerHTML = await nova.render();
     const novoBloco = temp.firstElementChild;
-    injetarIndicadorReroll(novoBloco, anteriores);
+    injetarIndicador(novoBloco, anteriores, indicador);
     blocos[index].replaceWith(novoBloco);
   }
 
@@ -264,6 +253,91 @@ async function rerolarResultado(message, index) {
   await message.update(update);
 }
 
+/**
+ * Rerola a rolagem de índice `index`: mesma fórmula e bônus, dados novos, sem
+ * gastar mana novamente. Símbolo de rerolagem (⟳).
+ */
+async function rerolarResultado(message, index) {
+  const original = message?.rolls?.[index];
+  if (!original || typeof original.reroll !== 'function') return;
+  const totalAnterior = original.total;
+  const nova = await original.reroll();
+  await aplicarNovaRolagem(message, index, nova, totalAnterior,
+    { icone: 'fa-rotate', dica: game.i18n.localize('T20HaydGMTools.TipRerolled') });
+}
+
+/**
+ * Define manualmente o resultado natural de cada dado da rolagem `index`
+ * (dentro da faixa 1..faces), mantendo bônus e modificadores. Recalcula o total
+ * e marca com um símbolo próprio (mão apontando) — para poderes que escolhem a
+ * rolagem por uma condição especial.
+ */
+async function inserirResultadoManual(message, index) {
+  const original = message?.rolls?.[index];
+  if (!original) return;
+
+  // Um campo por dado individual, com a faixa válida e o valor atual.
+  const dados = [];
+  (original.dice ?? []).forEach((die, di) => {
+    (die.results ?? []).forEach((res, ri) => {
+      dados.push({ di, ri, faces: die.faces, atual: res.result });
+    });
+  });
+  if (!dados.length) return ui.notifications?.warn(game.i18n.localize('T20HaydGMTools.InsertNoDice'));
+
+  const campos = dados.map((d, i) =>
+    `<div class="t20g-inserir-campo">
+       <label>d${d.faces}${dados.length > 1 ? ` #${i + 1}` : ''}</label>
+       <input type="number" data-i="${i}" value="${d.atual}" min="1" max="${d.faces}" step="1">
+     </div>`).join('');
+
+  const valores = await foundry.applications.api.DialogV2.prompt({
+    window: { title: game.i18n.localize('T20HaydGMTools.InsertTitle'), icon: 'fa-hand-pointer' },
+    content: `<p class="notes">${game.i18n.localize('T20HaydGMTools.InsertHelp')}</p>
+      <div class="t20g-inserir">${campos}</div>`,
+    ok: {
+      label: game.i18n.localize('T20HaydGMTools.InsertApply'),
+      icon: 'fa-check',
+      callback: (ev, btn) => {
+        const out = {};
+        btn.form.querySelectorAll('input[data-i]').forEach(inp => { out[inp.dataset.i] = Number(inp.value); });
+        return out;
+      }
+    }
+  }).catch(() => null);
+  if (!valores) return;
+
+  const totalAnterior = original.total;
+  // Trabalha numa cópia avaliada (preserva a classe RollT20 e os resultados).
+  const nova = foundry.dice.Roll.fromData(original.toJSON());
+  dados.forEach((d, i) => {
+    const res = nova.dice?.[d.di]?.results?.[d.ri];
+    const alvo = Number(valores[i]);
+    if (res && Number.isFinite(alvo)) res.result = Math.clamp(Math.round(alvo), 1, d.faces);
+  });
+  nova._total = nova._evaluateTotal();
+
+  await aplicarNovaRolagem(message, index, nova, totalAnterior,
+    { icone: 'fa-hand-pointer', dica: game.i18n.localize('T20HaydGMTools.TipManual') },
+    { animar: false });
+}
+
+// ─── Permissões ────────────────────────────────────────────────────────────────
+
+/** O usuário pode modificar (rerolar/inserir) esta mensagem de rolagem? */
+function podeModificarRolagem(message) {
+  // Precisa poder atualizar a mensagem: GM (qualquer) ou autor (a própria).
+  return !!message && (game.user.isGM || message.isAuthor);
+}
+function podeRerolar(message) {
+  if (!podeModificarRolagem(message)) return false;
+  return game.user.isGM || game.settings.get(MODULE_ID, 'jogadoresReroll');
+}
+function podeInserir(message) {
+  if (!podeModificarRolagem(message)) return false;
+  return game.user.isGM || game.settings.get(MODULE_ID, 'jogadoresManual');
+}
+
 // ─── Opções do menu de contexto ───────────────────────────────────────────────
 
 /**
@@ -277,17 +351,17 @@ function addContextMenuOptions(options) {
   const msgDo = li => game.messages.get(li.dataset?.messageId);
 
   options.push(
+    // Mostrar/esconder fórmula — apenas Mestre, em rolagens de criaturas do GM.
     {
       name: 'T20HaydGMTools.ShowFormula',
       icon: '<i class="fas fa-eye"></i>',
       condition: li => {
-        const id = li.dataset?.messageId;
-        if (!id) return false;
-        const msg = game.messages.get(id);
+        if (!game.user.isGM) return false;
+        const msg = msgDo(li);
         return msg && isGMActorMessage(msg) && msg.getFlag(MODULE_ID, FLAG_PLAYER_CAN_SEE) !== true;
       },
       callback: async li => {
-        const msg = game.messages.get(li.dataset?.messageId);
+        const msg = msgDo(li);
         if (msg) await msg.setFlag(MODULE_ID, FLAG_PLAYER_CAN_SEE, true);
       }
     },
@@ -295,13 +369,12 @@ function addContextMenuOptions(options) {
       name: 'T20HaydGMTools.HideFormula',
       icon: '<i class="fas fa-eye-slash"></i>',
       condition: li => {
-        const id = li.dataset?.messageId;
-        if (!id) return false;
-        const msg = game.messages.get(id);
+        if (!game.user.isGM) return false;
+        const msg = msgDo(li);
         return msg && isGMActorMessage(msg) && msg.getFlag(MODULE_ID, FLAG_PLAYER_CAN_SEE) === true;
       },
       callback: async li => {
-        const msg = game.messages.get(li.dataset?.messageId);
+        const msg = msgDo(li);
         if (msg) await msg.unsetFlag(MODULE_ID, FLAG_PLAYER_CAN_SEE);
       }
     },
@@ -311,7 +384,7 @@ function addContextMenuOptions(options) {
       icon: '<i class="fas fa-rotate"></i>',
       condition: li => {
         const msg = msgDo(li);
-        return !!msg && classificarRolagens(msg).total === 1;
+        return podeRerolar(msg) && classificarRolagens(msg).total === 1;
       },
       callback: li => {
         const msg = msgDo(li);
@@ -324,7 +397,7 @@ function addContextMenuOptions(options) {
       icon: '<i class="fas fa-rotate"></i>',
       condition: li => {
         const msg = msgDo(li);
-        if (!msg) return false;
+        if (!podeRerolar(msg)) return false;
         const { total, ataque } = classificarRolagens(msg);
         return total > 1 && ataque !== -1;
       },
@@ -341,7 +414,7 @@ function addContextMenuOptions(options) {
       icon: '<i class="fas fa-rotate"></i>',
       condition: li => {
         const msg = msgDo(li);
-        if (!msg) return false;
+        if (!podeRerolar(msg)) return false;
         const { total, dano } = classificarRolagens(msg);
         return total > 1 && dano !== -1;
       },
@@ -351,6 +424,53 @@ function addContextMenuOptions(options) {
         const { dano } = classificarRolagens(msg);
         if (dano !== -1) rerolarResultado(msg, dano);
       }
+    },
+    // Inserir resultado — define manualmente o dado (poderes que escolhem a rolagem).
+    {
+      name: 'T20HaydGMTools.InsertResult',
+      icon: '<i class="fas fa-hand-pointer"></i>',
+      condition: li => {
+        const msg = msgDo(li);
+        return podeInserir(msg) && classificarRolagens(msg).total === 1;
+      },
+      callback: li => {
+        const msg = msgDo(li);
+        if (msg) inserirResultadoManual(msg, 0);
+      }
+    },
+    // Inserir resultado do ataque (armas).
+    {
+      name: 'T20HaydGMTools.InsertAttack',
+      icon: '<i class="fas fa-hand-pointer"></i>',
+      condition: li => {
+        const msg = msgDo(li);
+        if (!podeInserir(msg)) return false;
+        const { total, ataque } = classificarRolagens(msg);
+        return total > 1 && ataque !== -1;
+      },
+      callback: li => {
+        const msg = msgDo(li);
+        if (!msg) return;
+        const { ataque } = classificarRolagens(msg);
+        if (ataque !== -1) inserirResultadoManual(msg, ataque);
+      }
+    },
+    // Inserir resultado do dano (armas).
+    {
+      name: 'T20HaydGMTools.InsertDamage',
+      icon: '<i class="fas fa-hand-pointer"></i>',
+      condition: li => {
+        const msg = msgDo(li);
+        if (!podeInserir(msg)) return false;
+        const { total, dano } = classificarRolagens(msg);
+        return total > 1 && dano !== -1;
+      },
+      callback: li => {
+        const msg = msgDo(li);
+        if (!msg) return;
+        const { dano } = classificarRolagens(msg);
+        if (dano !== -1) inserirResultadoManual(msg, dano);
+      }
     }
   );
 }
@@ -358,7 +478,44 @@ function addContextMenuOptions(options) {
 // ─── Hooks ────────────────────────────────────────────────────────────────────
 
 Hooks.once('init', () => {
+  game.settings.register(MODULE_ID, 'jogadoresReroll', {
+    name: 'T20HaydGMTools.SettingRerollName',
+    hint: 'T20HaydGMTools.SettingRerollHint',
+    scope: 'world', config: true, type: Boolean, default: true
+  });
+  game.settings.register(MODULE_ID, 'jogadoresManual', {
+    name: 'T20HaydGMTools.SettingManualName',
+    hint: 'T20HaydGMTools.SettingManualHint',
+    scope: 'world', config: true, type: Boolean, default: true
+  });
+  // Controle interno: aviso de boas-vindas já foi enviado?
+  game.settings.register(MODULE_ID, 'welcomeShown', {
+    scope: 'world', config: false, type: Boolean, default: false
+  });
   console.log('T20 Hayd GMTools | Inicializado');
+});
+
+/**
+ * No primeiro uso, avisa o Mestre (por sussurro) sobre as ações do menu de
+ * contexto das mensagens de rolagem. Enviado uma única vez pelo GM principal.
+ */
+Hooks.once('ready', async () => {
+  if (!game.user.isGM || game.user !== game.users.activeGM) return;
+  if (game.settings.get(MODULE_ID, 'welcomeShown')) return;
+
+  const content = `
+    <div class="t20g-welcome">
+      <p><strong><i class="fas fa-rotate"></i> ${game.i18n.localize('T20HaydGMTools.WelcomeTitle')}</strong></p>
+      <p>${game.i18n.localize('T20HaydGMTools.WelcomeBody')}</p>
+    </div>`;
+
+  await ChatMessage.create({
+    content,
+    whisper: game.users.filter(u => u.isGM).map(u => u.id),
+    speaker: { alias: 'T20 Hayd GMTools' }
+  });
+
+  await game.settings.set(MODULE_ID, 'welcomeShown', true);
 });
 
 /**
