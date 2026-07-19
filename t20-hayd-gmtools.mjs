@@ -366,32 +366,19 @@ Hooks.on('renderChatMessageHTML', (message, html) => {
 });
 
 /**
- * Injeta as opções do módulo no menu de contexto do chat.
+ * Injeta as opções do módulo no menu de contexto das mensagens do chat.
  *
- * O Foundry v13 usa _getEntryContextOptions() em vez do hook getChatLogEntryContext.
- * Por isso fazemos monkey-patch no protótipo do ChatLog após o ready.
- * O método é chamado a cada abertura do menu, então o patch é efetivo mesmo feito aqui.
+ * O Foundry v13 monta o menu no PRIMEIRO render do ChatLog (`_onFirstRender`,
+ * que ocorre ANTES do hook "ready") e dispara o hook oficial
+ * `getChatMessageContextOptions` com `(chatLog, opcoes)`, onde `opcoes` é o
+ * array mutável de entradas. Registramos o listener no carregamento do módulo
+ * para que ele já exista quando o menu é construído — um monkey-patch feito em
+ * "ready" chegaria tarde demais (a lista já teria sido capturada).
  */
-Hooks.once('ready', () => {
+Hooks.on('getChatMessageContextOptions', (...args) => {
   if (!game.user.isGM) return;
-
-  const chatLog = ui.chat;
-  if (!chatLog) return;
-
-  const proto = Object.getPrototypeOf(chatLog);
-  const original = proto._getEntryContextOptions;
-  if (typeof original !== 'function') {
-    console.warn('T20 Hayd GMTools | _getEntryContextOptions não encontrado no ChatLog');
-    return;
-  }
-
-  proto._getEntryContextOptions = function () {
-    const options = original.call(this);
-    addContextMenuOptions(options);
-    return options;
-  };
-
-  console.log('T20 Hayd GMTools | Context menu do chat estendido');
+  const options = args.find(a => Array.isArray(a));
+  if (options) addContextMenuOptions(options);
 });
 
 // ─── Integração Dice So Nice ──────────────────────────────────────────────────
