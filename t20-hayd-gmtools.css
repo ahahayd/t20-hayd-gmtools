@@ -1,0 +1,7 @@
+/* T20 Hayd GMTools — estilos do módulo */
+
+/* Fórmula ocultada: aparência discreta para indicar que foi mascarada */
+.tormenta20 .dice-formula:is([data-formula-hidden]) {
+  font-style: italic;
+  opacity: 0.7;
+}
