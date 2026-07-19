@@ -2,7 +2,7 @@
   "id": "t20-hayd-gmtools",
   "title": "T20 Hayd GMTools",
   "description": "Ferramentas de Mestre para Tormenta20: oculta modificadores de rolagens e detalhes de magias/habilidades para os jogadores.",
-  "version": "1.4.2",
+  "version": "1.4.3",
   "compatibility": {
     "minimum": "13",
     "verified": "13"

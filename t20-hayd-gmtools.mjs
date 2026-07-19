@@ -270,12 +270,12 @@ async function aplicarNovasRolagens(message, substituicoes) {
 function resolverItemDaMensagem(message) {
   const div = document.createElement('div');
   div.innerHTML = message.content;
-  const card = div.querySelector('.chat-card[data-item-id]');
+  const card = div.querySelector('[data-item-id]');
   const itemId = card?.dataset?.itemId;
   if (!itemId) return null;
 
-  // Tenta várias origens de ator (ator do mundo, token sintético, speaker).
-  const candidatos = [];
+  // Tenta várias origens de ator (resolvedor robusto, ator do mundo, token, speaker).
+  const candidatos = [resolveMessageActor(message)];
   if (card.dataset.actorId) candidatos.push(game.actors.get(card.dataset.actorId));
   const { token, scene, actor: speakerActor } = message.speaker ?? {};
   if (token && scene) candidatos.push(game.scenes.get(scene)?.tokens.get(token)?.actor);
@@ -343,18 +343,26 @@ async function rolarDanoDoItem(item, critical) {
  */
 async function substituicoesDeDanoPorCritico(message, index, novaAtaque, ataqueOriginal) {
   const cls = classificarRolagens(message);
-  if (index !== cls.ataque || cls.dano === -1) return [];
-
   // Margem de crítico confiável (options do dado ou flag da arma na mensagem).
   const critM = margemCritico(message, novaAtaque);
-  const antesCrit = (Number(ataqueOriginal.dice?.[0]?.total) || 0) >= critM;
-  const agoraCrit = (Number(novaAtaque.dice?.[0]?.total) || 0) >= critM;
-  if (antesCrit === agoraCrit) return [];
+  const antesCrit = (Number(ataqueOriginal?.dice?.[0]?.total) || 0) >= critM;
+  const agoraCrit = (Number(novaAtaque?.dice?.[0]?.total) || 0) >= critM;
+  const ehAtaqueDeArma = index === cls.ataque && cls.dano !== -1;
+  const mudouCritico = antesCrit !== agoraCrit;
+  const item = (ehAtaqueDeArma && mudouCritico) ? resolverItemDaMensagem(message) : null;
 
-  const item = resolverItemDaMensagem(message);
+  console.log('T20 Hayd GMTools | recálculo de dano por crítico →', {
+    index, ataque: cls.ataque, dano: cls.dano, margemCritico: critM,
+    totalOriginal: ataqueOriginal?.dice?.[0]?.total, totalNovo: novaAtaque?.dice?.[0]?.total,
+    antesCrit, agoraCrit, ehAtaqueDeArma, mudouCritico,
+    item: item ? `${item.name} [${item.type}]` : 'não resolvido'
+  });
+
+  if (!ehAtaqueDeArma || !mudouCritico) return [];
   if (item?.type !== 'arma') return [];
 
   const danoRolls = await rolarDanoDoItem(item, agoraCrit);
+  console.log('T20 Hayd GMTools | dano recalculado:', danoRolls.length, 'rolagem(ns)');
   if (!danoRolls.length) return [];
 
   const indicesDano = [];
