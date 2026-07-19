@@ -5,3 +5,27 @@
   font-style: italic;
   opacity: 0.7;
 }
+
+/* --- Indicador de rerolagem --------------------------------------------- */
+
+/* Total(is) anterior(es), riscado(s) e apagado(s), ao lado do novo resultado.
+   Usa currentColor (a cor do texto do tema) para nunca sumir no fundo. */
+.t20g-reroll-prev {
+  margin-left: 0.3em;
+  font-size: 0.62em;
+  font-weight: 400;
+  opacity: 0.5;
+  vertical-align: middle;
+  color: currentColor;
+}
+.t20g-reroll-prev del { text-decoration: line-through; }
+
+/* Símbolo de "rerolado". Herda a cor de destaque do t20-hayd-ui quando ativo
+   (--t20a-chat-cor, definida na mensagem); sem ele, cai num vermelho que
+   contrasta com o card claro padrão do sistema. */
+.t20g-reroll-icon {
+  margin-left: 0.35em;
+  font-size: 0.62em;
+  vertical-align: middle;
+  color: var(--t20a-chat-cor, #c0392b);
+}

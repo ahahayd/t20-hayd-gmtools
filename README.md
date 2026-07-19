@@ -19,7 +19,7 @@ Clicando com o botão direito em qualquer mensagem de rolagem no chat, o Mestre 
 - **Rerolar resultado** — em testes de perícia/atributo, re-rola os dados mantendo todos os bônus (perícia, atributos, situacionais). O custo de mana **não** é cobrado de novo.
 - **Rerolar ataque** / **Rerolar dano** — em cards de arma (que têm o teste de ataque e a rolagem de dano), cada fórmula pode ser rerolada **separadamente**.
 
-A animação do Dice So Nice é reproduzida na rerolagem (e continua oculta dos jogadores em rolagens de criaturas do Mestre).
+Uma rolagem rerolada ganha um **símbolo** (⟳) e mostra o(s) **resultado(s) anterior(es) riscado(s)** ao lado do novo total. O símbolo herda a cor de destaque do t20-hayd-ui (quando ativo) para não se confundir com o fundo. A animação do Dice So Nice é reproduzida na rerolagem (e continua oculta dos jogadores em rolagens de criaturas do Mestre).
 
 ## Como usar
 

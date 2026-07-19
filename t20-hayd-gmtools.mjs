@@ -195,12 +195,41 @@ function classificarRolagens(message) {
  * dados correspondente é substituído no card; o restante (nome, botão de mana,
  * efeitos) é preservado.
  */
+/**
+ * Injeta o indicador de rerolagem num bloco `.dice-roll`: um símbolo (⟳) e os
+ * totais anteriores riscados/apagados, logo ao lado do novo total. `anteriores`
+ * vem do mais recente para o mais antigo.
+ */
+function injetarIndicadorReroll(diceRoll, anteriores) {
+  const total = diceRoll?.querySelector('.dice-total');
+  if (!total) return;
+  total.classList.add('t20g-rerolled');
+  total.querySelectorAll('.t20g-reroll-prev, .t20g-reroll-icon').forEach(e => e.remove());
+  for (const t of anteriores) {
+    const span = document.createElement('span');
+    span.className = 't20g-reroll-prev';
+    span.innerHTML = `<del>${t}</del>`;
+    total.appendChild(span);
+  }
+  const icon = document.createElement('i');
+  icon.className = 'fas fa-rotate t20g-reroll-icon';
+  icon.setAttribute('data-tooltip', 'Resultado rerolado');
+  total.appendChild(icon);
+}
+
 async function rerolarResultado(message, index) {
   const rolls = message?.rolls;
   const original = rolls?.[index];
   if (!original || typeof original.reroll !== 'function') return;
 
+  const totalAnterior = original.total;
   const nova = await original.reroll();
+
+  // Histórico de totais anteriores por índice de rolagem (mais recente primeiro),
+  // guardado num flag para acumular entre rerolagens sucessivas.
+  const historico = foundry.utils.deepClone(message.getFlag(MODULE_ID, 'rerolls') ?? {});
+  const anteriores = [totalAnterior, ...(historico[index] ?? [])];
+  historico[index] = anteriores;
 
   // Animação dos dados (Dice So Nice), respeitando o ocultamento para jogadores.
   if (game.dice3d) {
@@ -211,16 +240,22 @@ async function rerolarResultado(message, index) {
     }
   }
 
-  // Substitui apenas o bloco .dice-roll de mesmo índice no conteúdo renderizado.
+  // Substitui apenas o bloco .dice-roll de mesmo índice e injeta o indicador.
   const wrapper = document.createElement('div');
   wrapper.innerHTML = message.content;
   const blocos = wrapper.querySelectorAll('.dice-roll');
-  if (blocos[index]) blocos[index].outerHTML = await nova.render();
+  if (blocos[index]) {
+    const temp = document.createElement('div');
+    temp.innerHTML = await nova.render();
+    const novoBloco = temp.firstElementChild;
+    injetarIndicadorReroll(novoBloco, anteriores);
+    blocos[index].replaceWith(novoBloco);
+  }
 
-  const novasRolls = rolls.map((r, i) => (i === index ? nova : r));
   const update = {
-    rolls: novasRolls.map(r => JSON.stringify(r)),
-    content: wrapper.innerHTML
+    rolls: rolls.map((r, i) => (i === index ? nova : r)).map(r => JSON.stringify(r)),
+    content: wrapper.innerHTML,
+    [`flags.${MODULE_ID}.rerolls`]: historico
   };
   // Card de perícia/atributo guarda o total num flag; mantém-no coerente.
   if (foundry.utils.getProperty(message, 'flags.tormenta20.rollTotal') !== undefined) {
