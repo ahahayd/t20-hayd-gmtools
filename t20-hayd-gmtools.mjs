@@ -327,7 +327,7 @@ async function rolarDanoDoItem(item, critical) {
     await item.rollDamage({ critical });
     return Object.values(item.system.rolled)
       .filter(r => r && r.options?.type === 'damage')
-      .map(r => foundry.dice.Roll.fromData(r.toJSON()));
+      .map(r => foundry.dice.Roll.fromData(JSON.parse(JSON.stringify(r))));
   } catch (err) {
     console.warn('T20 Hayd GMTools | Falha ao recalcular dano do crítico', err);
     return [];
@@ -347,22 +347,13 @@ async function substituicoesDeDanoPorCritico(message, index, novaAtaque, ataqueO
   const critM = margemCritico(message, novaAtaque);
   const antesCrit = (Number(ataqueOriginal?.dice?.[0]?.total) || 0) >= critM;
   const agoraCrit = (Number(novaAtaque?.dice?.[0]?.total) || 0) >= critM;
-  const ehAtaqueDeArma = index === cls.ataque && cls.dano !== -1;
-  const mudouCritico = antesCrit !== agoraCrit;
-  const item = (ehAtaqueDeArma && mudouCritico) ? resolverItemDaMensagem(message) : null;
+  if (index !== cls.ataque || cls.dano === -1) return [];
+  if (antesCrit === agoraCrit) return [];
 
-  console.log('T20 Hayd GMTools | recálculo de dano por crítico →', {
-    index, ataque: cls.ataque, dano: cls.dano, margemCritico: critM,
-    totalOriginal: ataqueOriginal?.dice?.[0]?.total, totalNovo: novaAtaque?.dice?.[0]?.total,
-    antesCrit, agoraCrit, ehAtaqueDeArma, mudouCritico,
-    item: item ? `${item.name} [${item.type}]` : 'não resolvido'
-  });
-
-  if (!ehAtaqueDeArma || !mudouCritico) return [];
+  const item = resolverItemDaMensagem(message);
   if (item?.type !== 'arma') return [];
 
   const danoRolls = await rolarDanoDoItem(item, agoraCrit);
-  console.log('T20 Hayd GMTools | dano recalculado:', danoRolls.length, 'rolagem(ns)');
   if (!danoRolls.length) return [];
 
   const indicesDano = [];
@@ -447,8 +438,10 @@ async function inserirResultadoManual(message, index) {
   if (!valores) return;
 
   const totalAnterior = original.total;
-  // Trabalha numa cópia avaliada (preserva a classe RollT20 e os resultados).
-  const nova = foundry.dice.Roll.fromData(original.toJSON());
+  // Cópia PROFUNDA e independente: fromData(toJSON()) reaproveita as referências
+  // dos arrays de resultados, então sem o round-trip JSON alterar `nova` também
+  // alteraria `original` (corrompendo a detecção de crítico antes/depois).
+  const nova = foundry.dice.Roll.fromData(JSON.parse(JSON.stringify(original)));
   dados.forEach((d, i) => {
     const res = nova.dice?.[d.di]?.results?.[d.ri];
     const alvo = Number(valores[i]);
