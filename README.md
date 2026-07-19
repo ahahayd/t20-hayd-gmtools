@@ -12,9 +12,18 @@ Quando uma rolagem ou ficha vem de um ator do tipo **NPC**, **Perigo** (`hazard`
 
 Quem é **dono ou observador** da criatura continua vendo tudo. Fichas e rolagens de personagens jogadores nunca são afetadas.
 
+### Rerolar resultados (Mestre)
+
+Clicando com o botão direito em qualquer mensagem de rolagem no chat, o Mestre pode **rerolar o resultado**:
+
+- **Rerolar resultado** — em testes de perícia/atributo, re-rola os dados mantendo todos os bônus (perícia, atributos, situacionais). O custo de mana **não** é cobrado de novo.
+- **Rerolar ataque** / **Rerolar dano** — em cards de arma (que têm o teste de ataque e a rolagem de dano), cada fórmula pode ser rerolada **separadamente**.
+
+A animação do Dice So Nice é reproduzida na rerolagem (e continua oculta dos jogadores em rolagens de criaturas do Mestre).
+
 ## Como usar
 
-Funciona automaticamente após ativar o módulo — não há configurações. O Mestre pode revelar ou reocultar uma rolagem específica **clicando com o botão direito na mensagem do chat** e escolhendo **"Revelar fórmula"** / **"Ocultar fórmula"**.
+Funciona automaticamente após ativar o módulo — não há configurações. O Mestre pode revelar ou reocultar uma rolagem específica, ou rerolá-la, **clicando com o botão direito na mensagem do chat**.
 
 ## Requisitos
 

@@ -1,6 +1,9 @@
 {
   "T20HaydGMTools": {
     "ShowFormula": "Mostrar fórmula para os jogadores",
-    "HideFormula": "Esconder fórmula dos jogadores"
+    "HideFormula": "Esconder fórmula dos jogadores",
+    "RerollResult": "Rerolar resultado",
+    "RerollAttack": "Rerolar ataque",
+    "RerollDamage": "Rerolar dano"
   }
 }

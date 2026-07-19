@@ -167,6 +167,68 @@ function hideCardSecrets(container, message) {
   });
 }
 
+// ─── Rerolagem de resultados ──────────────────────────────────────────────────
+
+/**
+ * Classifica as rolagens de uma mensagem em ataque (baseada em d20) e dano
+ * (qualquer outro dado). Retorna os índices na ordem de `message.rolls`, que é
+ * a mesma ordem dos blocos `.dice-roll` no conteúdo renderizado.
+ */
+function classificarRolagens(message) {
+  const rolls = message?.rolls ?? [];
+  let ataque = -1, dano = -1;
+  rolls.forEach((r, i) => {
+    const ehAtaque = r?.options?.type === 'attack' || r?.dice?.[0]?.faces === 20;
+    if (ehAtaque) { if (ataque === -1) ataque = i; }
+    else if (dano === -1) dano = i;
+  });
+  return { total: rolls.length, ataque, dano };
+}
+
+/**
+ * Rerola a rolagem de índice `index` de uma mensagem.
+ *
+ * `Roll#reroll()` clona a rolagem com a MESMA fórmula e dados (todos os bônus,
+ * perícia, atributos e situacionais permanecem) e apenas re-rola os dados. O
+ * custo de mana é gasto no momento da rolagem original — nunca faz parte do
+ * objeto Roll — então rerolar não desconta mana novamente. Apenas o bloco de
+ * dados correspondente é substituído no card; o restante (nome, botão de mana,
+ * efeitos) é preservado.
+ */
+async function rerolarResultado(message, index) {
+  const rolls = message?.rolls;
+  const original = rolls?.[index];
+  if (!original || typeof original.reroll !== 'function') return;
+
+  const nova = await original.reroll();
+
+  // Animação dos dados (Dice So Nice), respeitando o ocultamento para jogadores.
+  if (game.dice3d) {
+    try {
+      await game.dice3d.showForRoll(nova, game.user, true, null, false, message.id, message.speaker);
+    } catch (err) {
+      console.warn('T20 Hayd GMTools | Dice So Nice falhou na rerolagem', err);
+    }
+  }
+
+  // Substitui apenas o bloco .dice-roll de mesmo índice no conteúdo renderizado.
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = message.content;
+  const blocos = wrapper.querySelectorAll('.dice-roll');
+  if (blocos[index]) blocos[index].outerHTML = await nova.render();
+
+  const novasRolls = rolls.map((r, i) => (i === index ? nova : r));
+  const update = {
+    rolls: novasRolls.map(r => JSON.stringify(r)),
+    content: wrapper.innerHTML
+  };
+  // Card de perícia/atributo guarda o total num flag; mantém-no coerente.
+  if (foundry.utils.getProperty(message, 'flags.tormenta20.rollTotal') !== undefined) {
+    update['flags.tormenta20.rollTotal'] = nova.total;
+  }
+  await message.update(update);
+}
+
 // ─── Opções do menu de contexto ───────────────────────────────────────────────
 
 /**
@@ -176,6 +238,8 @@ function hideCardSecrets(container, message) {
 function addContextMenuOptions(options) {
   // Evita duplicar se chamado mais de uma vez
   if (options.some(o => o.name === 'T20HaydGMTools.ShowFormula')) return;
+
+  const msgDo = li => game.messages.get(li.dataset?.messageId);
 
   options.push(
     {
@@ -204,6 +268,53 @@ function addContextMenuOptions(options) {
       callback: async li => {
         const msg = game.messages.get(li.dataset?.messageId);
         if (msg) await msg.unsetFlag(MODULE_ID, FLAG_PLAYER_CAN_SEE);
+      }
+    },
+    // Rerolar resultado — mensagens com uma única rolagem (perícia, atributo…).
+    {
+      name: 'T20HaydGMTools.RerollResult',
+      icon: '<i class="fas fa-rotate"></i>',
+      condition: li => {
+        const msg = msgDo(li);
+        return !!msg && classificarRolagens(msg).total === 1;
+      },
+      callback: li => {
+        const msg = msgDo(li);
+        if (msg) rerolarResultado(msg, 0);
+      }
+    },
+    // Rerolar ataque — cards com ataque + dano (armas): rerola só o ataque.
+    {
+      name: 'T20HaydGMTools.RerollAttack',
+      icon: '<i class="fas fa-rotate"></i>',
+      condition: li => {
+        const msg = msgDo(li);
+        if (!msg) return false;
+        const { total, ataque } = classificarRolagens(msg);
+        return total > 1 && ataque !== -1;
+      },
+      callback: li => {
+        const msg = msgDo(li);
+        if (!msg) return;
+        const { ataque } = classificarRolagens(msg);
+        if (ataque !== -1) rerolarResultado(msg, ataque);
+      }
+    },
+    // Rerolar dano — cards com ataque + dano (armas): rerola só o dano.
+    {
+      name: 'T20HaydGMTools.RerollDamage',
+      icon: '<i class="fas fa-rotate"></i>',
+      condition: li => {
+        const msg = msgDo(li);
+        if (!msg) return false;
+        const { total, dano } = classificarRolagens(msg);
+        return total > 1 && dano !== -1;
+      },
+      callback: li => {
+        const msg = msgDo(li);
+        if (!msg) return;
+        const { dano } = classificarRolagens(msg);
+        if (dano !== -1) rerolarResultado(msg, dano);
       }
     }
   );
