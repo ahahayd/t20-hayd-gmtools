@@ -22,6 +22,8 @@ Clicando com o botão direito em uma mensagem de rolagem no chat:
 
 Uma rolagem alterada ganha um **símbolo** ao lado do novo total e mostra o(s) **resultado(s) anterior(es) riscado(s)** — ⟳ para rerolagem e ✋ para resultado inserido manualmente. O símbolo herda a cor de destaque do t20-hayd-ui (quando ativo) para não se confundir com o fundo.
 
+**Crítico automático:** ao rerolar ou definir manualmente o **ataque** de uma arma, se o resultado passar a ser (ou deixar de ser) um crítico, o **dano é recalculado automaticamente** com o estado correto — dados multiplicados no crítico, ou dano normal ao deixar de ser — deixando o valor de dano anterior riscado.
+
 ## Como usar
 
 Ocultar detalhes das criaturas do Mestre funciona automaticamente após ativar o módulo. Para rerolar, inserir um resultado ou revelar/reocultar uma fórmula, **clique com o botão direito na mensagem do chat**.

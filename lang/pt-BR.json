@@ -18,6 +18,8 @@
     "InsertNoDice": "Esta rolagem não tem dados para definir manualmente.",
     "TipRerolled": "Resultado rerolado",
     "TipManual": "Resultado definido manualmente",
+    "TipCritDamage": "Dano recalculado — o ataque virou crítico!",
+    "TipNormalDamage": "Dano recalculado — acerto normal (sem crítico)",
     "WelcomeTitle": "Dica: rerolar e inserir resultados",
     "WelcomeBody": "Clique com o botão direito em uma mensagem de rolagem no chat para rerolar o resultado — ou inserir um resultado manualmente (útil para poderes que definem o valor do dado)."
   }

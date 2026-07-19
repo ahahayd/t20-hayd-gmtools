@@ -214,43 +214,127 @@ function injetarIndicador(diceRoll, anteriores, { icone, dica }) {
  * o bloco `.dice-roll` correspondente injetando o indicador, e persiste tudo no
  * conteúdo/flags da mensagem.
  */
-async function aplicarNovaRolagem(message, index, nova, totalAnterior, indicador, { animar = true } = {}) {
-  const rolls = message.rolls;
-
-  // Histórico de totais anteriores por índice (mais recente primeiro).
+async function aplicarNovasRolagens(message, substituicoes) {
+  if (!substituicoes?.length) return;
+  const rolls = [...message.rolls];
   const historico = foundry.utils.deepClone(message.getFlag(MODULE_ID, 'rerolls') ?? {});
-  const anteriores = [totalAnterior, ...(historico[index] ?? [])];
-  historico[index] = anteriores;
-
-  if (animar && game.dice3d) {
-    try {
-      await game.dice3d.showForRoll(nova, game.user, true, null, false, message.id, message.speaker);
-    } catch (err) {
-      console.warn('T20 Hayd GMTools | Dice So Nice falhou', err);
-    }
-  }
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = message.content;
   const blocos = wrapper.querySelectorAll('.dice-roll');
-  if (blocos[index]) {
-    const temp = document.createElement('div');
-    temp.innerHTML = await nova.render();
-    const novoBloco = temp.firstElementChild;
-    injetarIndicador(novoBloco, anteriores, indicador);
-    blocos[index].replaceWith(novoBloco);
+
+  for (const sub of substituicoes) {
+    const anteriores = [sub.totalAnterior, ...(historico[sub.index] ?? [])];
+    historico[sub.index] = anteriores;
+    rolls[sub.index] = sub.nova;
+
+    if (sub.animar !== false && game.dice3d) {
+      try {
+        await game.dice3d.showForRoll(sub.nova, game.user, true, null, false, message.id, message.speaker);
+      } catch (err) {
+        console.warn('T20 Hayd GMTools | Dice So Nice falhou', err);
+      }
+    }
+
+    if (blocos[sub.index]) {
+      const temp = document.createElement('div');
+      temp.innerHTML = await sub.nova.render();
+      const novoBloco = temp.firstElementChild;
+      injetarIndicador(novoBloco, anteriores, sub.indicador);
+      blocos[sub.index].replaceWith(novoBloco);
+    }
   }
 
   const update = {
-    rolls: rolls.map((r, i) => (i === index ? nova : r)).map(r => JSON.stringify(r)),
+    rolls: rolls.map(r => JSON.stringify(r)),
     content: wrapper.innerHTML,
     [`flags.${MODULE_ID}.rerolls`]: historico
   };
-  // Card de perícia/atributo guarda o total num flag; mantém-no coerente.
-  if (foundry.utils.getProperty(message, 'flags.tormenta20.rollTotal') !== undefined) {
-    update['flags.tormenta20.rollTotal'] = nova.total;
+  // Card de perícia/atributo guarda o total da rolagem 0 num flag; mantém-no coerente.
+  const rol0 = substituicoes.find(s => s.index === 0);
+  if (rol0 && foundry.utils.getProperty(message, 'flags.tormenta20.rollTotal') !== undefined) {
+    update['flags.tormenta20.rollTotal'] = rol0.nova.total;
   }
   await message.update(update);
+}
+
+// ─── Recálculo automático do dano por crítico ──────────────────────────────────
+
+/** Resolve o item (arma) de um card de rolagem a partir do conteúdo da mensagem. */
+function resolverItemDaMensagem(message) {
+  const div = document.createElement('div');
+  div.innerHTML = message.content;
+  const card = div.querySelector('.chat-card[data-item-id]');
+  const itemId = card?.dataset?.itemId;
+  if (!itemId) return null;
+  let actor = card.dataset.actorId ? game.actors.get(card.dataset.actorId) : null;
+  if (!actor) {
+    const { token, scene } = message.speaker ?? {};
+    if (token && scene) actor = game.scenes.get(scene)?.tokens.get(token)?.actor;
+  }
+  return actor?.items.get(itemId) ?? null;
+}
+
+/**
+ * Rola o dano do item com o estado de crítico forçado, usando o próprio
+ * `rollDamage` do sistema (que aplica a multiplicação de dados do crítico, os
+ * bônus e os termos de dano crítico corretamente). Retorna os rolls de dano.
+ */
+async function rolarDanoDoItem(item, critical) {
+  const rolledAnterior = item.system.rolled;
+  item.system.rolled = { Ataque: { _critical: critical } };
+  try {
+    await item.rollDamage({ critical });
+    return Object.values(item.system.rolled)
+      .filter(r => r && r.options?.type === 'damage')
+      .map(r => foundry.dice.Roll.fromData(r.toJSON()));
+  } catch (err) {
+    console.warn('T20 Hayd GMTools | Falha ao recalcular dano do crítico', err);
+    return [];
+  } finally {
+    item.system.rolled = rolledAnterior;
+  }
+}
+
+/**
+ * Se a rolagem modificada foi o ATAQUE de uma arma e o estado de crítico mudou
+ * (virou crítico ou deixou de ser), rola o dano de novo com o novo estado e
+ * devolve as substituições correspondentes (com o valor de dano antigo riscado).
+ */
+async function substituicoesDeDanoPorCritico(message, index, novaAtaque, ataqueOriginal) {
+  const cls = classificarRolagens(message);
+  if (index !== cls.ataque || cls.dano === -1) return [];
+
+  const item = resolverItemDaMensagem(message);
+  if (item?.type !== 'arma') return [];
+
+  const criticoM = Number(item.system.criticoM) || 20;
+  const antesCrit = (ataqueOriginal.terms?.[0]?.total ?? 0) >= criticoM;
+  const agoraCrit = (novaAtaque.terms?.[0]?.total ?? 0) >= criticoM;
+  if (antesCrit === agoraCrit) return [];
+
+  const danoRolls = await rolarDanoDoItem(item, agoraCrit);
+  if (!danoRolls.length) return [];
+
+  const indicesDano = [];
+  message.rolls.forEach((r, i) => {
+    const ehAtaque = r?.options?.type === 'attack' || r?.dice?.[0]?.faces === 20;
+    if (!ehAtaque) indicesDano.push(i);
+  });
+
+  const dica = agoraCrit
+    ? game.i18n.localize('T20HaydGMTools.TipCritDamage')
+    : game.i18n.localize('T20HaydGMTools.TipNormalDamage');
+  return indicesDano.map((idx, k) => {
+    const novoDano = danoRolls[k] ?? danoRolls[0];
+    return novoDano ? {
+      index: idx,
+      nova: novoDano,
+      totalAnterior: message.rolls[idx].total,
+      indicador: { icone: agoraCrit ? 'fa-burst' : 'fa-rotate', dica },
+      animar: true
+    } : null;
+  }).filter(Boolean);
 }
 
 /**
@@ -262,8 +346,13 @@ async function rerolarResultado(message, index) {
   if (!original || typeof original.reroll !== 'function') return;
   const totalAnterior = original.total;
   const nova = await original.reroll();
-  await aplicarNovaRolagem(message, index, nova, totalAnterior,
-    { icone: 'fa-rotate', dica: game.i18n.localize('T20HaydGMTools.TipRerolled') });
+  const subs = [{
+    index, nova, totalAnterior, animar: true,
+    indicador: { icone: 'fa-rotate', dica: game.i18n.localize('T20HaydGMTools.TipRerolled') }
+  }];
+  // Se o ataque virou/deixou de ser crítico, recalcula o dano automaticamente.
+  subs.push(...await substituicoesDeDanoPorCritico(message, index, nova, original));
+  await aplicarNovasRolagens(message, subs);
 }
 
 /**
@@ -317,9 +406,13 @@ async function inserirResultadoManual(message, index) {
   });
   nova._total = nova._evaluateTotal();
 
-  await aplicarNovaRolagem(message, index, nova, totalAnterior,
-    { icone: 'fa-hand-pointer', dica: game.i18n.localize('T20HaydGMTools.TipManual') },
-    { animar: false });
+  const subs = [{
+    index, nova, totalAnterior, animar: false,
+    indicador: { icone: 'fa-hand-pointer', dica: game.i18n.localize('T20HaydGMTools.TipManual') }
+  }];
+  // Se o ataque virou/deixou de ser crítico, recalcula o dano automaticamente.
+  subs.push(...await substituicoesDeDanoPorCritico(message, index, nova, original));
+  await aplicarNovasRolagens(message, subs);
 }
 
 // ─── Permissões ────────────────────────────────────────────────────────────────
