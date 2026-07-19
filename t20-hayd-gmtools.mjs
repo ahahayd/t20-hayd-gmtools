@@ -241,6 +241,12 @@ async function aplicarNovasRolagens(message, substituicoes) {
       temp.innerHTML = await sub.nova.render();
       const novoBloco = temp.firstElementChild;
       injetarIndicador(novoBloco, anteriores, sub.indicador);
+      // Destaque de crítico/falha (verde/vermelho) no total, como o sistema.
+      const dt = novoBloco.querySelector('.dice-total');
+      if (dt) {
+        dt.classList.remove('success', 'critical', 'failure', 'fumble');
+        if (sub.classesTotal?.length) dt.classList.add(...sub.classesTotal);
+      }
       blocos[sub.index].replaceWith(novoBloco);
     }
   }
@@ -267,12 +273,35 @@ function resolverItemDaMensagem(message) {
   const card = div.querySelector('.chat-card[data-item-id]');
   const itemId = card?.dataset?.itemId;
   if (!itemId) return null;
-  let actor = card.dataset.actorId ? game.actors.get(card.dataset.actorId) : null;
-  if (!actor) {
-    const { token, scene } = message.speaker ?? {};
-    if (token && scene) actor = game.scenes.get(scene)?.tokens.get(token)?.actor;
+
+  // Tenta várias origens de ator (ator do mundo, token sintético, speaker).
+  const candidatos = [];
+  if (card.dataset.actorId) candidatos.push(game.actors.get(card.dataset.actorId));
+  const { token, scene, actor: speakerActor } = message.speaker ?? {};
+  if (token && scene) candidatos.push(game.scenes.get(scene)?.tokens.get(token)?.actor);
+  if (speakerActor) candidatos.push(game.actors.get(speakerActor));
+  for (const a of candidatos) {
+    const it = a?.items?.get(itemId);
+    if (it) return it;
   }
-  return actor?.items.get(itemId) ?? null;
+  return null;
+}
+
+/**
+ * Classes de destaque do sistema para o total de um ataque (verde no crítico,
+ * vermelho na falha), usando a margem de crítico/falha GRAVADA na própria
+ * rolagem (`dice[0].options.critical/fumble`) — mesma fonte do sistema base.
+ * Retorna [] para rolagens que não são ataque.
+ */
+function classesDeDestaqueAtaque(roll) {
+  const d = roll?.dice?.[0];
+  if (roll?.options?.type !== 'attack' || d?.faces !== 20) return [];
+  const total = Number(d.total);
+  const crit = Number(d.options?.critical) || 20;
+  const fumble = Number(d.options?.fumble) || 1;
+  if (total >= crit) return ['success', 'critical'];
+  if (total <= fumble) return ['failure', 'fumble'];
+  return [];
 }
 
 /**
@@ -305,13 +334,14 @@ async function substituicoesDeDanoPorCritico(message, index, novaAtaque, ataqueO
   const cls = classificarRolagens(message);
   if (index !== cls.ataque || cls.dano === -1) return [];
 
+  // Margem de crítico gravada na rolagem (não depende de resolver o item).
+  const critM = Number(novaAtaque.dice?.[0]?.options?.critical) || 20;
+  const antesCrit = (Number(ataqueOriginal.dice?.[0]?.total) || 0) >= critM;
+  const agoraCrit = (Number(novaAtaque.dice?.[0]?.total) || 0) >= critM;
+  if (antesCrit === agoraCrit) return [];
+
   const item = resolverItemDaMensagem(message);
   if (item?.type !== 'arma') return [];
-
-  const criticoM = Number(item.system.criticoM) || 20;
-  const antesCrit = (ataqueOriginal.terms?.[0]?.total ?? 0) >= criticoM;
-  const agoraCrit = (novaAtaque.terms?.[0]?.total ?? 0) >= criticoM;
-  if (antesCrit === agoraCrit) return [];
 
   const danoRolls = await rolarDanoDoItem(item, agoraCrit);
   if (!danoRolls.length) return [];
@@ -348,7 +378,8 @@ async function rerolarResultado(message, index) {
   const nova = await original.reroll();
   const subs = [{
     index, nova, totalAnterior, animar: true,
-    indicador: { icone: 'fa-rotate', dica: game.i18n.localize('T20HaydGMTools.TipRerolled') }
+    indicador: { icone: 'fa-rotate', dica: game.i18n.localize('T20HaydGMTools.TipRerolled') },
+    classesTotal: classesDeDestaqueAtaque(nova)
   }];
   // Se o ataque virou/deixou de ser crítico, recalcula o dano automaticamente.
   subs.push(...await substituicoesDeDanoPorCritico(message, index, nova, original));
@@ -408,7 +439,8 @@ async function inserirResultadoManual(message, index) {
 
   const subs = [{
     index, nova, totalAnterior, animar: false,
-    indicador: { icone: 'fa-hand-pointer', dica: game.i18n.localize('T20HaydGMTools.TipManual') }
+    indicador: { icone: 'fa-hand-pointer', dica: game.i18n.localize('T20HaydGMTools.TipManual') },
+    classesTotal: classesDeDestaqueAtaque(nova)
   }];
   // Se o ataque virou/deixou de ser crítico, recalcula o dano automaticamente.
   subs.push(...await substituicoesDeDanoPorCritico(message, index, nova, original));
