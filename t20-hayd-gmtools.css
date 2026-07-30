@@ -51,3 +51,234 @@
   width: 64px;
   text-align: center;
 }
+
+/* ═══ Definição de atributos iniciais ═══════════════════════════════════ */
+
+/* Seleção de método / arranjo */
+.t20g-atr-metodos { display: flex; flex-direction: column; gap: 4px; }
+.t20g-atr-metodo {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-light-2, #999);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.t20g-atr-metodo:hover { border-color: var(--color-border-highlight, #c0392b); }
+.t20g-atr-metodo input[type="radio"] { margin-top: 3px; flex: 0 0 auto; }
+.t20g-atr-metodo .notes { font-size: 0.85em; opacity: 0.85; }
+
+/* Compra por pontos */
+.t20g-atr-pontos {
+  text-align: center;
+  font-size: 1.05em;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+.t20g-atr-restantes {
+  display: inline-block;
+  min-width: 2.2em;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--t20a-chat-cor, #c0392b);
+  color: #fff;
+  text-align: center;
+}
+.t20g-atr-cab,
+.t20g-atr-linha {
+  display: grid;
+  grid-template-columns: 1fr 96px 14px 96px 14px 40px;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 3px;
+}
+.t20g-atr-cab { font-size: 0.8em; opacity: 0.75; text-align: center; }
+.t20g-atr-cab span:first-child { text-align: left; }
+.t20g-atr-nome { display: flex; align-items: center; gap: 6px; font-weight: bold; }
+.t20g-atr-nome i { width: 16px; text-align: center; opacity: 0.85; }
+.t20g-atr-controle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  justify-content: center;
+}
+.t20g-atr-controle button {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  line-height: 1;
+  font-weight: bold;
+}
+.t20g-atr-controle button:disabled { opacity: 0.35; cursor: default; }
+.t20g-num {
+  min-width: 2em;
+  text-align: center;
+  font-weight: bold;
+}
+.t20g-atr-op { text-align: center; opacity: 0.7; }
+.t20g-atr-total {
+  text-align: center;
+  font-weight: bold;
+  font-size: 1.05em;
+}
+.t20g-atr-num { text-align: center; }
+.t20g-atr-novo { color: var(--t20a-chat-cor, #c0392b); font-weight: bold; }
+.t20g-atr-seta { opacity: 0.6; text-align: center; }
+
+/* Rolagens */
+.t20g-atr-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  flex-wrap: wrap;
+}
+.t20g-atr-acoes button { width: auto; flex: 0 0 auto; }
+.t20g-atr-soma { font-weight: bold; margin-left: auto; }
+.t20g-atr-slot {
+  display: grid;
+  grid-template-columns: 90px 1fr 90px;
+  gap: 8px;
+  align-items: center;
+  padding: 3px 6px;
+  border: 1px solid var(--color-border-light-2, #999);
+  border-radius: 6px;
+  margin-bottom: 3px;
+}
+.t20g-atr-slot .t20g-atr-dados del { opacity: 0.5; }
+.t20g-atr-slot .t20g-atr-conv { text-align: right; }
+
+/* Distribuição de valores */
+.t20g-atr-dist h4 { margin: 8px 0 4px; }
+.t20g-atr-dist-linha {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+/* Valkaria */
+.t20g-atr-valk-dados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.t20g-atr-valk-dado {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--color-border-light-2, #999);
+  border-radius: 6px;
+}
+.t20g-atr-valk-dado b { font-size: 1.1em; min-width: 1em; text-align: center; }
+
+/* Editor de custos */
+.t20g-atr-custos { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
+.t20g-atr-custo-linha {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.t20g-atr-custo-linha input { width: 72px; text-align: center; }
+.t20g-atr-custo-remover { flex: 0 0 auto; opacity: 0.7; }
+.t20g-atr-custo-remover:hover { opacity: 1; }
+.t20g-atr-custo-acoes { display: flex; gap: 6px; }
+
+/* Presets de pontos variados */
+.t20g-atr-presets { display: flex; gap: 6px; margin-bottom: 6px; }
+
+/* Card de chat */
+.t20g-atr-chat em { opacity: 0.9; }
+
+/* Rolagem individual de dado (Valkaria/Nimb) */
+.t20g-atr-rolar-dado {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 24px;
+  padding: 0;
+  line-height: 1;
+}
+.t20g-atr-rolar-dado:disabled { display: none; }
+.t20g-atr-valk-res { min-width: 1.2em; text-align: center; }
+
+/* Botão de ajuda "?" e tabelas dos métodos.
+   Sem cara de botão: só o ícone redondo, como as dicas do próprio
+   Foundry — assim não briga com o estilo de <button> do tema. */
+.t20g-atr-ajuda {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  padding: 2px 4px;
+  margin: 0;
+  background: none;
+  border: none;
+  box-shadow: none;
+  outline: none;
+  line-height: 1;
+  cursor: pointer;
+  font-size: var(--font-size-16, 16px);
+  opacity: 0.75;
+}
+.t20g-atr-ajuda:hover,
+.t20g-atr-ajuda:focus {
+  background: none;
+  border: none;
+  box-shadow: none;
+  opacity: 1;
+}
+.t20g-atr-ajuda i { margin: 0; }
+.t20g-atr-pontos { position: relative; }
+.t20g-atr-pontos .t20g-atr-ajuda { position: absolute; right: 0; top: 0; }
+.t20g-atr-tabela { width: 100%; margin: 6px 0; border-collapse: collapse; }
+.t20g-atr-tabela th, .t20g-atr-tabela td {
+  padding: 2px 6px;
+  text-align: center;
+  border-bottom: 1px solid var(--color-border-light-2, #999);
+}
+.t20g-atr-presets .t20g-atr-ajuda { align-self: center; }
+
+/* Método padrão da campanha (escolhido pelo mestre) */
+.t20g-atr-metodo-padrao {
+  border-color: var(--t20a-chat-cor, #c0392b);
+  box-shadow: 0 0 5px var(--t20a-chat-cor, rgba(192, 57, 43, 0.55));
+}
+.t20g-atr-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.72em;
+  font-weight: bold;
+  color: #fff;
+  background: var(--t20a-chat-cor, #c0392b);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.t20g-atr-badge i { font-size: 0.9em; }
+
+/* Brilho pulsante no botão "Definir Atributos" do topo da ficha —
+   chama atenção em personagens recém-criados (atributos zerados).
+   O botão some sozinho quando os atributos são definidos, então o
+   pulso para junto. */
+@keyframes t20g-atr-pulso {
+  0%, 100% {
+    filter: drop-shadow(0 0 0 rgba(192, 57, 43, 0));
+    color: inherit;
+  }
+  50% {
+    filter: drop-shadow(0 0 6px var(--t20a-chat-cor, #c0392b));
+    color: var(--t20a-chat-cor, #e74c3c);
+  }
+}
+a.header-button.t20g-atr-header {
+  animation: t20g-atr-pulso 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  a.header-button.t20g-atr-header { animation: none; }
+}

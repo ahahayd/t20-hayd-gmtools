@@ -1,8 +1,8 @@
 {
   "id": "t20-hayd-gmtools",
   "title": "T20 Hayd GMTools",
-  "description": "Ferramentas de Mestre para Tormenta20: oculta modificadores de rolagens e detalhes de magias/habilidades para os jogadores.",
-  "version": "1.4.4",
+  "description": "Ferramentas de Mestre para Tormenta20: oculta modificadores de rolagens e detalhes de magias/habilidades para os jogadores, e define atributos iniciais de personagens (compra por pontos, rolagens e arranjos).",
+  "version": "1.5.0",
   "compatibility": {
     "minimum": "13",
     "verified": "13"
@@ -16,7 +16,8 @@
     ]
   },
   "esmodules": [
-    "t20-hayd-gmtools.mjs"
+    "t20-hayd-gmtools.mjs",
+    "t20-hayd-atributos.mjs"
   ],
   "styles": [
     "t20-hayd-gmtools.css"
@@ -33,11 +34,11 @@
       "path": "lang/pt-BR.json"
     }
   ],
-  "url": "https://github.com/Haydgi/t20-hayd-gmtools",
-  "manifest": "https://raw.githubusercontent.com/Haydgi/t20-hayd-gmtools/main/module.json",
-  "download": "https://github.com/Haydgi/t20-hayd-gmtools/archive/refs/heads/main.zip",
-  "readme": "https://github.com/Haydgi/t20-hayd-gmtools/blob/main/README.md",
-  "bugs": "https://github.com/Haydgi/t20-hayd-gmtools/issues",
+  "url": "https://github.com/ahahayd/t20-hayd-gmtools",
+  "manifest": "https://raw.githubusercontent.com/ahahayd/t20-hayd-gmtools/main/module.json",
+  "download": "https://github.com/ahahayd/t20-hayd-gmtools/archive/refs/heads/main.zip",
+  "readme": "https://github.com/ahahayd/t20-hayd-gmtools/blob/main/README.md",
+  "bugs": "https://github.com/ahahayd/t20-hayd-gmtools/issues",
   "license": "MIT",
   "authors": [
     {
