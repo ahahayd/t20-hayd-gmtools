@@ -1,7 +1,7 @@
 {
   "id": "t20-hayd-gmtools",
   "title": "T20 Hayd GMTools",
-  "description": "Ferramentas de Mestre para Tormenta20: oculta modificadores de rolagens e detalhes de magias/habilidades para os jogadores, e define atributos iniciais de personagens (compra por pontos, rolagens e arranjos).",
+  "description": "<p>Ferramentas de Mestre para Tormenta20: oculta dos jogadores os modificadores de rolagens e os detalhes de magias/habilidades de criaturas do Mestre, permite rerolar ou inserir manualmente resultados pelo menu de contexto do chat (com recálculo automático de dano crítico), e adiciona a definição de atributos iniciais dos personagens — compra por pontos, rolagens do Livro Básico e do Heróis de Arton (Clássica, Épica, Valkaria, Nimb) e arranjo Khalmyr — com método padrão, custos e tabela de conversão personalizáveis pelo mestre.</p>",
   "version": "1.5.0",
   "compatibility": {
     "minimum": "13",
@@ -11,7 +11,10 @@
     "systems": [
       {
         "id": "tormenta20",
-        "type": "system"
+        "type": "system",
+        "compatibility": {
+          "minimum": "1.5.0"
+        }
       }
     ]
   },
@@ -35,14 +38,15 @@
     }
   ],
   "url": "https://github.com/ahahayd/t20-hayd-gmtools",
-  "manifest": "https://raw.githubusercontent.com/ahahayd/t20-hayd-gmtools/main/module.json",
-  "download": "https://github.com/ahahayd/t20-hayd-gmtools/archive/refs/heads/main.zip",
+  "manifest": "https://github.com/ahahayd/t20-hayd-gmtools/releases/latest/download/module.json",
+  "download": "https://github.com/ahahayd/t20-hayd-gmtools/releases/download/v1.5.0/module.zip",
   "readme": "https://github.com/ahahayd/t20-hayd-gmtools/blob/main/README.md",
   "bugs": "https://github.com/ahahayd/t20-hayd-gmtools/issues",
   "license": "MIT",
   "authors": [
     {
-      "name": "Hayd"
+      "name": "Hayd",
+      "url": "https://github.com/ahahayd"
     }
   ]
 }
