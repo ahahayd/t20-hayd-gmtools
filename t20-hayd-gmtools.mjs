@@ -45,22 +45,15 @@ function isGMActorMessage(message) {
   return actor ? HIDDEN_ACTOR_TYPES.has(actor.type) : false;
 }
 
-/**
- * True se o usuário atual é dono ou observador do ator da mensagem.
- * Nesses casos a fórmula NÃO deve ser ocultada.
- */
-function userHasActorAccess(message) {
-  const actor = resolveMessageActor(message);
-  if (!actor) return false;
-  const level = actor.getUserLevel(game.user);
-  return level >= CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
-}
-
-/** True se a fórmula deve ser ocultada do usuário atual para esta mensagem */
+/** True se a fórmula deve ser ocultada do usuário atual para esta mensagem.
+ * Resolve o ator UMA vez (antes: até duas resoluções por chamada, e a
+ * função roda duas vezes por mensagem — hook + patch de highlight). */
 function shouldHideFormula(message) {
-  if (!isGMActorMessage(message)) return false;
+  const actor = resolveMessageActor(message);
+  if (!actor || !HIDDEN_ACTOR_TYPES.has(actor.type)) return false;
   if (message.getFlag(MODULE_ID, FLAG_PLAYER_CAN_SEE) === true) return false;
-  if (userHasActorAccess(message)) return false;
+  // Dono/observador do ator vê a fórmula normalmente
+  if (actor.getUserLevel(game.user) >= CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER) return false;
   return true;
 }
 
@@ -150,9 +143,12 @@ function hideCardSecrets(container, message) {
     el.style.display = 'none';
   });
 
-  // Mascara CD (ex.: "CD 15" → "CD ?")
+  // Mascara CD (ex.: "CD 15" → "CD ?"). Só reescreve o innerHTML quando
+  // há CD de fato — a escrita força re-parse do HTML e destrói listeners
+  // dos filhos, mesmo quando o texto não mudaria.
   chatCard.querySelectorAll('.card-item-header p').forEach(el => {
-    el.innerHTML = el.innerHTML.replace(/\bCD\s+\d+/gi, 'CD ?');
+    const html = el.innerHTML;
+    if (/\bCD\s+\d+/i.test(html)) el.innerHTML = html.replace(/\bCD\s+\d+/gi, 'CD ?');
   });
 
   // Bloqueia o clique em .item-name que dispara _onChatCardToggleContent no sistema,
