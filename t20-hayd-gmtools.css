@@ -282,3 +282,435 @@ a.header-button.t20g-atr-header {
 @media (prefers-reduced-motion: reduce) {
   a.header-button.t20g-atr-header { animation: none; }
 }
+
+/* --- Automações de itens ------------------------------------------------- */
+
+/* A barra é injetada dentro do .item-card do sistema, mas NÃO usa a classe
+   .card-item-effects dele: aquela classe manda todo <span> filho para
+   position:absolute num quadrado de 28px, o que jogava o rótulo por cima
+   dos botões. Aqui o layout é só nosso. */
+/* Barras com mais de uma linha (Golpe Pessoal, Combinações com vários alvos)
+   precisam de respiro entre elas, senão o botão de uma cola no da outra. */
+.tormenta20.chat-card .t20g-auto-barra {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(120, 46, 34, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tormenta20.chat-card .t20g-auto-linha {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tormenta20.chat-card .t20g-auto-rotulo {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: static;
+  font-size: 0.85em;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tormenta20.chat-card .t20g-auto-rotulo i {
+  color: var(--t20a-chat-cor, #782e22);
+  margin-right: 3px;
+}
+
+.tormenta20.chat-card .t20g-auto-rotulo b {
+  color: var(--t20a-chat-cor, #782e22);
+}
+
+/* Botões quadrados de verdade: o Foundry dá width/flex generosos aos
+   <button>, então o tamanho é fixado nas três dimensões. */
+.tormenta20.chat-card button.t20g-auto-btn {
+  flex: 0 0 28px;
+  width: 28px;
+  min-width: 28px;
+  max-width: 28px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  border: 1px solid var(--t20a-chat-cor, rgba(120, 46, 34, 0.5));
+  border-radius: 4px;
+  background: rgba(120, 46, 34, 0.08);
+}
+
+/* Botão de ação (com texto) ocupa a largura restante */
+.tormenta20.chat-card button.t20g-auto-btn.t20g-auto-btn-largo {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  gap: 5px;
+  padding: 0 8px;
+  font-size: 0.85em;
+}
+
+.tormenta20.chat-card button.t20g-auto-btn:hover:not(:disabled) {
+  background: var(--t20a-chat-cor, #782e22);
+  color: #fff;
+}
+
+.tormenta20.chat-card button.t20g-auto-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Mensagem de chat das automações de ação */
+.t20g-auto-chat i {
+  color: var(--t20a-chat-cor, #782e22);
+  margin-right: 4px;
+}
+
+/* Diálogo de escolha da automação */
+.t20g-auto-dialogo .t20g-auto-detalhe {
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-left: 3px solid #782e22;
+  background: rgba(120, 46, 34, 0.06);
+  border-radius: 0 4px 4px 0;
+}
+
+.t20g-auto-dialogo .t20g-auto-detalhe p {
+  margin: 0 0 4px;
+  font-size: 0.9em;
+}
+
+.t20g-auto-dialogo .t20g-auto-detalhe p:last-child {
+  margin-bottom: 0;
+}
+
+/* Diálogo de distribuição de projéteis */
+.t20g-dist .t20g-dist-tabela {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+}
+
+.t20g-dist .t20g-dist-tabela th {
+  text-align: left;
+  font-size: 0.85em;
+  opacity: 0.8;
+  border-bottom: 1px solid rgba(120, 46, 34, 0.35);
+  padding-bottom: 2px;
+}
+
+.t20g-dist .t20g-dist-tabela td {
+  padding: 2px 4px 2px 0;
+  vertical-align: middle;
+}
+
+.t20g-dist .t20g-dist-nome {
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.t20g-dist .t20g-dist-detalhe {
+  font-size: 0.85em;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
+.t20g-dist select.t20g-dist-alvo {
+  width: 100%;
+  min-width: 90px;
+}
+
+/* Lembrete de fim de cena */
+.t20g-auto-fimcena ul {
+  margin: 4px 0 6px;
+  padding-left: 18px;
+  font-size: 0.9em;
+}
+
+.t20g-auto-fimcena i {
+  color: var(--t20a-chat-cor, #782e22);
+  margin-right: 3px;
+}
+
+.t20g-auto-fimcena button.t20g-auto-zerar-tudo {
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Barra de contagem das Combinações */
+.tormenta20.chat-card .t20g-comb-alvo {
+  font-weight: normal;
+  opacity: 0.75;
+  font-size: 0.95em;
+}
+
+.t20g-dist .t20g-dist-total {
+  margin: 6px 0 0;
+  font-size: 0.85em;
+  opacity: 0.8;
+  text-align: right;
+}
+
+.t20g-dist .t20g-dist-total.t20g-dist-erro {
+  color: #c0392b;
+  font-weight: bold;
+  opacity: 1;
+}
+
+/* ═══ Nível de metagame ═════════════════════════════════════════════════ */
+.t20g-meta { display: flex; flex-direction: column; gap: 2px; }
+
+.t20g-meta-linha {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.t20g-meta-linha:hover { background: rgba(0, 0, 0, 0.06); }
+.t20g-meta-linha input[type="checkbox"] { flex: 0 0 auto; margin-top: 3px; }
+
+/* Chave-mestra: separada visualmente das opções que ela comanda */
+.t20g-meta-mestre {
+  border-bottom: 1px solid var(--color-border-light-2, #999);
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+
+.t20g-meta-rotulo { display: flex; flex-direction: column; line-height: 1.25; }
+.t20g-meta-dica { font-size: 0.8em; opacity: 0.7; }
+
+/* Chave-mestra desligada: opções apagadas e inertes (nada é escondido) */
+.t20g-meta-opcoes.t20g-meta-off { opacity: 0.4; pointer-events: none; }
+
+.t20g-meta-acoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.t20g-meta-acoes button { flex: 1 1 auto; font-size: 0.85em; }
+
+/* --- Régua para efeitos (ignora diagonais) ------------------------------- */
+
+/* Rótulo da régua opcional: contorno e ícone em tom quente, para distinguir de
+   relance da régua padrão do Foundry, que continua com a aparência normal.
+   O rótulo padrão não tem borda, então o contorno é acrescentado aqui — sem
+   mexer no padding, para o balão não mudar de tamanho entre as duas réguas. */
+#measurement .waypoint-label.t20g-regua-efeitos {
+  --control-icon-color: var(--color-warm-1, #e8836f);
+  box-shadow: inset 0 0 0 2px var(--color-warm-2, #c0392b);
+}
+
+/* ═══ Golpe Pessoal ═════════════════════════════════════════════════════ */
+
+/* O construtor é longo: a janela rola por dentro em vez de crescer. */
+.t20g-gp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.t20g-gp .t20g-gp-grupo {
+  border: 1px solid var(--color-fieldset-border, rgba(120, 46, 34, 0.35));
+  border-radius: 4px;
+  padding: 4px 8px 8px;
+  margin: 0;
+}
+
+.t20g-gp .t20g-gp-grupo > legend {
+  font-weight: bold;
+  padding: 0 4px;
+}
+
+.t20g-gp .t20g-gp-linha {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--color-fieldset-border, rgba(120, 46, 34, 0.35));
+  border-bottom-color: color-mix(in srgb, currentcolor 15%, transparent);
+}
+
+.t20g-gp .t20g-gp-linha:last-child {
+  border-bottom: none;
+}
+
+.t20g-gp .t20g-gp-controle {
+  flex: 0 0 44px;
+  display: flex;
+  justify-content: center;
+  padding-top: 2px;
+}
+
+.t20g-gp .t20g-gp-corpo {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.t20g-gp .t20g-gp-cabeca {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+/* Custos e descontos precisam ser legíveis nos dois temas do Foundry, então
+   saem das cores fixas do T20 e acompanham o texto da janela. */
+.t20g-gp .t20g-gp-pm {
+  font-size: 0.85em;
+  font-weight: bold;
+  color: var(--color-text-emphatic, var(--color-text-primary, inherit));
+  white-space: nowrap;
+}
+
+.t20g-gp .t20g-gp-pm.t20g-gp-desconto {
+  color: #3fa06a;
+}
+
+.t20g-gp .t20g-gp-texto {
+  margin: 2px 0 0;
+  font-size: 0.85em;
+  opacity: 0.9;
+}
+
+.t20g-gp .t20g-gp-corpo .notes {
+  margin: 2px 0 0;
+  font-size: 0.8em;
+}
+
+.t20g-gp input.t20g-gp-qtd {
+  width: 44px;
+  min-width: 44px;
+  text-align: center;
+}
+
+.t20g-gp .t20g-gp-extras {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.t20g-gp .t20g-gp-elementos label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+}
+
+/* Quadro onde a magia do Conjurador é solta */
+.t20g-gp .t20g-gp-magia {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 3px 8px;
+  border: 1px dashed color-mix(in srgb, currentcolor 45%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, currentcolor 6%, transparent);
+  font-size: 0.85em;
+}
+
+.t20g-gp .t20g-gp-magia[data-vazio="1"] {
+  font-style: italic;
+  opacity: 0.75;
+}
+
+.t20g-gp .t20g-gp-magia[data-vazio="1"] .t20g-gp-magia-limpar {
+  display: none;
+}
+
+.t20g-gp .t20g-gp-magia.t20g-gp-magia-sobre {
+  border-style: solid;
+  background: color-mix(in srgb, currentcolor 20%, transparent);
+}
+
+.t20g-gp .t20g-gp-magia-nome {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.t20g-gp button.t20g-gp-magia-limpar {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* Custo total, fixo no rodapé do construtor.
+
+   O fundo vem do `--background` da própria janela (o Foundry troca esse valor
+   entre pergaminho no tema claro e escuro translúcido no tema escuro), com um
+   desfoque atrás para o conteúdo que rola não vazar. Cor fixa aqui deixaria o
+   texto ilegível em um dos dois temas. */
+.t20g-gp .t20g-gp-total {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 8px;
+  border-top: 2px solid var(--color-fieldset-border, rgba(120, 46, 34, 0.5));
+  background: var(--background, var(--color-cool-5-90, #f4f1e8));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: var(--color-text-primary, inherit);
+}
+
+.t20g-gp .t20g-gp-total-valor {
+  font-size: 1.25em;
+  font-weight: bold;
+  color: var(--color-text-emphatic, var(--color-text-primary, inherit));
+}
+
+.t20g-gp .t20g-gp-total-detalhe {
+  font-size: 0.8em;
+  opacity: 0.8;
+}
+
+/* Resumo do golpe no cartão de chat (o espaçamento vem do gap da barra) */
+.tormenta20.chat-card .t20g-gp-cartao {
+  font-size: 0.85em;
+  line-height: 1.25;
+}
+
+.tormenta20.chat-card .t20g-gp-cartao .notes {
+  opacity: 0.8;
+}
+
+/* A janela do construtor é alta: rola por dentro em vez de estourar a tela. */
+.application.dialog.t20g-gp-janela .window-content {
+  overflow-y: auto;
+}
+
+/* Magia/poder não identificado no cartão de chat */
+.tormenta20.chat-card .t20g-nao-identificado {
+  font-style: italic;
+  opacity: 0.85;
+}
+.tormenta20.chat-card img.t20g-nao-identificado {
+  font-style: normal;
+  opacity: 1;
+  filter: grayscale(0.2);
+}
+
+/* Botão de padrão da criatura no HUD do token */
+#token-hud .control-icon.t20g-hud-segredos i { font-size: 1.1em; }
