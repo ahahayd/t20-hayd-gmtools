@@ -1,0 +1,180 @@
+<div class="t20g-tesouro-body t20g-tesouro-layout">
+<aside class="t20g-tesouro-sidebar">
+  <section class="t20g-tesouro-sidebar-grupo">
+    <h3><i class="fa-solid fa-sliders"></i> {{localize "T20HaydGMTools.TesourosConfiguracao"}}</h3>
+    <div class="form-group">
+      <label>{{localize "T20HaydGMTools.TesourosND"}}</label>
+      <select name="nd">
+        {{#each ordemND as |valor|}}
+          <option value="{{valor}}" {{#if (eq valor ../nd)}}selected{{/if}}>{{valor}}</option>
+        {{/each}}
+      </select>
+    </div>
+    <div class="form-group">
+      <label>{{localize "T20HaydGMTools.TesourosModoRolagem"}}</label>
+      <select name="modoRolagem">
+        <option value="auto" {{#if (eq modoRolagem "auto")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosModoAutomatico"}}</option>
+        <option value="passo" {{#if (eq modoRolagem "passo")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosModoPassoAPasso"}}</option>
+      </select>
+      {{!-- A dica é só do modo selecionado: mostrar as duas de uma vez
+           obrigava a ler a que não interessa. --}}
+      {{#if (eq modoRolagem "passo")}}
+        <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosModoPassoAPassoDica"}}</p>
+      {{else}}
+        <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosModoAutomaticoDica"}}</p>
+      {{/if}}
+    </div>
+  </section>
+
+  <section class="t20g-tesouro-sidebar-acoes">
+    <button type="button" class="t20g-botao-principal" data-action="iniciar" {{#if ocupado}}disabled{{/if}}>
+      <i class="fa-solid fa-dice-d20"></i> {{localize "T20HaydGMTools.TesourosRolarTudo"}}
+    </button>
+    <button type="button" data-action="limpar">
+      <i class="fa-solid fa-trash"></i> {{localize "T20HaydGMTools.TesourosLimpar"}}
+    </button>
+  </section>
+
+  <section class="t20g-tesouro-sidebar-grupo t20g-tesouro-sidebar-distribuicao">
+    <h3><i class="fa-solid fa-gift"></i> {{localize "T20HaydGMTools.TesourosDistribuicao"}}</h3>
+    {{#if totalMoedas.length}}
+      <p class="t20g-tesouro-total"><i class="fa-solid fa-coins"></i> {{#each totalMoedas}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</p>
+    {{else}}
+      <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosSemTotal"}}</p>
+    {{/if}}
+    <div class="form-group">
+      <label>{{localize "T20HaydGMTools.TesourosConcederA"}}</label>
+      <select name="destino">
+        <option value="">—</option>
+        {{#each destinos as |destino|}}
+          <option value="{{destino.value}}" {{#if (eq destino.value ../destinoAtual)}}selected{{/if}}>{{destino.label}}</option>
+        {{/each}}
+      </select>
+    </div>
+    <button type="button" class="t20g-botao-principal" data-action="conceder" {{#unless temTesouro}}disabled{{/unless}}>
+      <i class="fa-solid fa-gift"></i> {{localize "T20HaydGMTools.TesourosConceder"}}
+    </button>
+    {{#if temParty}}
+      <button type="button" data-action="distribuir" {{#unless temTesouro}}disabled{{/unless}}>
+        <i class="fa-solid fa-people-arrows"></i> {{localize "T20HaydGMTools.TesourosDistribuirParty"}}
+      </button>
+    {{/if}}
+    <button type="button" data-action="postar" {{#unless temTesouro}}disabled{{/unless}}>
+      <i class="fa-solid fa-comment"></i> {{localize "T20HaydGMTools.TesourosPostar"}}
+    </button>
+  </section>
+</aside>
+
+{{#*inline "no-card"}}
+  {{#if this}}
+    {{#if (eq this.tipoVisual "item")}}
+      <div class="t20g-tesouro-item">
+        <img src="{{this.img}}" width="36" height="36" />
+        <div class="t20g-tesouro-item-info">
+          <div class="t20g-tesouro-item-nome">{{this.nome}}</div>
+          <div class="t20g-tesouro-item-meta">
+            {{#if this.preco}}<span>{{this.preco}} T$</span>{{/if}}
+            {{#if this.espacos}}<span>{{this.espacos}} espaço(s)</span>{{/if}}
+            {{#if this.fonte}}<span class="t20g-hint">{{this.fonte}}</span>{{/if}}
+          </div>
+        </div>
+        {{#if this.badge}}<span class="t20g-badge {{this.badge.classe}}">{{this.badge.label}}</span>{{/if}}
+        {{#if this.vinculavel}}
+          <button type="button" data-action="trocarVinculo" data-no-id="{{this.id}}" title="{{localize 'T20HaydGMTools.TesourosVincular'}}">
+            <i class="fa-solid fa-link"></i>
+          </button>
+        {{/if}}
+      </div>
+    {{else if (eq this.tipoVisual "build")}}
+      <div class="t20g-tesouro-item t20g-tesouro-build">
+        <img src="{{this.img}}" width="36" height="36" />
+        <div class="t20g-tesouro-item-info">
+          <div class="t20g-tesouro-item-nome">{{this.nome}} <span class="t20g-badge-build">{{this.rotuloBuild}}</span></div>
+          <div class="t20g-tesouro-item-meta">
+            {{#if this.fonte}}<span class="t20g-hint">{{this.fonte}}</span>{{/if}}
+          </div>
+          {{#if this.entradas.length}}
+            <ul class="t20g-tesouro-entradas">
+              {{#each this.entradas}}
+                <li>{{this.nome}}{{#if this.material}} — {{this.material}}{{/if}}</li>
+              {{/each}}
+            </ul>
+          {{/if}}
+        </div>
+        {{#if this.badge}}<span class="t20g-badge {{this.badge.classe}}">{{this.badge.label}}</span>{{/if}}
+        {{#if this.vinculavel}}
+          <button type="button" data-action="trocarVinculo" data-no-id="{{this.id}}" title="{{localize 'T20HaydGMTools.TesourosVincular'}}">
+            <i class="fa-solid fa-link"></i>
+          </button>
+        {{/if}}
+      </div>
+    {{/if}}
+  {{/if}}
+{{/inline}}
+
+{{#*inline "coluna-card"}}
+  <section class="t20g-tesouro-coluna">
+    <div class="t20g-tesouro-coluna-header">
+      <h3><i class="{{this.icone}}"></i> {{this.rotulo}}</h3>
+      <button type="button" data-action="colunaRolar" data-coluna="{{this.chave}}" title="{{localize 'T20HaydGMTools.TesourosRolarColuna'}}">
+        <i class="fa-solid fa-dice"></i> {{localize "T20HaydGMTools.TesourosRolar"}}
+      </button>
+    </div>
+
+    <div class="t20g-tesouro-coluna-lista">
+      {{#each this.lista as |entrada|}}
+        <div class="t20g-tesouro-entrada">
+          <div class="t20g-tesouro-entrada-topo">
+            <span class="t20g-hint">
+              d% = {{entrada.rolagem}}{{#if entrada.manual}} ({{localize "T20HaydGMTools.TesourosManualCurto"}}){{/if}}
+            </span>
+            <div class="t20g-tesouro-entrada-acoes">
+              <button type="button" data-action="colunaRerolar" data-coluna="{{../chave}}" data-entrada-id="{{entrada.id}}" title="{{localize 'T20HaydGMTools.TesourosRerolar'}}">
+                <i class="fa-solid fa-rotate"></i>
+              </button>
+              <button type="button" data-action="metade" data-coluna="{{../chave}}" data-entrada-id="{{entrada.id}}" title="{{localize 'T20HaydGMTools.TesourosMetadeDica'}}">
+                <i class="fa-solid fa-scissors"></i>
+              </button>
+              <button type="button" data-action="colunaRemover" data-coluna="{{../chave}}" data-entrada-id="{{entrada.id}}" title="{{localize 'T20HaydGMTools.TesourosRemover'}}">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          </div>
+
+          {{#if entrada.vazio}}
+            <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosNadaNestaRolagem"}}</p>
+          {{/if}}
+
+          {{#if entrada.dinheiro}}
+            <div class="t20g-tesouro-dinheiro">
+              <i class="fa-solid fa-coins"></i>
+              <strong>{{entrada.dinheiro.valor}} {{entrada.dinheiro.moeda}}</strong>
+              {{#if entrada.dinheiro.metadeAplicada}}<span class="t20g-hint">({{localize "T20HaydGMTools.TesourosModMetade"}})</span>{{/if}}
+            </div>
+          {{/if}}
+
+          {{#if entrada.grupo}}
+            <div class="t20g-tesouro-grupo">
+              <p class="t20g-hint">{{entrada.grupo.rotulo}} ({{entrada.grupo.itens.length}})</p>
+              {{#each entrada.grupo.itens}}
+                {{> no-card this}}
+              {{/each}}
+            </div>
+          {{/if}}
+
+          {{#if entrada.no}}
+            {{> no-card entrada.no}}
+          {{/if}}
+        </div>
+      {{else}}
+        <p class="t20g-hint t20g-tesouro-coluna-vazia">{{localize "T20HaydGMTools.TesourosColunaVazia"}}</p>
+      {{/each}}
+    </div>
+  </section>
+{{/inline}}
+
+<main class="t20g-tesouro-principal">
+  {{> coluna-card colDinheiroCtx}}
+  {{> coluna-card colItensCtx}}
+</main>
+</div>

@@ -714,3 +714,244 @@ a.header-button.t20g-atr-header {
 
 /* Botão de padrão da criatura no HUD do token */
 #token-hud .control-icon.t20g-hud-segredos i { font-size: 1.1em; }
+
+/* ═══ Gerador de Tesouros ════════════════════════════════════════════════ */
+
+.t20g-tesouros .window-content { overflow-y: auto; }
+.t20g-tesouros .form-group { margin-bottom: 6px; }
+.t20g-tesouros .t20g-hint { font-size: 0.82em; opacity: 0.7; }
+
+/* Badges de status de vínculo */
+.t20g-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 10px;
+  font-size: 0.78em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.t20g-badge.t20g-ok { background: rgba(46, 160, 67, 0.18); color: #2ea043; }
+.t20g-badge.t20g-ambiguo { background: rgba(210, 153, 34, 0.2); color: #d29922; }
+.t20g-badge.t20g-sem { background: rgba(200, 60, 60, 0.18); color: #c83c3c; }
+.t20g-badge-build {
+  font-size: 0.75em;
+  font-weight: 600;
+  opacity: 0.75;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  padding: 0 4px;
+  margin-left: 4px;
+}
+
+/* --- app-gerador --------------------------------------------------------- */
+
+.t20g-tesouro-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.t20g-tesouro-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 0;
+}
+.t20g-tesouro-sidebar-grupo {
+  border: 1px solid var(--color-border-light-tertiary, #999);
+  border-radius: 6px;
+  padding: 8px;
+}
+.t20g-tesouro-sidebar-grupo h3 {
+  margin: 0 0 6px;
+  font-size: 0.95em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.t20g-tesouro-sidebar-acoes { display: flex; flex-direction: column; gap: 6px; }
+.t20g-tesouro-sidebar-distribuicao { display: flex; flex-direction: column; gap: 6px; }
+.t20g-botao-principal {
+  font-weight: 600;
+  padding: 8px;
+}
+.t20g-tesouro-total {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 4px;
+  font-weight: 600;
+}
+.t20g-aviso-suave {
+  font-size: 0.82em;
+  color: #d29922;
+  margin: 6px 0 0;
+}
+.t20g-tesouro-principal {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  min-width: 0;
+}
+.t20g-tesouro-coluna-header h3 { display: flex; align-items: center; gap: 6px; }
+.t20g-tesouro-coluna {
+  border: 1px solid var(--color-border-light-tertiary, #999);
+  border-radius: 6px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 120px;
+}
+.t20g-tesouro-coluna-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.t20g-tesouro-coluna-header h3 { margin: 0; font-size: 1em; }
+.t20g-tesouro-coluna-acoes { display: flex; gap: 4px; }
+.t20g-tesouro-coluna-acoes button { padding: 2px 6px; }
+
+.t20g-tesouro-coluna-lista { display: flex; flex-direction: column; gap: 6px; }
+.t20g-tesouro-entrada {
+  border: 1px solid var(--color-border-light-tertiary, #ccc);
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+.t20g-tesouro-entrada-topo { display: flex; align-items: center; justify-content: space-between; }
+.t20g-tesouro-entrada-acoes { display: flex; gap: 2px; }
+.t20g-tesouro-entrada-acoes button { padding: 1px 5px; }
+
+.t20g-tesouro-dinheiro { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+
+.t20g-tesouro-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+.t20g-tesouro-item img { border: none; border-radius: 4px; flex: 0 0 auto; }
+.t20g-tesouro-item-info { flex: 1 1 auto; min-width: 0; }
+.t20g-tesouro-item-nome { font-weight: 600; }
+.t20g-tesouro-item-meta { display: flex; gap: 8px; font-size: 0.82em; flex-wrap: wrap; }
+.t20g-tesouro-entradas { margin: 2px 0 0; padding-left: 18px; font-size: 0.85em; }
+
+.t20g-tesouro-grupo { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
+
+/* --- diálogo de vínculo (drag & drop) ------------------------------------ */
+.t20g-tesouro-drop {
+  border: 2px dashed var(--color-border-light-tertiary, #999);
+  border-radius: 6px;
+  padding: 16px;
+  text-align: center;
+  opacity: 0.85;
+}
+.t20g-tesouro-drop-compacto { padding: 4px 8px; font-size: 0.82em; flex: 0 0 auto; }
+
+/* --- app-vinculos ---------------------------------------------------------*/
+.t20g-tesouro-vinculos-topo { display: flex; align-items: flex-end; gap: 10px; }
+.t20g-tesouro-vinculos-resumo { display: flex; gap: 8px; margin: 8px 0; }
+.t20g-tesouro-vinculos-lista { display: flex; flex-direction: column; gap: 4px; }
+.t20g-tesouro-vinculo-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #ccc);
+  padding: 4px 0;
+}
+.t20g-tesouro-vinculo-info { flex: 1 1 auto; min-width: 0; }
+.t20g-tesouro-vinculo-nome { font-weight: 600; }
+
+/* --- app-homebrew ---------------------------------------------------------*/
+.t20g-tesouro-homebrew-lista { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.t20g-tesouro-homebrew-linha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border-light-tertiary, #ccc);
+  padding: 4px 0;
+}
+.t20g-tesouro-homebrew-faixa {
+  font-family: var(--font-monospace, monospace);
+  min-width: 3em;
+  text-align: right;
+  opacity: 0.8;
+}
+.t20g-tesouro-homebrew-novo { border: 1px solid var(--color-border-light-tertiary, #999); border-radius: 6px; padding: 8px; }
+.t20g-tesouro-homebrew-fonte-campos { display: flex; gap: 8px; }
+.t20g-tesouro-homebrew-fonte-campos .form-group { flex: 1 1 0; }
+
+/* --- pedido de rolagem no chat --------------------------------------------*/
+.t20g-tesouro-pedido { text-align: center; }
+.t20g-tesouro-rolar-btn { margin-top: 4px; }
+.t20g-tesouro-rolado { opacity: 0.75; font-style: italic; }
+
+/* --- card de resumo no chat -------------------------------------------- */
+.t20g-tesouro-chat ul.t20g-tesouro-chat-itens { margin: 4px 0; padding-left: 4px; list-style: none; }
+.t20g-tesouro-chat ul.t20g-tesouro-chat-itens li { padding: 1px 0; }
+
+/* Título do card: herda a cor do conteúdo da mensagem em vez de usar a cor de
+   título do tema. O t20-hayd-ui pinta .message-content de claro em mensagens
+   do Mestre (fundo escuro), mas a regra `.t20a h3` do tema forçava a cor de
+   título — escura — deixando o título ilegível sobre o próprio card.
+   `inherit` acerta os dois casos sem depender de qual tema está ativo.
+   O seletor inclui .chat-message só para ganhar da especificidade de `.t20a h3`
+   independentemente da ordem em que os módulos carregam. */
+.chat-message .t20g-tesouro-chat h3 {
+  color: inherit;
+  margin: 0 0 4px;
+  padding-bottom: 3px;
+  border-bottom: 1px solid currentColor;
+  /* currentColor cheio deixaria a linha dura demais sobre fundo escuro */
+  border-bottom-color: color-mix(in srgb, currentColor 35%, transparent);
+}
+
+/* --- card de trilha no chat (rolagens que levaram ao resultado) -------- */
+.t20g-tesouro-chat-trilha ol { margin: 4px 0; padding-left: 20px; }
+.t20g-tesouro-chat-trilha li { padding: 1px 0; }
+.t20g-trilha-rotulo { font-weight: 600; }
+.t20g-tesouro-chat-resultado { margin-top: 6px; padding-top: 4px; border-top: 1px dashed var(--color-border-light-tertiary, #999); }
+
+/* --- diálogo do modo "passo a passo" ------------------------------------ */
+.t20g-tesouro-passo-rotulo { margin-bottom: 2px; }
+.t20g-tesouro-passo .form-group { margin-top: 6px; }
+
+/* --- diálogo de distribuição entre a party -------------------------------- */
+.t20g-dist-dialogo { display: flex; flex-direction: column; gap: 10px; }
+.t20g-dist-secao {
+  border: 1px solid var(--color-border-light-tertiary, #999);
+  border-radius: 6px;
+  padding: 8px;
+}
+.t20g-dist-secao legend { padding: 0 4px; font-weight: 600; }
+.t20g-dist-itens {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.t20g-dist-linha { display: flex; align-items: center; gap: 6px; }
+.t20g-dist-linha img { border: none; border-radius: 4px; flex: 0 0 auto; }
+.t20g-dist-nome { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t20g-dist-linha select { flex: 0 0 auto; max-width: 45%; }
+.t20g-dist-check-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.t20g-dist-check { display: flex; align-items: center; gap: 6px; }
+.t20g-dist-check img { width: 20px; height: 20px; border: none; border-radius: 3px; }
+
+/* ═══ Títulos de categoria nas configurações ════════════════════════════ */
+.t20g-cfg-titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--color-border-light-2, #999);
+  font-size: 1.05em;
+  font-weight: 600;
+}
+.t20g-cfg-titulo:first-child { margin-top: 4px; }
+.t20g-cfg-titulo i { opacity: 0.7; }

@@ -9,6 +9,11 @@
 import './t20-hayd-automacoes.mjs';
 // Régua opcional para efeitos (ignora diagonais). Mesmo motivo do import acima.
 import './t20-hayd-regua.mjs';
+// Gerador de Tesouros (Tabela 8-1 e associadas). Mesmo motivo do import acima.
+import './t20-hayd-tesouros.mjs';
+// Ficha do Grupo, estoque compartilhado e transferências (ex-t20-hayd-management).
+// Mesmo motivo do import acima.
+import './t20-hayd-management.mjs';
 
 const MODULE_ID = 't20-hayd-gmtools';
 
@@ -1195,6 +1200,31 @@ Hooks.once('ready', async () => {
 });
 
 /**
+ * Enquanto o t20-hayd-management antigo continuar ativo junto do GMTools,
+ * avisa o Mestre nesta sessão: os dados dele (settings/flags) continuam
+ * intactos e funcionando via GMTools, então dá para desativá-lo com
+ * segurança. Não é um evento único — a condição pode voltar a ficar falsa
+ * a qualquer momento (quando o Mestre desativar o módulo antigo), então
+ * roda de novo em toda sessão em vez de usar uma flag "já mostrado".
+ */
+Hooks.once('ready', async () => {
+  if (!game.user.isGM || game.user !== game.users.activeGM) return;
+  if (!game.modules.get('t20-hayd-management')?.active) return;
+
+  const content = `
+    <div class="t20g-welcome">
+      <p><strong><i class="fas fa-code-merge"></i> ${game.i18n.localize('T20HaydGMTools.UnificacaoTitle')}</strong></p>
+      <p>${game.i18n.localize('T20HaydGMTools.UnificacaoBody')}</p>
+    </div>`;
+
+  await ChatMessage.create({
+    content,
+    whisper: game.users.filter(u => u.isGM).map(u => u.id),
+    speaker: { alias: 'T20 Hayd GMTools' }
+  });
+});
+
+/**
  * Impede que o sistema aplique estilização de crítico/fumble para jogadores restritos.
  *
  * O método _highlightCriticalSuccessFailure() é chamado em renderHTML() da
@@ -1314,6 +1344,68 @@ Hooks.on('getChatMessageContextOptions', (...args) => {
   if (!game.user.isGM) return;
   const options = args.find(a => Array.isArray(a));
   if (options) addContextMenuOptions(options);
+});
+
+// ─── Organização das configurações ────────────────────────────────────────────
+
+/**
+ * O Foundry agrupa as configurações por PACOTE e não oferece subdivisão: com
+ * a fusão, tudo do GMTools cai numa lista só, longa e sem separação temática.
+ * Estas categorias são aplicadas depois do render, movendo cada `.form-group`
+ * para baixo de um título. É puramente visual — não muda registro nem valor.
+ *
+ * Toda configuração visível precisa estar em alguma categoria; o que ficar de
+ * fora permanece no topo, solto (ver `organizarConfiguracoes`).
+ */
+const CATEGORIAS_CONFIG = [
+  { rotulo: 'CatMetagame',    icone: 'fa-mask',           chaves: ['metagameMenu'] },
+  { rotulo: 'CatRolagens',    icone: 'fa-dice-d20',       chaves: ['jogadoresReroll', 'jogadoresManual'] },
+  { rotulo: 'CatAutomacoes',  icone: 'fa-wand-sparkles',  chaves: ['automacoesEnabled', 'abrirDiarioAutomacoes'] },
+  { rotulo: 'CatTesouros',    icone: 'fa-sack-dollar',    chaves: ['tesourosVinculosMenu', 'tesourosHomebrewMenu'] },
+  { rotulo: 'CatParty',       icone: 'fa-users',          chaves: ['partySheetEnabled', 'visibility', 'requireConfirmation', 'chatMode', 'lojaCompat'] },
+  { rotulo: 'CatAtributos',   icone: 'fa-dice-d6',        chaves: ['atributosMetodoPadrao', 'atributosPontos', 'atributosMultiNegativos', 'atributosCustosMenu', 'atributosConversaoMenu'] },
+  { rotulo: 'CatFerramentas', icone: 'fa-ruler-combined', chaves: ['reguaEfeitos'] }
+];
+
+/**
+ * Encontra o `.form-group` de uma configuração nossa. Campos comuns são
+ * localizados pelo `name` do input e submenus pelo `data-key` do botão —
+ * ambos usam o id completo "namespace.chave".
+ */
+function grupoDaConfiguracao(root, chave) {
+  const id = CSS.escape(`${MODULE_ID}.${chave}`);
+  const alvo = root.querySelector(`[name="${id}"], button[data-key="${id}"]`);
+  return alvo?.closest('.form-group') ?? null;
+}
+
+/** Move as configurações do módulo para baixo de títulos de categoria. */
+function organizarConfiguracoes(root) {
+  // Já organizado neste render (o Foundry re-renderiza ao trocar de aba).
+  if (root.querySelector('.t20g-cfg-titulo')) return;
+
+  let container = null;
+  const grupos = [];
+  for (const cat of CATEGORIAS_CONFIG) {
+    const itens = cat.chaves.map(c => grupoDaConfiguracao(root, c)).filter(Boolean);
+    if (!itens.length) continue;
+    container ??= itens[0].parentElement;
+    grupos.push({ cat, itens });
+  }
+  if (!container) return;
+
+  for (const { cat, itens } of grupos) {
+    const titulo = document.createElement('h3');
+    titulo.className = 't20g-cfg-titulo';
+    titulo.innerHTML = `<i class="fa-solid ${cat.icone}"></i> ${foundry.utils.escapeHTML(game.i18n.localize(`T20HaydGMTools.${cat.rotulo}`))}`;
+    container.appendChild(titulo);
+    // appendChild MOVE o nó existente: agrupa e reordena numa passada só.
+    for (const item of itens) container.appendChild(item);
+  }
+}
+
+Hooks.on('renderSettingsConfig', (app, html) => {
+  const root = html?.querySelector ? html : (html?.[0] ?? null);
+  if (root) organizarConfiguracoes(root);
 });
 
 // ─── Integração Dice So Nice ──────────────────────────────────────────────────

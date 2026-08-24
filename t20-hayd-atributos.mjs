@@ -179,7 +179,7 @@ function obterCustos() {
 
 function registrarConfiguracoes() {
   game.settings.register(MODULE_ID, 'atributosMetodoPadrao', {
-    name: 'Atributos: método padrão da campanha',
+    name: 'Método padrão da campanha',
     hint: 'Método de definição de atributos adotado pela mesa — aparece pré-selecionado e destacado para os jogadores no menu de definir atributos.',
     scope: 'world', config: true, type: String, default: '',
     choices: {
@@ -194,12 +194,12 @@ function registrarConfiguracoes() {
     }
   });
   game.settings.register(MODULE_ID, 'atributosPontos', {
-    name: 'Atributos: pontos da compra',
+    name: 'Pontos da compra',
     hint: 'Quantidade de pontos sugerida na Compra por Pontos (padrão do livro: 10; 5 para campanhas "pé no chão", 15 para épicas).',
     scope: 'world', config: true, type: Number, default: 10
   });
   game.settings.register(MODULE_ID, 'atributosMultiNegativos', {
-    name: 'Atributos: permitir vários negativos',
+    name: 'Permitir vários atributos negativos',
     hint: 'Se marcado, mais de um atributo pode ficar negativo na compra por pontos (a regra oficial permite reduzir apenas UM atributo para −1).',
     scope: 'world', config: true, type: Boolean, default: false
   });
@@ -208,7 +208,7 @@ function registrarConfiguracoes() {
     scope: 'world', config: false, type: Object, default: CUSTO_PADRAO
   });
   game.settings.registerMenu(MODULE_ID, 'atributosCustosMenu', {
-    name: 'Atributos: custos da compra',
+    name: 'Custos da compra por pontos',
     label: 'Editar custos',
     hint: 'Modifique o custo de cada valor de atributo e habilite novas compras (ex.: valor 5 por 10 pontos).',
     icon: 'fa-solid fa-coins',
@@ -223,7 +223,7 @@ function registrarConfiguracoes() {
     scope: 'world', config: false, type: Object, default: CONVERSAO_PADRAO
   });
   game.settings.registerMenu(MODULE_ID, 'atributosConversaoMenu', {
-    name: 'Atributos: conversão de rolagens',
+    name: 'Conversão de rolagens em atributos',
     label: 'Editar conversão',
     hint: 'Personalize os intervalos de rolagem e quanto cada um vale de atributo (ex.: fazer 18 valer 5 em vez de 4). Vale para todos os métodos com rolagem.',
     icon: 'fa-solid fa-arrow-right-arrow-left',

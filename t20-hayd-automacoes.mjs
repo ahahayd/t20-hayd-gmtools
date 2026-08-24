@@ -13,6 +13,15 @@
 const MODULE_ID = 't20-hayd-gmtools';
 const { DialogV2 } = foundry.applications.api;
 
+/**
+ * Interruptor mestre: desligado, nenhuma automação faz nada (mas nada é
+ * apagado — religar volta a funcionar sozinho). try/catch porque este hook
+ * pode rodar antes do 'init' registrar o setting.
+ */
+function automacoesAtivas() {
+  try { return game.settings.get(MODULE_ID, 'automacoesEnabled'); } catch { return true; }
+}
+
 /** Flag no ITEM: id da automação escolhida. */
 const FLAG_AUTOMACAO = 'automacao';
 /** Flag no ITEM: valor acumulado do contador. */
@@ -3752,6 +3761,7 @@ async function abrirDiario() {
  * `getItemSheetHeaderButtons`, que cobre ItemSheetT20 e RaceSheetT20.
  */
 Hooks.on('getItemSheetHeaderButtons', (app, buttons) => {
+  if (!automacoesAtivas()) return;
   const item = app?.document ?? app?.object;
   if (item?.documentName !== 'Item') return;
   if (!item.isOwner) return;
@@ -3770,6 +3780,7 @@ Hooks.on('getItemSheetHeaderButtons', (app, buttons) => {
 
 /** Controles no chat: cartões de ataque e o cartão do próprio poder. */
 Hooks.on('renderChatMessageHTML', (message, html) => {
+  if (!automacoesAtivas()) return;
   try {
     injetarControlesAutomacao(message, html);
 
@@ -3795,6 +3806,7 @@ Hooks.on('renderChatMessageHTML', (message, html) => {
  * efeitos de uso são recalculados para o novo alvo.
  */
 Hooks.on('targetToken', (usuario) => {
+  if (!automacoesAtivas()) return;
   if (usuario?.id !== game.user.id) return;
   for (const ator of game.actors) {
     if (!ator.isOwner || !poderesDeCombinacao(ator).length) continue;
@@ -3810,6 +3822,7 @@ Hooks.on('targetToken', (usuario) => {
  * o combate.
  */
 Hooks.on('updateCombat', (combate, mudancas) => {
+  if (!automacoesAtivas()) return;
   if (!('round' in mudancas) && !('turn' in mudancas)) return;
 
   // Contadores que valem só no próprio turno saem quando ele acaba
@@ -3839,6 +3852,7 @@ Hooks.on('updateCombat', (combate, mudancas) => {
  * ser a mensagem acompanhada, e a anterior congela no valor que tinha.
  */
 Hooks.on('createChatMessage', (message, options, userId) => {
+  if (!automacoesAtivas()) return;
   if (userId !== game.user.id) return;
   registrarMensagemRetroativa(message).catch((err) =>
     console.error(`${MODULE_ID} | Falha ao registrar mensagem retroativa`, err)
@@ -3847,6 +3861,7 @@ Hooks.on('createChatMessage', (message, options, userId) => {
 
 /** Encontro encerrado → sugere zerar os contadores de "até o fim da cena". */
 Hooks.on('deleteCombat', () => {
+  if (!automacoesAtivas()) return;
   sugerirZerarContadores(game.i18n.localize('T20HaydGMTools.FimCenaCombate')).catch((err) =>
     console.error(`${MODULE_ID} | Falha ao sugerir zerar contadores`, err)
   );
@@ -3854,6 +3869,7 @@ Hooks.on('deleteCombat', () => {
 
 /** Cena ativa trocada → mesma sugestão. */
 Hooks.on('updateScene', (cena, mudancas) => {
+  if (!automacoesAtivas()) return;
   if (mudancas.active !== true) return;
   sugerirZerarContadores(game.i18n.format('T20HaydGMTools.FimCenaTroca', { cena: cena.name })).catch(
     (err) => console.error(`${MODULE_ID} | Falha ao sugerir zerar contadores`, err)
@@ -3865,6 +3881,7 @@ Hooks.on('updateScene', (cena, mudancas) => {
  * Só o cliente que fez a alteração sincroniza (o hook dispara em todos).
  */
 Hooks.on('updateItem', (item, mudancas, options, userId) => {
+  if (!automacoesAtivas()) return;
   if (userId !== game.user.id) return;
   if (!item.actor?.isOwner) return;
   const def = definicaoDe(item);
@@ -3879,6 +3896,7 @@ Hooks.on('updateItem', (item, mudancas, options, userId) => {
 
 /** Remove o efeito órfão quando o poder é apagado da ficha. */
 Hooks.on('deleteItem', (item, options, userId) => {
+  if (!automacoesAtivas()) return;
   if (userId !== game.user.id) return;
   const ator = item.actor;
   if (!ator?.isOwner) return;
@@ -3891,6 +3909,15 @@ Hooks.on('deleteItem', (item, options, userId) => {
 
 /** Registro do diário: id do documento criado no mundo + botão nas configurações. */
 Hooks.once('init', () => {
+  game.settings.register(MODULE_ID, 'automacoesEnabled', {
+    name: 'T20HaydGMTools.SettingAutomacoesEnabledName',
+    hint: 'T20HaydGMTools.SettingAutomacoesEnabledHint',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true
+  });
+
   game.settings.register(MODULE_ID, FLAG_DIARIO, {
     scope: 'world',
     config: false,

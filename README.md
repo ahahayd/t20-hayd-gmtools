@@ -1,11 +1,12 @@
 # T20 Hayd GMTools
 
-Ferramentas de Mestre para o sistema **Tormenta20** no FoundryVTT: oculta dos jogadores os detalhes das rolagens e habilidades das criaturas do Mestre, permite rerolar ou inserir resultados manualmente pelo chat, oferece uma régua opcional para efeitos que ignora diagonais e adiciona um assistente completo de definição de atributos iniciais dos personagens.
+Ferramentas de Mestre para o sistema **Tormenta20** no FoundryVTT: oculta dos jogadores os detalhes das rolagens e habilidades das criaturas do Mestre, permite rerolar ou inserir resultados manualmente pelo chat, oferece uma régua opcional para efeitos que ignora diagonais, adiciona um assistente completo de definição de atributos iniciais dos personagens, e reúne a Ficha do Grupo (ex-T20 Hayd Gestão de Party): estoque compartilhado, transferência de dinheiro/itens entre personagens e distribuição de tesouros gerados.
 
 ## Requisitos
 
 - FoundryVTT **v13**
 - Sistema **Tormenta20**
+- **socketlib** *(obrigatório — instalado automaticamente como dependência; usado pelas transferências entre personagens)*
 - *(Opcional)* **Dice So Nice** — para ocultar também a animação 3D dos dados das criaturas do Mestre
 
 ## Instalação
@@ -93,9 +94,17 @@ A ferramenta só aparece em cenas com grade quadrada — em grade hexagonal ou s
 
 Um botão nas configurações do personagem abre o assistente de atributos iniciais, com todos os métodos: **compra por pontos** (com pontos variados), **rolagens do Livro Básico** e as variantes do **Heróis de Arton** (Clássica e Épica, p. 280; Valkaria e Nimb, p. 281 — com rolagem individual de cada dado) e o **arranjo de Khalmyr**. O assistente escreve apenas os valores base; o bônus racial continua por sua conta.
 
+### Ficha do Grupo
+
+Crie uma pasta na barra lateral de *Atores* com os personagens do grupo e registre-a em *Configurar → Configurações → T20 Hayd GMTools → Gerenciar Parties*. A Ficha do Grupo reúne retrato, PV/PM/carga, Defesa, Deslocamento, testes de Fortitude/Reflexos/Vontade/Percepção/Iniciativa e sentidos especiais de cada personagem, um **estoque compartilhado** (arraste itens da ficha para o estoque e de volta, ou de um compêndio direto para o estoque) e, numa aba exclusiva do Mestre, ferramentas de distribuir dinheiro, aplicar descanso em grupo, pedir testes de perícia e **gerar tesouros direto para o estoque** (veja "Gerador de tesouros" abaixo).
+
+A **transferência de dinheiro e itens entre personagens** — o botão de enviar dinheiro na ficha, o "Enviar para..." no menu de contexto dos itens, e arrastar itens entre fichas ou para um token no mapa — é nativa do GMTools e funciona **mesmo com a Ficha do Grupo desligada**; só a janela e o botão que a abrem dependem do interruptor.
+
+A Ficha do Grupo pode ser desligada em *Configurar → Configurações → T20 Hayd GMTools → Ativar Ficha do Grupo*. Sem nenhuma party configurada, ela já se comporta como se não existisse — não é preciso desligar nada num mundo novo.
+
 ### Configurações
 
-Em *Configurar → Configurações → T20 Hayd GMTools*, o Mestre define o **nível de metagame**, se jogadores podem rerolar/inserir resultados nas próprias rolagens, se a **régua para efeitos** existe na mesa, o método de atributos padrão da campanha (destacado no assistente), os pontos sugeridos e as tabelas de custo/conversão personalizadas.
+Em *Configurar → Configurações → T20 Hayd GMTools*, o Mestre define o **nível de metagame**, se jogadores podem rerolar/inserir resultados nas próprias rolagens, se a **régua para efeitos** existe na mesa, se as **automações de itens** e a **Ficha do Grupo** estão ativas, o método de atributos padrão da campanha (destacado no assistente), os pontos sugeridos e as tabelas de custo/conversão personalizadas.
 
 ## Detalhes adicionais
 

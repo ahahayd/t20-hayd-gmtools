@@ -1,0 +1,69 @@
+<div class="t20g-tesouro-body">
+<div class="t20g-tesouro-vinculos-topo">
+  <div class="form-group">
+    <label>{{localize "T20HaydGMTools.TesourosTabela"}}</label>
+    <select name="filtroTabela">
+      {{#each tabelasOpcoes as |opcao|}}
+        <option value="{{opcao.id}}" {{#if (eq opcao.id ../tabelaFiltro)}}selected{{/if}}>{{opcao.label}}</option>
+      {{/each}}
+    </select>
+  </div>
+  <div class="form-group">
+    <label>{{localize "T20HaydGMTools.TesourosStatus"}}</label>
+    <select name="filtroStatus">
+      <option value="pendentes" {{#if (eq statusFiltro "pendentes")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosPendentes"}}</option>
+      <option value="todos" {{#if (eq statusFiltro "todos")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosTodos"}}</option>
+      <option value="sem-vinculo" {{#if (eq statusFiltro "sem-vinculo")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosSemVinculo"}}</option>
+      <option value="ambiguo" {{#if (eq statusFiltro "ambiguo")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosAmbiguo"}}</option>
+      <option value="vinculado" {{#if (eq statusFiltro "vinculado")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosVinculado"}}</option>
+      <option value="sem-vinculo-forcado" {{#if (eq statusFiltro "sem-vinculo-forcado")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosSemVinculoForcado"}}</option>
+    </select>
+  </div>
+  <button type="button" data-action="filtrar"><i class="fa-solid fa-filter"></i> {{localize "T20HaydGMTools.TesourosFiltrar"}}</button>
+</div>
+
+<div class="t20g-tesouro-vinculos-resumo">
+  <span class="t20g-badge t20g-sem">{{totais.semVinculo}} {{localize "T20HaydGMTools.TesourosSemVinculo"}}</span>
+  <span class="t20g-badge t20g-ambiguo">{{totais.ambiguo}} {{localize "T20HaydGMTools.TesourosAmbiguo"}}</span>
+  <span class="t20g-badge t20g-ok">{{totais.vinculado}} {{localize "T20HaydGMTools.TesourosVinculado"}}</span>
+</div>
+
+<div class="t20g-tesouro-vinculos-lista">
+  {{#each linhas as |linha|}}
+    <div class="t20g-tesouro-vinculo-linha" data-tabela="{{linha.tabelaId}}" data-chave="{{linha.chave}}">
+      <div class="t20g-tesouro-vinculo-info">
+        <div class="t20g-tesouro-vinculo-nome">{{linha.nome}}</div>
+        <div class="t20g-hint">
+          {{linha.tabelaLabel}}{{#if linha.fonte}} · {{linha.fonte}}{{/if}}
+        </div>
+      </div>
+
+      <span class="t20g-badge {{linha.status}}">{{linha.statusLabel}}</span>
+
+      {{#if linha.ambiguo}}
+        <select name="candidato">
+          {{#each linha.candidatos as |c|}}
+            <option value="{{c.uuid}}">{{c.nome}}</option>
+          {{/each}}
+        </select>
+        <button type="button" data-action="usarCandidato">{{localize "T20HaydGMTools.TesourosUsar"}}</button>
+      {{/if}}
+
+      <div class="t20g-tesouro-drop t20g-tesouro-drop-compacto" data-drop data-tabela="{{linha.tabelaId}}" data-chave="{{linha.chave}}">
+        <i class="fa-solid fa-hand-pointer"></i> {{localize "T20HaydGMTools.TesourosArrasteAqui"}}
+      </div>
+
+      <button type="button" data-action="usarSemVinculo" title="{{localize 'T20HaydGMTools.TesourosUsarSemVinculo'}}">
+        <i class="fa-solid fa-link-slash"></i>
+      </button>
+      {{#if linha.temOverride}}
+        <button type="button" data-action="limparOverride" title="{{localize 'T20HaydGMTools.TesourosLimparOverride'}}">
+          <i class="fa-solid fa-eraser"></i>
+        </button>
+      {{/if}}
+    </div>
+  {{else}}
+    <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosNenhumaLinha"}}</p>
+  {{/each}}
+</div>
+</div>

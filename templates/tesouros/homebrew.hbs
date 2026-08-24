@@ -1,0 +1,53 @@
+<div class="t20g-tesouro-body">
+<div class="form-group">
+  <label>{{localize "T20HaydGMTools.TesourosTabela"}}</label>
+  {{!-- Sem data-action: no ApplicationV2 ele dispara no CLIQUE, e abrir o
+       dropdown já é um clique — o re-render fechava a lista antes da escolha.
+       A troca é ligada no evento `change`, em _onRender. --}}
+  <select name="tabela">
+    {{#each tabelas as |t|}}
+      <option value="{{t.id}}" {{#if (eq t.id ../tabelaId)}}selected{{/if}}>{{t.label}}</option>
+    {{/each}}
+  </select>
+</div>
+
+<p class="t20g-hint">
+  {{localize "T20HaydGMTools.TesourosHomebrewDado" dadoOficial=dadoOficial dadoAtual=dadoAtual}}
+</p>
+
+<div class="t20g-tesouro-homebrew-lista">
+  {{#each entradas as |e|}}
+    <div class="t20g-tesouro-homebrew-linha">
+      <span class="t20g-tesouro-homebrew-faixa">{{e.faixa}}</span>
+      <div class="t20g-tesouro-vinculo-info">
+        <div class="t20g-tesouro-vinculo-nome">{{e.nome}}</div>
+        {{#if e.fonte}}<div class="t20g-hint">{{e.fonte}}</div>{{/if}}
+      </div>
+      <button type="button" data-action="remover" data-indice="{{e.indice}}" title="{{localize 'T20HaydGMTools.TesourosRemover'}}">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    </div>
+  {{else}}
+    <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosHomebrewNenhumaEntrada"}}</p>
+  {{/each}}
+</div>
+
+<fieldset class="t20g-tesouro-homebrew-novo">
+  <legend>{{localize "T20HaydGMTools.TesourosHomebrewNova"}}</legend>
+  <div class="form-group">
+    <label>{{localize "T20HaydGMTools.TesourosHomebrewNome"}}</label>
+    <input type="text" name="novoNome" placeholder="{{localize 'T20HaydGMTools.TesourosHomebrewNomePlaceholder'}}" />
+  </div>
+  <div class="t20g-tesouro-homebrew-fonte-campos">
+    <div class="form-group">
+      <label>{{localize "T20HaydGMTools.TesourosHomebrewLivro"}}</label>
+      <input type="text" name="novoLivro" />
+    </div>
+    <div class="form-group">
+      <label>{{localize "T20HaydGMTools.TesourosHomebrewPagina"}}</label>
+      <input type="number" name="novaPagina" min="1" />
+    </div>
+  </div>
+  <button type="button" data-action="adicionar"><i class="fa-solid fa-plus"></i> {{localize "T20HaydGMTools.TesourosHomebrewAdicionar"}}</button>
+</fieldset>
+</div>

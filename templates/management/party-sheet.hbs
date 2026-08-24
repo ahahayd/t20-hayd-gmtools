@@ -1,0 +1,167 @@
+<div class="thm-sheet-root">
+<nav class="tabs" data-group="primary">
+  <a data-action="changeTab" data-group="primary" data-tab="members" class="{{#if (eq tab "members")}}active{{/if}}">
+    <i class="fa-solid fa-users"></i> {{localize "THM.TabMembers"}}
+  </a>
+  <a data-action="changeTab" data-group="primary" data-tab="inventory" class="{{#if (eq tab "inventory")}}active{{/if}}">
+    <i class="fa-solid fa-box-open"></i> {{localize "THM.TabInventory"}}
+  </a>
+  {{#if isGM}}
+  <a data-action="changeTab" data-group="primary" data-tab="gm" class="{{#if (eq tab "gm")}}active{{/if}}">
+    <i class="fa-solid fa-crown"></i> {{localize "THM.TabGm"}}
+  </a>
+  {{/if}}
+</nav>
+
+<section class="tab {{#if (eq tab "members")}}active{{/if}}" data-group="primary" data-tab="members">
+  <div class="thm-members">
+    {{#each members}}
+    <div class="thm-member-card" data-actor-id="{{this.id}}">
+      <img class="thm-portrait" src="{{this.img}}" alt="{{this.name}}" data-action="openActor" data-actor-id="{{this.id}}" />
+      <div class="thm-member-info">
+        <div class="thm-member-header">
+          <div class="thm-member-name">
+            {{this.name}}
+            {{#if this.level}}<span class="thm-member-level">{{localize "THM.Level"}} {{this.level}}</span>{{/if}}
+          </div>
+          <div class="thm-badge-row">
+            <div class="thm-icon-badge thm-desloc-badge" data-tooltip-html="<strong>{{localize 'THM.Movement'}}</strong>{{#each this.desloc.linhas}}<br>{{this}}{{else}}<br>{{localize 'THM.MovementNone'}}{{/each}}">
+              <i class="fa-solid fa-shoe-prints"></i>
+              <span class="thm-badge-value">{{this.desloc.maxLabel}}</span>
+            </div>
+            <div class="thm-icon-badge thm-defesa-badge" data-tooltip="{{localize 'THM.Defense'}}">
+              <i class="fa-solid fa-shield"></i>
+              <span class="thm-badge-value">{{this.defesa}}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="thm-stat-strip">
+          <span class="thm-stat" data-tooltip="{{localize 'THM.SaveFortitude'}}">
+            <i class="fa-solid fa-heart-pulse"></i>{{this.fort}}
+          </span>
+          <span class="thm-stat" data-tooltip="{{localize 'THM.SaveReflexes'}}">
+            <i class="fa-solid fa-person-running"></i>{{this.refl}}
+          </span>
+          <span class="thm-stat" data-tooltip="{{localize 'THM.SaveWill'}}">
+            <i class="fa-solid fa-brain"></i>{{this.vont}}
+          </span>
+          <span class="thm-stat-sep"></span>
+          <span class="thm-stat" data-tooltip="{{localize 'THM.Perception'}}">
+            <i class="fa-solid fa-eye"></i>{{this.percepcao}}
+          </span>
+          <span class="thm-stat" data-tooltip="{{localize 'THM.Initiative'}}">
+            <i class="fa-solid fa-bolt"></i>{{this.iniciativa}}
+          </span>
+        </div>
+
+        {{#if this.sentidos.length}}
+        <div class="thm-senses-row">
+          {{#each this.sentidos}}
+          <span class="thm-sense-pill" data-tooltip="{{this.label}}"><i class="fa-solid {{this.icon}}"></i> {{this.label}}</span>
+          {{/each}}
+        </div>
+        {{/if}}
+
+        {{#unless ../hideBars}}
+        <div class="thm-bars">
+          <div class="thm-bar thm-pv" title="PV">
+            <div class="thm-bar-fill" style="width: {{this.pv.pct}}%"></div>
+            <span class="thm-bar-label">{{this.pv.label}}</span>
+          </div>
+          <div class="thm-bar thm-pm" title="PM">
+            <div class="thm-bar-fill" style="width: {{this.pm.pct}}%"></div>
+            <span class="thm-bar-label">{{this.pm.label}}</span>
+          </div>
+          {{#if this.carga}}
+          <div class="thm-bar thm-carga {{#if this.carga.encumbered}}thm-encumbered{{/if}}" title="{{localize 'THM.Encumbrance'}}">
+            <div class="thm-bar-fill" style="width: {{this.carga.pct}}%"></div>
+            <span class="thm-bar-label">{{this.carga.label}}</span>
+          </div>
+          {{/if}}
+        </div>
+        {{/unless}}
+      </div>
+    </div>
+    {{else}}
+    <p class="thm-empty">{{localize "THM.NoMembers"}}</p>
+    {{/each}}
+  </div>
+</section>
+
+<section class="tab {{#if (eq tab "inventory")}}active{{/if}}" data-group="primary" data-tab="inventory">
+  <div class="thm-money-row">
+    {{#if showTl}}
+    <span class="thm-coin thm-coin-tl" title="{{localize 'THM.CoinTL'}}"><i class="fa-solid fa-coins"></i> {{money.tl}} TL</span>
+    {{/if}}
+    <span class="thm-coin thm-coin-to" title="{{localize 'THM.CoinTO'}}"><i class="fa-solid fa-coins"></i> {{money.to}} TO</span>
+    <span class="thm-coin thm-coin-tp" title="{{localize 'THM.CoinTP'}}"><i class="fa-solid fa-coins"></i> {{money.tp}} TP</span>
+    <span class="thm-coin thm-coin-tc" title="{{localize 'THM.CoinTC'}}"><i class="fa-solid fa-coins"></i> {{money.tc}} TC</span>
+    <div class="thm-money-actions">
+      <button type="button" data-action="depositMoney" title="{{localize 'THM.DepositMoneyTitle'}}">
+        <i class="fa-solid fa-arrow-down"></i> {{localize "THM.DepositMoney"}}
+      </button>
+      <button type="button" data-action="withdrawMoney" title="{{localize 'THM.WithdrawMoneyTitle'}}">
+        <i class="fa-solid fa-arrow-up"></i> {{localize "THM.WithdrawMoney"}}
+      </button>
+      {{#if isGM}}
+      <button type="button" class="thm-edit-money" data-action="editStashMoney" title="{{localize 'THM.EditStashMoneyTitle'}}">
+        <i class="fa-solid fa-pen"></i>
+      </button>
+      {{/if}}
+    </div>
+  </div>
+
+  <div class="thm-inv-list">
+    {{#each items}}
+    <div class="thm-inv-item" data-item-id="{{this.id}}" draggable="true">
+      <img src="{{this.img}}" alt="{{this.name}}" />
+      <span class="thm-item-name">{{this.name}}</span>
+      <span class="thm-item-qty">×{{this.qtd}}</span>
+      <span class="thm-item-type">{{this.typeLabel}}</span>
+      <button type="button" class="thm-send-money-btn" data-action="sendStashItem" data-item-id="{{this.id}}" title="{{localize 'THM.SendTo'}}">
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+      {{#if ../isGM}}
+      <button type="button" class="thm-send-money-btn" data-action="editStashItem" data-item-id="{{this.id}}" title="{{localize 'THM.EditItem'}}">
+        <i class="fa-solid fa-pen"></i>
+      </button>
+      <button type="button" class="thm-send-money-btn thm-danger" data-action="deleteStashItem" data-item-id="{{this.id}}" title="{{localize 'THM.DeleteItem'}}">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+      {{/if}}
+    </div>
+    {{else}}
+    <p class="thm-empty">{{localize "THM.NoItems"}}</p>
+    {{/each}}
+  </div>
+</section>
+
+{{#if isGM}}
+<section class="tab {{#if (eq tab "gm")}}active{{/if}}" data-group="primary" data-tab="gm">
+  <div class="thm-gm-tools">
+    <button type="button" data-action="gmDistribute">
+      <i class="fa-solid fa-hand-holding-dollar"></i>
+      <span>{{localize "THM.DistributeMoneyTitle"}}</span>
+      <small>{{localize "THM.DistributeMoneyDesc"}}</small>
+    </button>
+    <button type="button" data-action="gmRest">
+      <i class="fa-solid fa-bed"></i>
+      <span>{{localize "THM.PartyRestTitle"}}</span>
+      <small>{{localize "THM.PartyRestDesc"}}</small>
+    </button>
+    <button type="button" data-action="gmSkillTest">
+      <i class="fa-solid fa-dice-d20"></i>
+      <span>{{localize "THM.SkillRequestTitle"}}</span>
+      <small>{{localize "THM.SkillRequestDesc"}}</small>
+    </button>
+    <button type="button" data-action="gmTreasure">
+      <i class="fa-solid fa-sack-dollar"></i>
+      <span>{{localize "THM.GenerateTreasureTitle"}}</span>
+      <small>{{localize "THM.GenerateTreasureDesc"}}</small>
+    </button>
+    <p class="thm-hint">{{localize "THM.GmToolsHint"}}</p>
+  </div>
+</section>
+{{/if}}
+</div>
