@@ -3,7 +3,13 @@
   <section class="t20g-tesouro-sidebar-grupo">
     <h3><i class="fa-solid fa-sliders"></i> {{localize "T20HaydGMTools.TesourosConfiguracao"}}</h3>
     <div class="form-group">
-      <label>{{localize "T20HaydGMTools.TesourosND"}}</label>
+      <label>
+        {{localize "T20HaydGMTools.TesourosND"}}
+        {{!-- Os modificadores do livro deixaram de ser opção do gerador; o
+              tooltip explica como fazer cada um com o que existe hoje. --}}
+        <i class="fa-solid fa-circle-question t20g-tesouro-ajuda"
+           data-tooltip="{{localize 'T20HaydGMTools.TesourosTiposDica'}}"></i>
+      </label>
       <select name="nd">
         {{#each ordemND as |valor|}}
           <option value="{{valor}}" {{#if (eq valor ../nd)}}selected{{/if}}>{{valor}}</option>
@@ -13,13 +19,15 @@
     <div class="form-group">
       <label>{{localize "T20HaydGMTools.TesourosModoRolagem"}}</label>
       <select name="modoRolagem">
+        <option value="rapido" {{#if (eq modoRolagem "rapido")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosModoRapido"}}</option>
         <option value="auto" {{#if (eq modoRolagem "auto")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosModoAutomatico"}}</option>
         <option value="passo" {{#if (eq modoRolagem "passo")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosModoPassoAPasso"}}</option>
       </select>
-      {{!-- A dica é só do modo selecionado: mostrar as duas de uma vez
-           obrigava a ler a que não interessa. --}}
+      {{!-- A dica é só do modo selecionado. --}}
       {{#if (eq modoRolagem "passo")}}
         <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosModoPassoAPassoDica"}}</p>
+      {{else if (eq modoRolagem "rapido")}}
+        <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosModoRapidoDica"}}</p>
       {{else}}
         <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosModoAutomaticoDica"}}</p>
       {{/if}}
@@ -27,9 +35,16 @@
   </section>
 
   <section class="t20g-tesouro-sidebar-acoes">
-    <button type="button" class="t20g-botao-principal" data-action="iniciar" {{#if ocupado}}disabled{{/if}}>
-      <i class="fa-solid fa-dice-d20"></i> {{localize "T20HaydGMTools.TesourosRolarTudo"}}
-    </button>
+    {{!-- Enquanto rola, o botão vira "cancelar" em vez de ficar desabilitado. --}}
+    {{#if ocupado}}
+      <button type="button" class="t20g-botao-principal t20g-botao-cancelar" data-action="cancelarRolagens">
+        <i class="fa-solid fa-ban"></i> {{localize "T20HaydGMTools.TesourosCancelarRolagens"}}
+      </button>
+    {{else}}
+      <button type="button" class="t20g-botao-principal" data-action="iniciar">
+        <i class="fa-solid fa-dice-d20"></i> {{localize "T20HaydGMTools.TesourosRolarTudo"}}
+      </button>
+    {{/if}}
     <button type="button" data-action="limpar">
       <i class="fa-solid fa-trash"></i> {{localize "T20HaydGMTools.TesourosLimpar"}}
     </button>
@@ -42,25 +57,27 @@
     {{else}}
       <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosSemTotal"}}</p>
     {{/if}}
-    <div class="form-group">
-      <label>{{localize "T20HaydGMTools.TesourosConcederA"}}</label>
-      <select name="destino">
-        <option value="">—</option>
-        {{#each destinos as |destino|}}
-          <option value="{{destino.value}}" {{#if (eq destino.value ../destinoAtual)}}selected{{/if}}>{{destino.label}}</option>
-        {{/each}}
-      </select>
-    </div>
-    <button type="button" class="t20g-botao-principal" data-action="conceder" {{#unless temTesouro}}disabled{{/unless}}>
-      <i class="fa-solid fa-gift"></i> {{localize "T20HaydGMTools.TesourosConceder"}}
-    </button>
-    {{#if temParty}}
-      <button type="button" data-action="distribuir" {{#unless temTesouro}}disabled{{/unless}}>
-        <i class="fa-solid fa-people-arrows"></i> {{localize "T20HaydGMTools.TesourosDistribuirParty"}}
-      </button>
+
+    {{!-- Com grupos configurados, o tesouro é do grupo; sem nenhum, os
+          destinos são os personagens de jogador. Nos dois casos o Mestre pode
+          arrastar atores ou uma pasta para incluir convidados. --}}
+    {{#if temGrupos}}
+      <div class="form-group">
+        <label>{{localize "T20HaydGMTools.TesourosGrupo"}}</label>
+        <select name="escopo">
+          {{#each grupos as |g|}}
+            <option value="{{g.value}}" {{#if (eq g.value ../escopo)}}selected{{/if}}>{{g.label}}</option>
+          {{/each}}
+        </select>
+      </div>
     {{/if}}
+    <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosArrastarAtoresDica"}}</p>
+
     <button type="button" data-action="postar" {{#unless temTesouro}}disabled{{/unless}}>
       <i class="fa-solid fa-comment"></i> {{localize "T20HaydGMTools.TesourosPostar"}}
+    </button>
+    <button type="button" class="t20g-botao-principal" data-action="distribuir" {{#unless temTesouro}}disabled{{/unless}}>
+      <i class="fa-solid fa-people-arrows"></i> {{localize "T20HaydGMTools.TesourosDistribuirConfirmar"}}
     </button>
   </section>
 </aside>
@@ -123,7 +140,8 @@
 
     <div class="t20g-tesouro-coluna-lista">
       {{#each this.lista as |entrada|}}
-        <div class="t20g-tesouro-entrada">
+        {{!-- O tooltip traz a cadeia inteira de dados que levou a este resultado. --}}
+        <div class="t20g-tesouro-entrada" {{#if entrada.trilha}}data-tooltip="{{entrada.trilha}}" data-tooltip-direction="LEFT"{{/if}}>
           <div class="t20g-tesouro-entrada-topo">
             <span class="t20g-hint">
               d% = {{entrada.rolagem}}{{#if entrada.manual}} ({{localize "T20HaydGMTools.TesourosManualCurto"}}){{/if}}
@@ -132,9 +150,12 @@
               <button type="button" data-action="colunaRerolar" data-coluna="{{../chave}}" data-entrada-id="{{entrada.id}}" title="{{localize 'T20HaydGMTools.TesourosRerolar'}}">
                 <i class="fa-solid fa-rotate"></i>
               </button>
+              {{!-- Cortar pela metade só faz sentido em dinheiro. --}}
+              {{#if entrada.dinheiro}}
               <button type="button" data-action="metade" data-coluna="{{../chave}}" data-entrada-id="{{entrada.id}}" title="{{localize 'T20HaydGMTools.TesourosMetadeDica'}}">
                 <i class="fa-solid fa-scissors"></i>
               </button>
+              {{/if}}
               <button type="button" data-action="colunaRemover" data-coluna="{{../chave}}" data-entrada-id="{{entrada.id}}" title="{{localize 'T20HaydGMTools.TesourosRemover'}}">
                 <i class="fa-solid fa-xmark"></i>
               </button>
@@ -149,32 +170,120 @@
             <div class="t20g-tesouro-dinheiro">
               <i class="fa-solid fa-coins"></i>
               <strong>{{entrada.dinheiro.valor}} {{entrada.dinheiro.moeda}}</strong>
-              {{#if entrada.dinheiro.metadeAplicada}}<span class="t20g-hint">({{localize "T20HaydGMTools.TesourosModMetade"}})</span>{{/if}}
+              {{#if entrada.dinheiro.metadeAplicada}}
+                <span class="t20g-tesouro-cortado" title="{{localize 'T20HaydGMTools.TesourosMetadeMarcadorDica'}}">
+                  <i class="fa-solid fa-scissors"></i>
+                  {{#if entrada.dinheiro.original}}<del>{{entrada.dinheiro.original}}</del>{{/if}}
+                </span>
+              {{/if}}
             </div>
           {{/if}}
 
           {{#if entrada.grupo}}
             <div class="t20g-tesouro-grupo">
-              <p class="t20g-hint">{{entrada.grupo.rotulo}} ({{entrada.grupo.itens.length}})</p>
-              {{#each entrada.grupo.itens}}
-                {{> no-card this}}
-              {{/each}}
+              <span class="t20g-hint">{{entrada.grupo.rotulo}}</span>
+              {{#each entrada.grupo.itens}}{{> no-card this}}{{/each}}
             </div>
           {{/if}}
 
-          {{#if entrada.no}}
-            {{> no-card entrada.no}}
-          {{/if}}
+          {{#if entrada.no}}{{> no-card entrada.no}}{{/if}}
         </div>
       {{else}}
-        <p class="t20g-hint t20g-tesouro-coluna-vazia">{{localize "T20HaydGMTools.TesourosColunaVazia"}}</p>
+        <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosColunaVazia"}}</p>
       {{/each}}
     </div>
   </section>
 {{/inline}}
 
-<main class="t20g-tesouro-principal">
-  {{> coluna-card colDinheiroCtx}}
-  {{> coluna-card colItensCtx}}
-</main>
+<div class="t20g-tesouro-principal">
+  {{!-- Metade de cima: o que foi gerado. Rola por dentro. --}}
+  <div class="t20g-tesouro-resultado">
+    {{> coluna-card colDinheiroCtx}}
+    {{> coluna-card colItensCtx}}
+  </div>
+
+  {{!-- Metade de baixo: para onde vai cada coisa. Também rola por dentro. --}}
+  {{#if temTesouro}}
+  <section class="t20g-dist2">
+    <div class="t20g-dist2-topo">
+      <h3><i class="fa-solid fa-people-arrows"></i> {{localize "T20HaydGMTools.TesourosDistribuirTitulo"}}</h3>
+      {{#if moedasEmUso.length}}
+        <div class="t20g-dist2-moedas-acoes">
+          <button type="button" data-action="dividirIgual">
+            <i class="fa-solid fa-scale-balanced"></i> {{localize "T20HaydGMTools.TesourosDividirIgual"}}
+          </button>
+          <button type="button" data-action="zerarMoedas">
+            <i class="fa-solid fa-eraser"></i> {{localize "T20HaydGMTools.TesourosZerarMoedas"}}
+          </button>
+        </div>
+      {{/if}}
+    </div>
+
+    <p class="t20g-dist2-disputa" data-disputa>
+      {{#if disputa.length}}
+        <i class="fa-solid fa-triangle-exclamation"></i>
+        {{localize "T20HaydGMTools.TesourosEmDisputa"}}:
+        {{#each disputa}}<b>{{this.valor}} {{this.rotulo}}</b>{{#unless @last}}, {{/unless}}{{/each}}
+      {{/if}}
+    </p>
+
+    <div class="t20g-dist2-colunas">
+      {{#each destinos as |d|}}
+        <div class="t20g-dist2-coluna {{#if d.recem}}t20g-dist2-novo{{/if}} {{#if d.desativado}}t20g-dist2-desativado{{/if}}" data-bolso="{{d.id}}">
+          <header class="t20g-dist2-coluna-topo">
+            <img src="{{d.img}}" width="24" height="24" />
+            <span class="t20g-dist2-nome">{{d.nome}}</span>
+            {{!-- Marca quem não é do grupo, para não parecer que a pasta mudou. --}}
+            {{#if d.convidado}}
+              <span class="t20g-dist2-convidado">{{localize "T20HaydGMTools.TesourosConvidado"}}</span>
+            {{/if}}
+            {{#if d.podeDesativar}}
+              {{!-- Membro do grupo não some: fica apagado e volta com um clique. --}}
+              <button type="button" class="t20g-dist2-botao" data-action="alternarAtor" data-actor-id="{{d.actorId}}"
+                      title="{{#if d.desativado}}{{localize 'T20HaydGMTools.TesourosIncluirAtor'}}{{else}}{{localize 'T20HaydGMTools.TesourosTirarAtor'}}{{/if}}">
+                <i class="fa-solid {{#if d.desativado}}fa-user-plus{{else}}fa-user-minus{{/if}}"></i>
+              </button>
+            {{/if}}
+            {{#if d.removivel}}
+              <button type="button" class="t20g-dist2-botao" data-action="removerAtor" data-actor-id="{{d.actorId}}"
+                      title="{{localize 'T20HaydGMTools.TesourosRemoverAtor'}}">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            {{/if}}
+          </header>
+
+          {{#if d.moedas.length}}
+            <div class="t20g-dist2-moedas-campos">
+              {{#each d.moedas}}
+                <label class="t20g-dist2-moeda">
+                  <span>{{this.rotulo}}</span>
+                  <input type="number" min="0" step="1" value="{{this.valor}}"
+                         data-moeda="{{this.chave}}" data-bolso="{{d.id}}" />
+                </label>
+              {{/each}}
+            </div>
+          {{/if}}
+
+          <div class="t20g-dist2-itens">
+            {{#each d.itens as |it|}}
+              <div class="t20g-dist2-item" draggable="true" data-item-uid="{{it.id}}">
+                <img src="{{it.img}}" width="22" height="22" />
+                <span class="t20g-dist2-item-nome">{{it.nome}}</span>
+                {{#if it.extra}}
+                  <button type="button" data-action="removerExtra" data-uid="{{it.id}}"
+                          title="{{localize 'T20HaydGMTools.TesourosRemover'}}">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                {{/if}}
+              </div>
+            {{else}}
+              <p class="t20g-hint t20g-dist2-vazio">{{localize "T20HaydGMTools.TesourosSolteAqui"}}</p>
+            {{/each}}
+          </div>
+        </div>
+      {{/each}}
+    </div>
+  </section>
+  {{/if}}
+</div>
 </div>

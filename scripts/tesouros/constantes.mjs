@@ -11,6 +11,26 @@ export const FLAG_PEDIDO_ROLAGEM = 'tesouroRequestId';
 /** Setting de mundo: overrides de vínculo item de compêndio ↔ entrada de tabela. */
 export const SETTING_VINCULOS = 'tesourosVinculos';
 
+/** Setting de mundo: quais livros-fonte entram nas rolagens ({ [livro]: boolean }). */
+export const SETTING_LIVROS = 'tesourosLivros';
+
+/** Livro básico do sistema — os itens dele vêm nos compêndios do próprio T20. */
+export const LIVRO_BASE = 'Tormenta20';
+
+/**
+ * Livros que aparecem como fonte nas tabelas de tesouro.
+ *
+ * Mesa que não usa um deles pode desligá-lo: as entradas daquele livro saem do
+ * sorteio, e o espaço delas é redividido entre as que ficam (ver
+ * `redistribuirFaixas`) — o dado continua o mesmo e nada é rerrolado.
+ */
+export const LIVROS = [
+  'Tormenta20',
+  'Heróis de Arton',
+  'Deuses de Arton',
+  'Ameaças de Arton'
+];
+
 /** Tipos de item que contam como inventário físico (mesmo critério do t20-hayd-management). */
 export const TIPOS_INVENTARIO = ['arma', 'equipamento', 'consumivel', 'tesouro'];
 

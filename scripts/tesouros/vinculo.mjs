@@ -11,8 +11,9 @@
  * isso, abrir o menu de Vínculos rolava a comparação de ~850 entradas do
  * catálogo contra TODO o índice a cada clique (filtro, arrastar item...).
  */
-import { MODULE_ID, SETTING_VINCULOS } from './constantes.mjs';
+import { MODULE_ID, SETTING_VINCULOS, LIVRO_BASE } from './constantes.mjs';
 import { normalizarTexto, bigramas, similaridadeDeConjuntos } from './utils.mjs';
+import { apelidoDe, nuncaVincula } from './apelidos.mjs';
 import { iconeTesouroAleatorio, ICONE_TESOURO_PADRAO } from './dados-icones.mjs';
 import { TABELAS, entradasResolvidas } from './tabelas.mjs';
 
@@ -62,20 +63,23 @@ export function invalidarIndiceItens() {
 
 async function construirIndice() {
   const mapa = new Map();
-  const add = (nome, uuid, img) => {
+  // `sistema` marca item vindo de compêndio do PRÓPRIO sistema — é o que
+  // desempata quando um módulo de conteúdo repete um item do livro básico.
+  const add = (nome, uuid, img, sistema = false) => {
     const key = normalizarTexto(nome);
     if (!key) return;
     if (!mapa.has(key)) mapa.set(key, { entradas: [], bigramas: bigramas(key) });
-    mapa.get(key).entradas.push({ nome, uuid, img });
+    mapa.get(key).entradas.push({ nome, uuid, img, sistema });
   };
   for (const item of game.items ?? []) add(item.name, item.uuid, item.img);
   for (const pack of game.packs.filter(p => p.documentName === 'Item')) {
     let index;
     try { index = await pack.getIndex({ fields: ['img'] }); }
     catch { continue; }
+    const doSistema = pack.metadata?.packageType === 'system';
     for (const entry of index) {
       const uuid = entry.uuid ?? `Compendium.${pack.metadata.id}.Item.${entry._id}`;
-      add(entry.name, uuid, entry.img);
+      add(entry.name, uuid, entry.img, doSistema);
     }
   }
   return mapa;
@@ -145,6 +149,20 @@ export async function definirOverride(tabelaId, chave, uuidOuNenhum) {
   await game.settings.set(MODULE_ID, SETTING_VINCULOS, overrides);
 }
 
+/**
+ * Apaga TODOS os vínculos manuais e força a reconstrução do índice.
+ *
+ * É a saída para quando a busca automática ficou defasada — compêndio novo
+ * instalado, itens renomeados, ou uma regra de busca que mudou (as poções
+ * ganharam prefixo, por exemplo). Custa uma varredura completa dos
+ * compêndios, então quem chama deve avisar que pode demorar.
+ */
+export async function resetarVinculos() {
+  await game.settings.set(MODULE_ID, SETTING_VINCULOS, {});
+  invalidarIndiceItens();
+  await garantirIndice();
+}
+
 export async function limparOverride(tabelaId, chave) {
   const overrides = foundry.utils.deepClone(overridesBrutos());
   delete overrides[chaveOverride(tabelaId, chave)];
@@ -168,11 +186,117 @@ function iconeFallback(nome, riqueza) {
  * (lista de itens entre os quais o Mestre pode escolher direto no botão
  * "vincular" da UI, sem precisar arrastar nada).
  */
-export async function resolverReferencia(tabelaId, chave, nome, { riqueza = false } = {}) {
+/**
+ * Nomes a tentar no índice para uma entrada da tabela.
+ *
+ * A tabela de poções lista só o nome da MAGIA ("Curar Ferimentos"), mas os
+ * itens do compêndio são "Poção de Curar Ferimentos" — por isso poção nunca
+ * vinculava. O sufixo entre parênteses diz o recipiente: `(óleo)` vira
+ * "Óleo de", `(granada)` vira "Granada de", e sem sufixo é "Poção de". Os
+ * demais parênteses são anotação de regra ("(2d8+2 PV)") e saem fora.
+ *
+ * As outras variantes entram como alternativa porque o nome no compêndio pode
+ * divergir do recipiente indicado na tabela.
+ */
+const PREFIXOS_POCAO = ['Poção de', 'Óleo de', 'Granada de'];
+
+/** Parêntese que é só quantidade — "Balas (20)" vira "Balas". */
+const PAREN_QUANTIDADE = /\s*\(\s*\d+\s*\)\s*/g;
+
+/**
+ * Parênteses a descartar numa poção: o marcador de recipiente (o prefixo já
+ * carrega essa informação) e a descrição de aprimoramento. O que sobra é
+ * mantido, porque costuma fazer parte do nome no compêndio — "Poção de Curar
+ * Ferimentos (2d8+2 PV)" existe com o "(2d8+2 PV)" mesmo.
+ */
+function limparParentesesPocao(texto) {
+  return texto.replace(/\s*\(([^)]*)\)/g, (todo, dentro) => {
+    const conteudo = dentro.toLowerCase();
+    const soRecipiente = /^\s*(óleo|oleo|granada)\s*$/.test(conteudo);
+    const ehAprimoramento = /aprimoramento/.test(conteudo);
+    const recipienteComAprimoramento = /^\s*(óleo|oleo|granada)\s*;/.test(conteudo);
+    return (soRecipiente || ehAprimoramento || recipienteComAprimoramento) ? ' ' : todo;
+  }).replace(/\s+/g, ' ').trim();
+}
+
+export function nomesDeBusca(tabelaId, nome) {
+  // Apelido explícito manda em tudo (ver apelidos.mjs).
+  const apelido = apelidoDe(nome);
+  if (typeof apelido === 'string') return [apelido];
+
+  const texto = String(nome ?? '');
+
+  if (tabelaId !== 'pocoes') {
+    // "(20)" é anotação de quantidade, não parte do nome do item.
+    const semQuantidade = texto.replace(PAREN_QUANTIDADE, ' ').replace(/\s+/g, ' ').trim();
+    return semQuantidade && semQuantidade !== texto ? [semQuantidade, texto] : [texto];
+  }
+
+  const limpo = limparParentesesPocao(texto);
+  if (!limpo) return [texto];
+
+  const marcadores = (texto.match(/\(([^)]*)\)/g) ?? []).join(' ').toLowerCase();
+  const preferido = /[óo]leo/.test(marcadores) ? 'Óleo de'
+    : /granada/.test(marcadores) ? 'Granada de'
+      : 'Poção de';
+
+  // Sem os parênteses restantes como último recurso: se o compêndio nomeia o
+  // item sem a anotação, ainda assim acha.
+  const semParenteses = limpo.replace(/\s*\([^)]*\)/g, '').replace(/\s+/g, ' ').trim();
+
+  return [...new Set([
+    `${preferido} ${limpo}`,
+    ...PREFIXOS_POCAO.filter(p => p !== preferido).map(p => `${p} ${limpo}`),
+    `${preferido} ${semParenteses}`,
+    limpo
+  ])];
+}
+
+/**
+ * Desempata candidatos preferindo os compêndios do PRÓPRIO SISTEMA.
+ *
+ * Módulos de conteúdo (os que trazem Heróis/Deuses/Ameaças de Arton) às vezes
+ * repetem itens do livro básico. Sem isto, "Espada Longa" existe duas vezes e
+ * o vínculo fica ambíguo para sempre, obrigando o Mestre a escolher à mão algo
+ * que tem resposta óbvia: o item do sistema.
+ *
+ * Só vale para entradas do livro BÁSICO — o item de um livro extra mora no
+ * módulo, e preferir o sistema ali escolheria o item errado.
+ */
+function preferirSistema(candidatos) {
+  const doSistema = candidatos.filter(c => c.sistema);
+  return doSistema.length ? doSistema : candidatos;
+}
+
+/**
+ * Aplica o desempate e recalcula o status.
+ *
+ * Só promove a "vinculado" o que era casamento EXATO (sem `score`) ou fuzzy
+ * forte: sobrar um único candidato fraco depois do filtro não é motivo para
+ * tratá-lo como certo.
+ */
+function desempatarPorSistema(resultado, ehLivroBase) {
+  if (!ehLivroBase || resultado.status === 'sem-vinculo') return resultado;
+
+  const candidatos = preferirSistema(resultado.candidatos);
+  if (candidatos.length !== 1 || candidatos.length === resultado.candidatos.length) {
+    return { ...resultado, candidatos };
+  }
+
+  const unico = candidatos[0];
+  const confiavel = unico.score === undefined || unico.score >= LIMIAR_FORTE;
+  return { status: confiavel ? 'vinculado' : resultado.status, candidatos };
+}
+
+export async function resolverReferencia(tabelaId, chave, nome, { riqueza = false, livro = null } = {}) {
+  const ehLivroBase = livro === LIVRO_BASE;
   const semVinculo = () => ({ status: 'sem-vinculo', uuid: null, nome, img: iconeFallback(nome, riqueza), item: null, candidatos: [] });
 
   // Melhorias/encantos/materiais/riquezas não são itens do sistema — nem tenta buscar.
   if (!tabelaAceitaVinculo(tabelaId)) return semVinculo();
+  // Entrada sem item correspondente no compêndio: melhor sem vínculo do que
+  // deixar o fuzzy apontar para algo parecido e errado.
+  if (nuncaVincula(nome)) return semVinculo();
 
   const override = obterOverride(tabelaId, chave);
   if (override === 'nenhum') return semVinculo();
@@ -182,7 +306,8 @@ export async function resolverReferencia(tabelaId, chave, nome, { riqueza = fals
   }
 
   const idx = await garantirIndice();
-  const r = candidatosParaSync(idx, nome);
+  const r = candidatosResolvidos(idx, tabelaId, nome, livro);
+
   if (r.status === 'vinculado') {
     const c = r.candidatos[0];
     const doc = await fromUuid(c.uuid).catch(() => null);
@@ -192,6 +317,32 @@ export async function resolverReferencia(tabelaId, chave, nome, { riqueza = fals
     return { status: 'ambiguo', uuid: null, nome, img: iconeFallback(nome, riqueza), item: null, candidatos: r.candidatos };
   }
   return semVinculo();
+}
+
+/**
+ * Busca com TODAS as regras aplicadas: variantes de nome (prefixo das poções)
+ * e desempate por compêndio do sistema.
+ *
+ * Fonte única para a rolagem e para o menu de Vínculos — antes o menu chamava
+ * `candidatosParaSync` cru, então mostrava "ambíguo" ou "sem vínculo" em
+ * entradas que a geração resolvia sozinha.
+ */
+function candidatosResolvidos(idx, tabelaId, nome, livro) {
+  // Mesmo curto-circuito da geração: sem isso o menu sugeriria um palpite
+  // fuzzy para entradas que a rolagem deixa sem vínculo de propósito.
+  if (nuncaVincula(nome)) return { status: 'sem-vinculo', candidatos: [] };
+
+  const ehLivroBase = livro === LIVRO_BASE;
+
+  // Tenta cada variante na ordem; um acerto encerra. Os "ambíguos" viram
+  // sugestão caso nenhuma variante case sozinha.
+  let ambiguo = null;
+  for (const variante of nomesDeBusca(tabelaId, nome)) {
+    const r = desempatarPorSistema(candidatosParaSync(idx, variante), ehLivroBase);
+    if (r.status === 'vinculado') return r;
+    if (r.status === 'ambiguo' && !ambiguo) ambiguo = r;
+  }
+  return ambiguo ?? { status: 'sem-vinculo', candidatos: [] };
 }
 
 /* ─── Auditoria (app-vinculos.mjs) ─────────────────────────────────────── */
@@ -204,7 +355,8 @@ function linhaAuditoria(idx, tabelaId, e) {
   if (override) {
     return { tabelaId, chave: e.chave, nome: e.nome, livro: e.livro ?? null, pagina: e.pagina ?? null, status: 'vinculado-manual', candidatos: [], override };
   }
-  const r = candidatosParaSync(idx, e.nome);
+  // Mesmas regras da geração, para o menu não contradizer o que a rolagem faz.
+  const r = candidatosResolvidos(idx, tabelaId, e.nome, e.livro ?? null);
   return { tabelaId, chave: e.chave, nome: e.nome, livro: e.livro ?? null, pagina: e.pagina ?? null, status: r.status, candidatos: r.candidatos, override };
 }
 

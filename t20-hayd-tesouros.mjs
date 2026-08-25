@@ -9,11 +9,13 @@
 import { MODULE_ID } from './scripts/tesouros/constantes.mjs';
 import { registrarHomebrewSettings } from './scripts/tesouros/homebrew.mjs';
 import { registrarVinculoSettings } from './scripts/tesouros/vinculo.mjs';
+import { registrarLivrosSettings } from './scripts/tesouros/livros.mjs';
+import { abrirLivrosTesouros } from './scripts/tesouros/app-livros.mjs';
 import { abrirGeradorTesouros } from './scripts/tesouros/app-gerador.mjs';
 import { abrirVinculosTesouros } from './scripts/tesouros/app-vinculos.mjs';
 import { abrirHomebrewTesouros } from './scripts/tesouros/app-homebrew.mjs';
 import { gerarTesouro } from './scripts/tesouros/motor.mjs';
-import { concederTesouro, postarCardTesouro } from './scripts/tesouros/distribuicao.mjs';
+import { concederTesouro, postarCardTesouro, aplicarBuildPendente } from './scripts/tesouros/distribuicao.mjs';
 // Liga o botão "Rolar" das mensagens de pedido de rolagem (Hooks.on própria).
 import './scripts/tesouros/rolagem-jogador.mjs';
 
@@ -27,6 +29,7 @@ const TOOL = 't20g-tesouros';
 Hooks.once('init', () => {
   registrarHomebrewSettings();
   registrarVinculoSettings();
+  registrarLivrosSettings();
 
   game.settings.registerMenu(MODULE_ID, 'tesourosVinculosMenu', {
     name: 'T20HaydGMTools.TesourosVinculosTitulo',
@@ -36,6 +39,18 @@ Hooks.once('init', () => {
     restricted: true,
     type: class extends foundry.appv1.api.FormApplication {
       async render() { abrirVinculosTesouros(); return this; }
+      async _updateObject() {}
+    }
+  });
+
+  game.settings.registerMenu(MODULE_ID, 'tesourosLivrosMenu', {
+    name: 'T20HaydGMTools.TesourosLivrosTitulo',
+    label: 'T20HaydGMTools.TesourosLivrosMenuBotao',
+    hint: 'T20HaydGMTools.TesourosLivrosMenuDica',
+    icon: 'fa-solid fa-book',
+    restricted: true,
+    type: class extends foundry.appv1.api.FormApplication {
+      async render() { abrirLivrosTesouros(); return this; }
       async _updateObject() {}
     }
   });
@@ -55,7 +70,8 @@ Hooks.once('init', () => {
   foundry.applications.handlebars.loadTemplates([
     `modules/${MODULE_ID}/templates/tesouros/gerador.hbs`,
     `modules/${MODULE_ID}/templates/tesouros/vinculos.hbs`,
-    `modules/${MODULE_ID}/templates/tesouros/homebrew.hbs`
+    `modules/${MODULE_ID}/templates/tesouros/homebrew.hbs`,
+    `modules/${MODULE_ID}/templates/tesouros/livros.hbs`
   ]);
 
   console.log('T20 Hayd GMTools | Gerador de Tesouros inicializado');
@@ -76,6 +92,27 @@ Hooks.once('ready', () => {
       }
     };
   }
+});
+
+/**
+ * Aplica as melhorias/encantos de um item gerado assim que ele vira um Item de
+ * verdade numa ficha.
+ *
+ * É aqui, e não só no momento de conceder, porque o estoque do grupo guarda
+ * dado cru numa flag da pasta — não existe Document para aplicar efeito. O
+ * item saía do gerador com as melhorias roladas, ficava no estoque, e ao ir
+ * para a ficha de alguém chegava sem elas (e sem nem a lista na descrição,
+ * porque o texto é omitido quando o t20-hayd-itens vai aplicá-las de verdade).
+ *
+ * Só o Mestre ativo executa: o hook dispara em todos os clientes, e aplicar em
+ * paralelo duplicaria os efeitos.
+ */
+Hooks.on('createItem', item => {
+  if (item?.parent?.documentName !== 'Actor') return;
+  if (game.user !== game.users.activeGM) return;
+  aplicarBuildPendente(item).catch(err =>
+    console.error('T20 Hayd GMTools | Falha ao aplicar melhorias do item gerado', err)
+  );
 });
 
 /** Ferramenta nos controles de token, ao lado das demais do GMTools — só para o Mestre. */

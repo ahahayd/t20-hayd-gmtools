@@ -6,7 +6,7 @@
  */
 import { MODULE_ID } from './constantes.mjs';
 import { TABELAS, labelTabela } from './tabelas.mjs';
-import { auditarTudo, definirOverride, limparOverride, tabelaAceitaVinculo } from './vinculo.mjs';
+import { auditarTudo, definirOverride, limparOverride, tabelaAceitaVinculo, resetarVinculos } from './vinculo.mjs';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const loc = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
@@ -47,7 +47,9 @@ export class TesourosVinculosApp extends HandlebarsApplicationMixin(ApplicationV
       filtrar: TesourosVinculosApp.#onFiltrar,
       usarCandidato: TesourosVinculosApp.#onUsarCandidato,
       usarSemVinculo: TesourosVinculosApp.#onUsarSemVinculo,
-      limparOverride: TesourosVinculosApp.#onLimparOverride
+      limparOverride: TesourosVinculosApp.#onLimparOverride,
+      abrirItem: TesourosVinculosApp.#onAbrirItem,
+      resetarVinculos: TesourosVinculosApp.#onResetarVinculos
     }
   };
 
@@ -87,6 +89,10 @@ export class TesourosVinculosApp extends HandlebarsApplicationMixin(ApplicationV
       status: STATUS[l.status]?.classe ?? 't20g-sem',
       statusLabel: loc(STATUS[l.status]?.label ?? 'T20HaydGMTools.TesourosSemVinculo'),
       ambiguo: l.status === 'ambiguo',
+      // Uuid do item de fato vinculado, para abrir a ficha pelo nome. Vínculo
+      // manual guarda o uuid no override; o automático, no primeiro candidato.
+      uuid: l.status === 'vinculado-manual' ? l.override
+        : (l.status === 'vinculado' ? l.candidatos?.[0]?.uuid ?? null : null),
       candidatos: l.candidatos?.map(c => ({ uuid: c.uuid, nome: c.nome })) ?? [],
       temOverride: !!l.override
     }));
@@ -144,6 +150,35 @@ export class TesourosVinculosApp extends HandlebarsApplicationMixin(ApplicationV
     const linha = target.closest('[data-tabela]');
     await definirOverride(linha.dataset.tabela, linha.dataset.chave, 'nenhum');
     this.render();
+  }
+
+  /**
+   * Apaga todos os vínculos manuais e refaz a busca do zero.
+   *
+   * Confirma antes porque não dá para desfazer, e avisa que demora: a
+   * reconstrução varre o índice inteiro de compêndios.
+   */
+  static async #onResetarVinculos() {
+    this.#sincronizarFiltros();
+
+    const ok = await foundry.applications.api.DialogV2.confirm({
+      window: { title: loc('T20HaydGMTools.TesourosResetarVinculos'), icon: 'fa-solid fa-arrows-rotate' },
+      content: `<p>${loc('T20HaydGMTools.TesourosResetarVinculosAviso')}</p>`,
+      rejectClose: false
+    });
+    if (!ok) return;
+
+    ui.notifications.info(loc('T20HaydGMTools.TesourosResetandoVinculos'));
+    await resetarVinculos();
+    this.render();
+    ui.notifications.info(loc('T20HaydGMTools.TesourosVinculosResetados'));
+  }
+
+  /** Abre a ficha do item vinculado (só existe onde há vínculo válido). */
+  static async #onAbrirItem(event, target) {
+    const doc = await fromUuid(target.dataset.uuid).catch(() => null);
+    if (!doc) return ui.notifications.warn(loc('T20HaydGMTools.TesourosItemSumiu'));
+    doc.sheet.render(true);
   }
 
   static async #onLimparOverride(event, target) {

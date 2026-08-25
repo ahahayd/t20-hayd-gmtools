@@ -36,7 +36,7 @@ const TABELA_ID_MAGICO = { arma: 'encantosArmas', 'armadura-escudo': 'encantosAr
 const TABELA_ID_ACESSORIO = { menor: 'acessoriosMenores', medio: 'acessoriosMedios', maior: 'acessoriosMaiores' };
 
 const ROTULO_CATEGORIA_EQUIPAMENTO = {
-  arma: 'Tabela 8-4 — Armas', 'armadura-escudo': 'Tabela 8-4 — Armaduras & Escudos', esoterico: 'Tabela 8-4 — Esotéricos'
+  arma: 'Armas', 'armadura-escudo': 'Armaduras & Escudos', esoterico: 'Esotéricos'
 };
 const ROTULO_SUPERIOR = { arma: 'Melhoria de Arma', 'armadura-escudo': 'Melhoria de Armadura/Escudo', esoterico: 'Melhoria de Esotérico' };
 const ROTULO_MAGICO = { arma: 'Encanto de Arma', 'armadura-escudo': 'Encanto de Armadura/Escudo', esoterico: 'Encanto de Esotérico' };
@@ -64,15 +64,26 @@ async function comEscolha2D(sessao, duasEscolhas, rotulo, resolver) {
 }
 
 /* ─── Rolagem genérica numa tabela do registry (com homebrew já mesclado) ── */
+/**
+ * Rola na tabela e devolve a entrada correspondente.
+ *
+ * Uma rolagem só, sempre. Entradas removidas (livro desligado ou tiradas pelo
+ * Mestre) não deixam buraco: `tabelaEfetiva` redistribui as faixas de quem
+ * ficou para cobrir o dado inteiro. Rolar de novo na frente da mesa estragava
+ * o momento, e a redistribuição preserva a raridade relativa do livro.
+ */
 async function resolverEntradaTabela(sessao, tabelaId, rotulo) {
   const dado = dadoResolvido(tabelaId);
+  if (!dado) return null;
   const { total } = await sessao.d(dado, rotulo);
-  const entrada = entradaPorRolagem(tabelaId, total);
-  return entrada;
+  // O fallback cobre só arredondamento de borda; faixa vazia não existe mais.
+  return entradaPorRolagem(tabelaId, total) ?? entradasResolvidas(tabelaId)[0] ?? null;
 }
 
 async function nodeItemDeEntrada(tabelaId, entrada) {
-  const vinculo = await resolverReferencia(tabelaId, entrada.chave, entrada.nome, { riqueza: false });
+  // O livro vai junto: entradas do básico preferem o item do próprio
+  // sistema quando um módulo de conteúdo repete o mesmo nome.
+  const vinculo = await resolverReferencia(tabelaId, entrada.chave, entrada.nome, { riqueza: false, livro: entrada.livro ?? null });
   return {
     id: novoId(), tipo: 'item', tabela: tabelaId, chave: entrada.chave,
     nome: entrada.nome, livro: entrada.livro ?? null, pagina: entrada.pagina ?? null,
@@ -82,7 +93,7 @@ async function nodeItemDeEntrada(tabelaId, entrada) {
 
 /* ─── Item diverso (Tabela 8-3) ─────────────────────────────────────────── */
 async function resolverItemDiverso(sessao) {
-  const entrada = await resolverEntradaTabela(sessao, 'itensDiversos', 'Tabela 8-3 — Item Diverso');
+  const entrada = await resolverEntradaTabela(sessao, 'itensDiversos', 'Item Diverso');
   return nodeItemDeEntrada('itensDiversos', entrada);
 }
 
@@ -99,14 +110,14 @@ async function resolverEquipamentoBase(sessao, categoria) {
 async function resolverEquipamento(sessao, duasEscolhas) {
   return comEscolha2D(
     sessao, duasEscolhas,
-    'Tipo de Equipamento (Tabela 8-4: 1d6 — 1-3 arma, 4-5 armadura/escudo, 6 esotérico)',
+    'Tipo de Equipamento (1-3 arma, 4-5 armadura/escudo, 6 esotérico)',
     (s, d6) => resolverEquipamentoBase(s, categoriaEquipamentoPorD6(d6))
   );
 }
 
 /* ─── Material especial (1d6, usado por melhorias "Material especial") ──── */
 async function resolverMaterial(sessao) {
-  const entrada = await resolverEntradaTabela(sessao, 'materiaisEspeciais', 'Material Especial (1d6)');
+  const entrada = await resolverEntradaTabela(sessao, 'materiaisEspeciais', 'Material Especial');
   return nodeItemDeEntrada('materiaisEspeciais', entrada);
 }
 
@@ -115,7 +126,7 @@ async function resolverMaterial(sessao) {
  * - melhoria que "conta como duas" sem espaço sobrando no orçamento → reroll
  * - "Material especial" dispara uma segunda rolagem (1d6) ─────────────── */
 async function rolarMelhoriaValida(sessao, categoria, itemBase, numero) {
-  const rotulo = `Tabela 8-5 — ${ROTULO_SUPERIOR[categoria]} #${numero}`;
+  const rotulo = `${ROTULO_SUPERIOR[categoria]} #${numero}`;
   for (let t = 0; t < MAX_TENTATIVAS_REROLL; t++) {
     const entrada = await resolverEntradaTabela(sessao, TABELA_ID_SUPERIOR[categoria], rotulo);
     if (entrada.apenasArmadura && itemBase.ehEscudo) continue;
@@ -156,7 +167,7 @@ async function resolverSuperior(sessao, qtdMelhorias, categoria, itemBase) {
 async function resolverResultadoSuperior(sessao, celula) {
   return comEscolha2D(
     sessao, celula.duasEscolhas,
-    'Tipo de Equipamento — Item Superior (Tabela 8-4: 1d6 — 1-3 arma, 4-5 armadura/escudo, 6 esotérico)',
+    'Tipo de Equipamento — Item Superior (1-3 arma, 4-5 armadura/escudo, 6 esotérico)',
     async (s, d6) => {
       const categoria = categoriaEquipamentoPorD6(d6);
       const item = await resolverEquipamentoBase(s, categoria);
@@ -236,10 +247,14 @@ async function resolverResultadoMagico(sessao, celula) {
 async function resolverPocao(sessao, quantidade, maisPct) {
   const rollQtd = await sessao.formula(quantidade, 'Quantidade de Poções');
   const n = Math.max(0, Math.floor(rollQtd.total));
-  const dado = dadoResolvido('pocoes');
+
+  // A tabela de poções vai até 120, mas o dado é d100: as faixas de 101 a 120
+  // só são alcançáveis pelo "+20%" de algumas linhas da Tabela 8-1. Rolar
+  // d120 direto daria acesso às poções mais caras em qualquer tesouro.
+  const teto = dadoResolvido('pocoes');
   const itens = [];
   for (let i = 1; i <= n; i++) {
-    const { total: valor } = await sessao.d(dado, `Poção #${i} (1d${dado})`, maisPct ? { ajustar: t => Math.min(dado, t + 20) } : {});
+    const { total: valor } = await sessao.d(100, `Poção #${i}`, maisPct ? { ajustar: t => Math.min(teto, t + 20) } : {});
     const entrada = entradaPorRolagem('pocoes', valor);
     itens.push(await nodeItemDeEntrada('pocoes', entrada));
   }
@@ -248,13 +263,13 @@ async function resolverPocao(sessao, quantidade, maisPct) {
 
 /* ─── Riquezas (Tabela 8-2) ─────────────────────────────────────────────── */
 async function resolverRiquezaUnidade(sessao, categoria, maisPct) {
-  const { total: valorTipo } = await sessao.d(100, 'Tabela 8-2 — Valor da Riqueza', maisPct ? { ajustar: t => Math.min(100, t + 20) } : {});
+  const { total: valorTipo } = await sessao.d(100, 'Valor da Riqueza', maisPct ? { ajustar: t => Math.min(100, t + 20) } : {});
   const faixa = faixaValorPor(categoria, valorTipo);
   if (!faixa) return null;
 
-  const rollValor = await sessao.formula(faixa.formula, `Tabela 8-2 — Preço da Riqueza (${faixa.formula})`);
+  const rollValor = await sessao.formula(faixa.formula, 'Preço da Riqueza');
   const dadoExemplos = dadoResolvidoExemplosRiqueza(faixa.id);
-  const { total: totalExemplo } = await sessao.d(dadoExemplos, 'Tabela 8-2 — Exemplo de Riqueza');
+  const { total: totalExemplo } = await sessao.d(dadoExemplos, 'Exemplo de Riqueza');
   const exemplo = exemploRiquezaPorRolagem(faixa.id, totalExemplo);
 
   let espacos = exemplo?.espacos ?? null;
@@ -292,7 +307,9 @@ async function resolverRiqueza(sessao, quantidade, categoria, maisPct) {
 // Mapear para 'to' (Ouro) multiplicava por 10 todo tesouro em dinheiro.
 // As linhas que dizem TC ou TO explicitamente já vêm com a moeda própria.
 async function resolverDinheiro(sessao, formula, moeda) {
-  const roll = await sessao.formula(formula, `Dinheiro (${formula})`);
+  // O rótulo NÃO repete a fórmula: quem exibe a trilha já mostra "(4d12x10)"
+  // ao lado, e embutir aqui saía como "Dinheiro (4d12x10) (4d12x10)".
+  const roll = await sessao.formula(formula, 'Dinheiro');
   return {
     id: novoId(), tipo: 'dinheiro', moeda: moeda === 'generico' ? 'tp' : moeda,
     formula, valor: Math.max(0, Math.floor(roll.total))
@@ -339,23 +356,70 @@ export async function resolverColuna(faixasColuna, sessao, rotuloColuna) {
   // sem isso o "d% que escolheu esta linha do ND" se perderia num reroll).
   const trilhaColuna = [...sessao.trilha];
   const resultado = await resolverCelula(sessao, celula);
-  return resultado ? { id: novoId(), celula, resultado, trilha: sessao.trilha, trilhaColuna } : null;
+  if (!resultado) return null;
+
+  // `trilha` é SÓ o que aconteceu DENTRO da célula. Antes devolvia
+  // `sessao.trilha` inteira, que já continha o d% da coluna — e como quem
+  // exibe concatena trilhaColuna + trilha, a primeira rolagem saía duplicada.
+  return {
+    id: novoId(), celula, resultado, trilhaColuna,
+    trilha: sessao.trilha.slice(trilhaColuna.length)
+  };
 }
 
 /** Divide pela metade (arredondando para baixo) todo valor monetário de um resultado da coluna Dinheiro. */
-export function aplicarMetadeResultado(resultado) {
-  if (!resultado) return;
-  if (resultado.tipo === 'dinheiro') {
-    resultado.valor = Math.floor(resultado.valor / 2);
-    resultado.metadeAplicada = true;
-  } else if (resultado.tipo === 'grupo') {
-    for (const item of resultado.itens) {
-      if (typeof item.preco === 'number') { item.preco = Math.floor(item.preco / 2); item.metadeAplicada = true; }
-    }
-  } else if (resultado.tipo === 'item' && typeof resultado.preco === 'number') {
-    resultado.preco = Math.floor(resultado.preco / 2);
-    resultado.metadeAplicada = true;
+/** Denominação imediatamente menor. Cada degrau vale 10 da moeda abaixo. */
+const MOEDA_ABAIXO = { tl: 'to', to: 'tp', tp: 'tc' };
+
+/**
+ * Metade de uma quantia respeitando as denominações: 7 TO não vira 3 TO
+ * (jogando fora meia moeda de ouro), vira 35 T$. Quantidade ímpar desce uma
+ * denominação — ×10 — antes de dividir. No cobre, que é a menor, arredonda
+ * para baixo porque não há para onde descer.
+ */
+function metadeEmMoedas(valor, moeda) {
+  if (valor % 2 === 0) return { valor: valor / 2, moeda };
+  const abaixo = MOEDA_ABAIXO[moeda];
+  if (!abaixo) return { valor: Math.floor(valor / 2), moeda };
+  return { valor: (valor * 10) / 2, moeda: abaixo };
+}
+
+/** Aplica a metade num nó, guardando o valor original para poder desfazer. */
+function cortarNo(no) {
+  if (no.tipo === 'dinheiro') {
+    no.metadeOriginal = { valor: no.valor, moeda: no.moeda };
+    const meio = metadeEmMoedas(no.valor, no.moeda);
+    no.valor = meio.valor;
+    no.moeda = meio.moeda;
+    no.metadeAplicada = true;
+  } else if (typeof no.preco === 'number') {
+    no.metadeOriginal = { preco: no.preco };
+    no.preco = Math.floor(no.preco / 2);
+    no.metadeAplicada = true;
   }
+}
+
+/** Restaura o valor guardado por `cortarNo`. */
+function restaurarNo(no) {
+  const orig = no.metadeOriginal;
+  if (!orig) return;
+  if (orig.valor !== undefined) { no.valor = orig.valor; no.moeda = orig.moeda; }
+  if (orig.preco !== undefined) no.preco = orig.preco;
+  delete no.metadeOriginal;
+  no.metadeAplicada = false;
+}
+
+/**
+ * ALTERNA a metade de um resultado: corta se estiver inteiro, restaura se já
+ * estiver cortado. Antes cortava sempre, então clicar duas vezes deixava o
+ * tesouro em um quarto sem querer.
+ */
+export function alternarMetadeResultado(resultado) {
+  // Só dinheiro: item não tem meia unidade, e mexer no preço não muda o que a
+  // mesa ganhou — o botão existia para itens e não fazia sentido nenhum.
+  if (resultado?.tipo !== 'dinheiro') return;
+  if (resultado.metadeAplicada) restaurarNo(resultado);
+  else cortarNo(resultado);
 }
 
 /**
@@ -376,9 +440,9 @@ export async function gerarTesouro(nd, criarSessao = sessaoAutomatica) {
 
   const dinheiro = [];
   const itens = [];
-  const colDinheiro = await resolverColuna(linha.dinheiro, criarSessao(), `Tabela 8-1 — ND ${nd} — Dinheiro`);
+  const colDinheiro = await resolverColuna(linha.dinheiro, criarSessao(), `ND ${nd} — Dinheiro`);
   if (colDinheiro) dinheiro.push(colDinheiro);
-  const colItens = await resolverColuna(linha.itens, criarSessao(), `Tabela 8-1 — ND ${nd} — Itens`);
+  const colItens = await resolverColuna(linha.itens, criarSessao(), `ND ${nd} — Itens`);
   if (colItens) itens.push(colItens);
 
   return { nd, dinheiro, itens };

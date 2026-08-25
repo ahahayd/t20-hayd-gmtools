@@ -35,6 +35,43 @@ export function formulaParaRoll(formula) {
   return limpa;
 }
 
+/**
+ * Separa a parte de DADOS de uma fórmula do PDF, para que o Mestre possa
+ * digitar o que saiu nos dados em vez do total já multiplicado: em "3d8x100"
+ * ele digita 10, não 1000.
+ *
+ * Devolve `null` quando a fórmula não é um NdM simples (com bônus fixo
+ * opcional) — nesse caso quem chama volta a pedir o total direto.
+ *
+ * "3d8x100"  → { dados: "3d8",   min: 3, max: 24, multiplicador: 100 }
+ * "2d6+1x100"→ { dados: "2d6+1", min: 3, max: 13, multiplicador: 100 }
+ * "1d3+1"    → { dados: "1d3+1", min: 2, max: 4,  multiplicador: 1 }
+ */
+export function analisarFormula(formula) {
+  const limpa = String(formula ?? '').trim();
+  const partesX = limpa.split(/x/i);
+  if (partesX.length > 2) return null;
+
+  const temMult = partesX.length === 2;
+  const multiplicador = temMult ? Number(partesX[1].replace(/\./g, '')) : 1;
+  if (!Number.isFinite(multiplicador) || multiplicador <= 0) return null;
+
+  const dadoTxt = (temMult ? partesX[0] : limpa).trim();
+  const m = dadoTxt.match(/^(\d*)d(\d+)\s*([+-]\s*\d+)?$/i);
+  if (!m) return null;
+
+  const n = Number(m[1] || 1);
+  const faces = Number(m[2]);
+  const bonus = m[3] ? Number(m[3].replace(/\s+/g, '')) : 0;
+  if (!n || !faces) return null;
+
+  return {
+    dados: dadoTxt, n, faces, bonus, multiplicador,
+    min: n + bonus,
+    max: (n * faces) + bonus
+  };
+}
+
 /** Rola uma fórmula (já convertida por `formulaParaRoll` se necessário) e devolve o Roll avaliado. */
 export async function rolarFormula(formula) {
   const roll = new Roll(formulaParaRoll(formula));

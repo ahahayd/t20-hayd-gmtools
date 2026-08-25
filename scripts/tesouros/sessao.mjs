@@ -13,6 +13,21 @@
  */
 import { rolarDado, rolarFormula } from './utils.mjs';
 
+/**
+ * Sinal de "o Mestre desistiu desta geração".
+ *
+ * O motor resolve as tabelas recursivamente, então não há como devolver um
+ * "cancelado" pelo valor de retorno sem que cada nível tenha de checá-lo. Uma
+ * exceção dedicada sobe sozinha até quem iniciou a rolagem, que a trata como
+ * cancelamento em vez de erro.
+ */
+export class RolagemCancelada extends Error {
+  constructor() {
+    super('t20-hayd-tesouros | geração cancelada pelo Mestre');
+    this.name = 'RolagemCancelada';
+  }
+}
+
 export class SessaoDeRolagem {
   /**
    * @param {"auto"|"passo"} modo - rótulo livre pra quem monta a sessão (a

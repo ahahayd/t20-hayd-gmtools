@@ -1361,7 +1361,7 @@ const CATEGORIAS_CONFIG = [
   { rotulo: 'CatMetagame',    icone: 'fa-mask',           chaves: ['metagameMenu'] },
   { rotulo: 'CatRolagens',    icone: 'fa-dice-d20',       chaves: ['jogadoresReroll', 'jogadoresManual'] },
   { rotulo: 'CatAutomacoes',  icone: 'fa-wand-sparkles',  chaves: ['automacoesEnabled', 'abrirDiarioAutomacoes'] },
-  { rotulo: 'CatTesouros',    icone: 'fa-sack-dollar',    chaves: ['tesourosVinculosMenu', 'tesourosHomebrewMenu'] },
+  { rotulo: 'CatTesouros',    icone: 'fa-sack-dollar',    chaves: ['tesourosVinculosMenu', 'tesourosLivrosMenu', 'tesourosHomebrewMenu'] },
   { rotulo: 'CatParty',       icone: 'fa-users',          chaves: ['partySheetEnabled', 'visibility', 'requireConfirmation', 'chatMode', 'lojaCompat'] },
   { rotulo: 'CatAtributos',   icone: 'fa-dice-d6',        chaves: ['atributosMetodoPadrao', 'atributosPontos', 'atributosMultiNegativos', 'atributosCustosMenu', 'atributosConversaoMenu'] },
   { rotulo: 'CatFerramentas', icone: 'fa-ruler-combined', chaves: ['reguaEfeitos'] }

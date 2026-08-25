@@ -20,6 +20,9 @@
     </select>
   </div>
   <button type="button" data-action="filtrar"><i class="fa-solid fa-filter"></i> {{localize "T20HaydGMTools.TesourosFiltrar"}}</button>
+  <button type="button" data-action="resetarVinculos" title="{{localize 'T20HaydGMTools.TesourosResetarVinculosDica'}}">
+    <i class="fa-solid fa-arrows-rotate"></i> {{localize "T20HaydGMTools.TesourosResetarVinculos"}}
+  </button>
 </div>
 
 <div class="t20g-tesouro-vinculos-resumo">
@@ -32,7 +35,15 @@
   {{#each linhas as |linha|}}
     <div class="t20g-tesouro-vinculo-linha" data-tabela="{{linha.tabelaId}}" data-chave="{{linha.chave}}">
       <div class="t20g-tesouro-vinculo-info">
-        <div class="t20g-tesouro-vinculo-nome">{{linha.nome}}</div>
+        {{!-- Com vínculo resolvido, o nome abre a ficha do item; sem vínculo
+              não há o que abrir, então fica texto puro. --}}
+        {{#if linha.uuid}}
+          <a class="t20g-tesouro-vinculo-nome t20g-tesouro-vinculo-abrir"
+             data-action="abrirItem" data-uuid="{{linha.uuid}}"
+             title="{{localize 'T20HaydGMTools.TesourosAbrirItem'}}">{{linha.nome}}</a>
+        {{else}}
+          <div class="t20g-tesouro-vinculo-nome">{{linha.nome}}</div>
+        {{/if}}
         <div class="t20g-hint">
           {{linha.tabelaLabel}}{{#if linha.fonte}} · {{linha.fonte}}{{/if}}
         </div>

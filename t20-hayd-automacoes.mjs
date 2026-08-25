@@ -2341,7 +2341,7 @@ const GP_EFEITOS = [
     texto: 'Seu golpe causa +1d6 pontos de dano. A cada vez que você acerta o golpe na mesma '
       + 'cena, esse bônus aumenta em um passo.',
     nota: 'O contador fica no cartão do golpe e nos cartões de ataque: <b>+</b> a cada acerto, '
-      + '<b>−</b> desfaz e <b>↺</b> zera. Aumenta conforme os passos: 1d6 → 1d8 → 1d10 → 1d12 → 3d6 → 4d6 → 4d8 '
+      + '<b>−</b> desfaz e <i class="fa-solid fa-rotate-left"></i> zera. Aumenta conforme os passos: 1d6 → 1d8 → 1d10 → 1d12 → 3d6 → 4d6 → 4d8 '
       + '→ 4d10 → 4d12 (máximo).',
     changes: (cfg, item) => [{
       key: 'dano',
@@ -3522,7 +3522,7 @@ function paginaCombinacoes() {
       <li>A contagem é <b>uma por inimigo</b> e vale para todas as suas Combinações.</li>
       <li><b>Mire o token</b> do oponente: os botões aparecem nos cartões de ataque do chat.
           Com mais de um alvo mirado, cada um tem sua linha.</li>
-      <li><b>+</b> marca que você acertou uma Combinação, <b>−</b> desfaz e <b>↺</b> zera.
+      <li><b>+</b> marca que você acertou uma Combinação, <b>−</b> desfaz e <i class="fa-solid fa-rotate-left"></i> zera.
           Com o poder <i>Mestre das Combinações</i>, o <b>+</b> soma 2.</li>
       <li>Se passar uma rodada sem acertar nenhuma Combinação, a contagem some sozinha e
           os efeitos aplicados saem junto.</li>
@@ -3566,7 +3566,7 @@ function paginaDaAutomacao(def) {
     comoFunciona = `<h2>No módulo</h2>
       <ul>
         <li>Contador nos cartões de ataque: <b>+</b> aumenta, <b>−</b> diminui e, no cartão do
-            próprio poder, <b>↺</b> zera.</li>
+            próprio poder, <i class="fa-solid fa-rotate-left"></i> zera.</li>
         <li>Limite: ${def.contador.limiteTexto ?? 'sem limite'}.</li>
         <li>O bônus entra sozinho na janela de rolagem enquanto o contador estiver aceso.</li>
         <li>${def.contador.duracao === 'turno'
@@ -3655,7 +3655,7 @@ function paginaGolpePessoal(def, tipos) {
           aprimoramentos que você escolher, e só então o golpe sai cobrando o +1 PM.</li>
       <li><b>Carregado</b>: vira um segundo efeito de uso, sem custo. Marque-o na janela de
           rolagem só se tiver gastado a ação padrão para energizar o golpe (+2d8).</li>
-      <li><b>Sequencial</b>: contador nos cartões (<b>+</b>, <b>−</b>, <b>↺</b>), subindo
+      <li><b>Sequencial</b>: contador nos cartões (<b>+</b>, <b>−</b>, <i class="fa-solid fa-rotate-left"></i>), subindo
           1d6 → 1d8 → 1d10 → 1d12 → 3d6 → 4d6 → 4d8 → 4d10 → 4d12. O dado atual aparece no nome
           do efeito e no cartão.</li>
       <li><b>Sacrifício</b>: botão no cartão para descontar os 10 PV.</li>

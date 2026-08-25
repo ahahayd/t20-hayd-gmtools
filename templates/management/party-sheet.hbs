@@ -101,9 +101,16 @@
       <button type="button" data-action="depositMoney" title="{{localize 'THM.DepositMoneyTitle'}}">
         <i class="fa-solid fa-arrow-down"></i> {{localize "THM.DepositMoney"}}
       </button>
+      {{!-- Mestre distribui para quem quiser; jogador só pega para si. --}}
+      {{#if isGM}}
       <button type="button" data-action="withdrawMoney" title="{{localize 'THM.WithdrawMoneyTitle'}}">
         <i class="fa-solid fa-arrow-up"></i> {{localize "THM.WithdrawMoney"}}
       </button>
+      {{else}}
+      <button type="button" data-action="withdrawMoney" title="{{localize 'THM.TakeMoneyHint'}}">
+        <i class="fa-solid fa-hand"></i> {{localize "THM.TakeMoney"}}
+      </button>
+      {{/if}}
       {{#if isGM}}
       <button type="button" class="thm-edit-money" data-action="editStashMoney" title="{{localize 'THM.EditStashMoneyTitle'}}">
         <i class="fa-solid fa-pen"></i>
@@ -119,17 +126,26 @@
       <span class="thm-item-name">{{this.name}}</span>
       <span class="thm-item-qty">×{{this.qtd}}</span>
       <span class="thm-item-type">{{this.typeLabel}}</span>
+      {{#if ../isGM}}
       <button type="button" class="thm-send-money-btn" data-action="sendStashItem" data-item-id="{{this.id}}" title="{{localize 'THM.SendTo'}}">
         <i class="fa-solid fa-paper-plane"></i>
       </button>
+      {{else}}
+      {{!-- Jogador pega para o próprio personagem, sem escolher destinatário. --}}
+      <button type="button" class="thm-send-money-btn" data-action="takeStashItem" data-item-id="{{this.id}}" title="{{localize 'THM.TakeItemHint'}}">
+        <i class="fa-solid fa-hand"></i>
+      </button>
+      {{/if}}
       {{#if ../isGM}}
       <button type="button" class="thm-send-money-btn" data-action="editStashItem" data-item-id="{{this.id}}" title="{{localize 'THM.EditItem'}}">
         <i class="fa-solid fa-pen"></i>
       </button>
+      {{/if}}
+      {{!-- Apagar vale para qualquer membro do grupo; a gravação passa pelo
+            Mestre, que revalida a permissão antes de mexer no estoque. --}}
       <button type="button" class="thm-send-money-btn thm-danger" data-action="deleteStashItem" data-item-id="{{this.id}}" title="{{localize 'THM.DeleteItem'}}">
         <i class="fa-solid fa-trash"></i>
       </button>
-      {{/if}}
     </div>
     {{else}}
     <p class="thm-empty">{{localize "THM.NoItems"}}</p>

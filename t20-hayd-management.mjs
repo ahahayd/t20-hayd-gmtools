@@ -170,6 +170,15 @@ function registerSettings() {
   });
 
   // Controle interno: mensagem de boas-vindas já foi enviada?
+  // Último grupo cuja ficha este usuário abriu — vira o padrão do seletor.
+  // Escopo de cliente: é preferência pessoal, cada um tem a sua.
+  game.settings.register(SETTINGS_NS, "ultimoGrupo", {
+    scope: "client",
+    config: false,
+    type: String,
+    default: ""
+  });
+
   game.settings.register(SETTINGS_NS, "partyWelcomeShown", {
     scope: "world",
     config: false,
@@ -179,6 +188,20 @@ function registerSettings() {
 
   // A entrada de menu só aparece com a Ficha do Grupo ligada — desligada,
   // não há nada pra gerenciar (nem o botão que abriria essa configuração).
+  // Atalho para abrir a ficha do grupo. Vale para jogador e Mestre; com mais
+  // de um grupo, cai no mesmo seletor de `openPartySheet`.
+  game.keybindings.register(SETTINGS_NS, "abrirFichaGrupo", {
+    name: "THM.KeybindOpenPartySheet",
+    hint: "THM.KeybindOpenPartySheetHint",
+    editable: [{ key: "KeyB" }],
+    onDown: () => {
+      openPartySheet();
+      return true;
+    },
+    // Não dispara enquanto o foco está num campo de texto.
+    precedence: CONST.KEYBINDING_PRECEDENCE.NORMAL
+  });
+
   if (lerConfig("partySheetEnabled")) {
     game.settings.registerMenu(SETTINGS_NS, "partyManager", {
       name: "THM.PartyManagerMenuName",
@@ -200,7 +223,7 @@ function getPartiesSetting() {
 }
 
 /** Ids de pasta de todas as parties cujas pastas ainda existem. */
-function getPartyFolderIds() {
+export function getPartyFolderIds() {
   return Object.keys(getPartiesSetting()).filter((id) => game.folders.get(id));
 }
 
@@ -233,6 +256,45 @@ function isStashActor(actor) {
 /** Pasta de party à qual o ator-estoque pertence. */
 function stashPartyFolderId(actor) {
   return lerFlag(actor, "stash") || null;
+}
+
+/**
+ * Personagens do grupo que o usuário atual controla.
+ *
+ * O jogador nunca escolhe PARA QUEM vai o que ele pega do estoque: vai para o
+ * personagem dele. Quando tem mais de um no mesmo grupo, ele escolhe qual dos
+ * SEUS recebe — o que é diferente de poder mandar para outra pessoa.
+ */
+function personagensDoUsuario(folderId) {
+  return getMembers(folderId).filter((a) => a.isOwner && a.system?.dinheiro);
+}
+
+/** Resolve para qual personagem do usuário vai o que ele pegar (pergunta se houver vários). */
+async function escolherPersonagemDoUsuario(folderId) {
+  const meus = personagensDoUsuario(folderId);
+  if (!meus.length) return null;
+  if (meus.length === 1) return meus[0];
+
+  const escolhido = await foundry.applications.api.DialogV2.wait({
+    window: { title: loc("THM.ChooseOwnCharTitle"), icon: "fa-solid fa-user" },
+    content: `
+      <div class="thm-dialog">
+        <div class="form-group">
+          <label>${loc("THM.ChooseOwnChar")}</label>
+          <select name="meu">${memberOptionsHtml(meus)}</select>
+        </div>
+      </div>`,
+    rejectClose: false,
+    buttons: [
+      {
+        action: "ok", icon: "fa-solid fa-check", label: loc("THM.Confirm"), default: true,
+        callback: (ev, btn) => btn.form.elements.meu.value
+      },
+      { action: "cancel", icon: "fa-solid fa-xmark", label: loc("THM.Cancel") }
+    ]
+  });
+  if (!escolhido || escolhido === "cancel") return null;
+  return game.actors.get(String(escolhido).slice(2)) ?? null;
 }
 
 /** Membros da party (atores dentro da pasta/subpastas, exceto o estoque) — versão pública. */
@@ -292,6 +354,27 @@ function getStashDataRaw(folderId) {
     money: Object.fromEntries(COINS.map((k) => [k, Number(raw.money?.[k]) || 0])),
     items: Array.isArray(raw.items) ? raw.items : []
   };
+}
+
+/**
+ * Fila de mutações do estoque, uma por pasta de grupo.
+ *
+ * Toda gravação passa pelo cliente do Mestre, mas isso NÃO basta: entre ler o
+ * estoque e gravá-lo de volta há `await`s — a confirmação do destinatário
+ * chega a esperar 90 s. Sem serializar, dois jogadores pegando o mesmo item
+ * liam a mesma lista, e a última gravação vencia: o item saía uma vez do
+ * estoque e entrava duas nas fichas.
+ *
+ * Cada pasta tem sua própria fila; grupos diferentes não se bloqueiam.
+ */
+const filasEstoque = new Map();
+
+function filaEstoque(folderId, tarefa) {
+  const anterior = filasEstoque.get(folderId) ?? Promise.resolve();
+  // O `catch` encadeado evita que uma tarefa que falhou trave a fila inteira.
+  const atual = anterior.then(tarefa, tarefa);
+  filasEstoque.set(folderId, atual.then(() => {}, () => {}));
+  return atual;
 }
 
 /** (GM) Persiste os dados do estoque na pasta da party. */
@@ -520,7 +603,7 @@ function postTransferChat({ kind, sourceName, targetName, itemName, qty, coins }
   const messageData = {
     content,
     speaker: { alias: loc("THM.ChatTransferHeader") },
-    flags: { [MODULE_ID]: { transfer: true } }
+    flags: { [FLAG_SCOPE]: { transfer: true } }
   };
   if (mode === "gm") {
     messageData.whisper = game.users.filter((u) => u.isGM).map((u) => u.id);
@@ -811,6 +894,25 @@ async function gmExecuteTransfer(payload) {
   }
 
   // ---------- Execução ----------
+  // Serializada por estoque (ver `filaEstoque`) e com a disponibilidade
+  // revalidada DENTRO da seção crítica: tudo que foi checado lá em cima pode
+  // ter envelhecido durante a confirmação do destinatário ou enquanto outro
+  // pedido do mesmo estoque era atendido.
+  const executar = async () => {
+  if (payload.kind === "item") {
+    const info = findSourceItem();
+    if (!info || qty > info.have) {
+      await notifyUser(payload.userId, loc("THM.NotEnoughQty", { name: sourceName, item: itemName }), "warn");
+      return { ok: false, reason: "qty" };
+    }
+  } else {
+    const balance = sourceBalance();
+    if (COINS.some((k) => coins[k] > balance[k])) {
+      await notifyUser(payload.userId, loc("THM.NotEnoughMoney", { name: sourceName }), "warn");
+      return { ok: false, reason: "funds" };
+    }
+  }
+
   try {
     if (payload.kind === "item") {
       let itemData;
@@ -875,6 +977,12 @@ async function gmExecuteTransfer(payload) {
 
   await notifyUser(payload.userId, loc("THM.TransferDone"), "info");
   return { ok: true };
+  };
+
+  // Sem estoque envolvido (ficha para ficha) não há leitura-modificação-escrita
+  // compartilhada, então não precisa entrar na fila.
+  const folderTrava = source.isStash ? source.folderId : (target.isStash ? target.folderId : null);
+  return folderTrava ? filaEstoque(folderTrava, executar) : executar();
 }
 
 /** Ponto de entrada de qualquer cliente. */
@@ -886,7 +994,7 @@ async function requestTransfer(payload) {
     return { ok: false, reason: "no-gm" };
   }
   if (!socket) {
-    ui.notifications.error(`${MODULE_ID}: socketlib indisponível.`);
+    ui.notifications.error(`${ASSET_MODULE_ID}: socketlib indisponível.`);
     return { ok: false, reason: "no-socket" };
   }
   return socket.executeAsGM("gmExecuteTransfer", payload);
@@ -1242,8 +1350,38 @@ async function changeStashItemQty(folderId, entryId) {
 }
 
 /** (GM) Exclui uma entrada do estoque (a pilha inteira), com confirmação. */
+/** O usuário participa deste grupo (é Mestre, ou tem personagem dentro dele)? */
+function usuarioNoGrupo(user, folderId) {
+  if (!user) return false;
+  if (user.isGM) return true;
+  return getMembers(folderId).some((a) => a.testUserPermission(user, "OWNER"));
+}
+
+/**
+ * (GM) Apaga uma entrada do estoque — inclusive a pedido de um jogador do
+ * grupo, via socket. Jogador não tem permissão de escrever na pasta, então a
+ * gravação sempre acontece aqui; e passa pela fila do estoque para não
+ * atropelar uma transferência em andamento.
+ */
+async function gmDeleteStashItem({ userId, folderId, entryId }) {
+  const user = game.users.get(userId);
+  if (!usuarioNoGrupo(user, folderId)) {
+    await notifyUser(userId, loc("THM.NotAuthorized"), "warn");
+    return { ok: false, reason: "unauthorized" };
+  }
+
+  return filaEstoque(folderId, async () => {
+    const stash = getStashData(folderId);
+    const idx = stash.items.findIndex((e) => e._id === entryId);
+    if (idx < 0) return { ok: false, reason: "item-not-found" };
+    stash.items.splice(idx, 1);
+    await setStashData(folderId, stash);
+    return { ok: true };
+  });
+}
+
+/** Confirma e apaga uma entrada do estoque (Mestre direto, jogador via Mestre). */
 async function deleteStashItem(folderId, entryId) {
-  if (!game.user.isGM) return;
   const entry = getStashDataRaw(folderId).items.find((e) => e._id === entryId);
   if (!entry) return;
   const qtd = Number(entry.system?.qtd ?? 1) || 1;
@@ -1255,9 +1393,15 @@ async function deleteStashItem(folderId, entryId) {
   });
   if (!ok) return;
 
-  const stash = getStashData(folderId);
-  stash.items = stash.items.filter((e) => e._id !== entryId);
-  await setStashData(folderId, stash);
+  if (game.user.isGM) {
+    await gmDeleteStashItem({ userId: game.user.id, folderId, entryId });
+    return;
+  }
+  if (!socket) {
+    ui.notifications.error(`${ASSET_MODULE_ID}: socketlib indisponível.`);
+    return;
+  }
+  await socket.executeAsGM("gmDeleteStashItem", { userId: game.user.id, folderId, entryId });
 }
 
 /* ============================================================
@@ -1585,8 +1729,8 @@ async function openPartyRestDialog(folderId) {
       <tr>
         <td class="thm-rc-who"><img src="${esc(r.img)}" alt="" />
           <div>${esc(r.name)}<small>${esc(r.extras)}</small></div></td>
-        <td class="thm-rc-pv">+${r.pv} PV${r.pvCheio ? " ✦" : ""}</td>
-        <td class="thm-rc-pm">+${r.pm} PM${r.pmCheio ? " ✦" : ""}</td>
+        <td class="thm-rc-pv">+${r.pv} PV${r.pvCheio ? " <i class=\"fa-solid fa-star thm-rc-cheio\"></i>" : ""}</td>
+        <td class="thm-rc-pm">+${r.pm} PM${r.pmCheio ? " <i class=\"fa-solid fa-star thm-rc-cheio\"></i>" : ""}</td>
       </tr>`
     )
     .join("");
@@ -1594,7 +1738,7 @@ async function openPartyRestDialog(folderId) {
     loc("THM.PartyRestTitle"),
     "icons/svg/regen.svg",
     `<table class="thm-rest-chat"><tbody>${linhasHtml}</tbody></table>
-     <p class="thm-rc-note">✦ ${loc("THM.RestFullNote")}</p>`
+     <p class="thm-rc-note"><i class="fa-solid fa-star thm-rc-cheio"></i> ${loc("THM.RestFullNote")}</p>`
   );
 }
 
@@ -1818,6 +1962,7 @@ class PartySheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
       depositMoney: PartySheetApp.#onDepositMoney,
       withdrawMoney: PartySheetApp.#onWithdrawMoney,
       sendStashItem: PartySheetApp.#onSendStashItem,
+      takeStashItem: PartySheetApp.#onTakeStashItem,
       openConfig: PartySheetApp.#onOpenConfig,
       editStashMoney: PartySheetApp.#onEditStashMoney,
       gmDistribute: PartySheetApp.#onGmDistribute,
@@ -2062,20 +2207,81 @@ class PartySheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
     });
   }
 
-  static #onWithdrawMoney() {
-    const members = getMembers(this.folderId).filter((a) => a.system?.dinheiro);
-    if (!members.length) return ui.notifications.warn(loc("THM.NoMembers"));
-    openMoneyDialog({
-      title: loc("THM.WithdrawMoneyTitle"),
+  static async #onWithdrawMoney() {
+    const maxCoins = getStashDataRaw(this.folderId).money;
+
+    // Mestre continua distribuindo para quem quiser.
+    if (game.user.isGM) {
+      const members = getMembers(this.folderId).filter((a) => a.system?.dinheiro);
+      if (!members.length) return ui.notifications.warn(loc("THM.NoMembers"));
+      return openMoneyDialog({
+        title: loc("THM.WithdrawMoneyTitle"),
+        folderId: this.folderId,
+        fixedSource: { stashFolderId: this.folderId },
+        targetChoices: { members, includeStash: false },
+        maxCoins
+      });
+    }
+
+    // Jogador pega para si: sem seletor de destinatário.
+    const meu = await escolherPersonagemDoUsuario(this.folderId);
+    if (!meu) return ui.notifications.warn(loc("THM.NoPartyForUser"));
+    return openMoneyDialog({
+      title: loc("THM.TakeMoneyTitle", { name: meu.name }),
       folderId: this.folderId,
       fixedSource: { stashFolderId: this.folderId },
-      targetChoices: { members, includeStash: false },
-      maxCoins: getStashDataRaw(this.folderId).money
+      fixedTarget: { actorId: meu.id },
+      maxCoins
     });
   }
 
   static #onSendStashItem(event, target) {
     this.#sendStashItem(target.dataset.itemId);
+  }
+
+  /** Jogador pegando um item do estoque para o próprio personagem. */
+  static async #onTakeStashItem(event, target) {
+    const entry = getStashDataRaw(this.folderId).items.find((e) => e._id === target.dataset.itemId);
+    if (!entry) return;
+
+    const meu = await escolherPersonagemDoUsuario(this.folderId);
+    if (!meu) return ui.notifications.warn(loc("THM.NoPartyForUser"));
+
+    const max = Math.max(1, Number(entry.system?.qtd ?? 1) || 1);
+    const campoQtd = max > 1
+      ? `<div class="form-group">
+           <label>${loc("THM.SendQty", { max })}</label>
+           <input type="number" name="qty" value="1" min="1" max="${max}" step="1" />
+         </div>`
+      : "";
+
+    const resposta = await foundry.applications.api.DialogV2.wait({
+      window: { title: loc("THM.TakeItemTitle", { item: entry.name }), icon: "fa-solid fa-hand" },
+      content: `
+        <div class="thm-dialog">
+          <p>${loc("THM.TakeItemConfirm", { item: esc(entry.name), name: esc(meu.name) })}</p>
+          ${campoQtd}
+        </div>`,
+      rejectClose: false,
+      buttons: [
+        {
+          action: "ok", icon: "fa-solid fa-hand", label: loc("THM.Take"), default: true,
+          callback: (ev, btn) => Math.max(1, Math.min(max, Number(btn.form.elements.qty?.value ?? 1) || 1))
+        },
+        { action: "cancel", icon: "fa-solid fa-xmark", label: loc("THM.Cancel") }
+      ]
+    });
+    if (!resposta || resposta === "cancel") return;
+
+    // A disponibilidade real é revalidada no cliente do Mestre, dentro da fila
+    // do estoque — dois jogadores pedindo o mesmo item não duplicam.
+    await requestTransfer({
+      kind: "item",
+      source: { stashFolderId: this.folderId },
+      target: { actorId: meu.id },
+      itemId: entry._id,
+      qty: Number(resposta)
+    });
   }
 
   static #onOpenConfig() {
@@ -2148,12 +2354,16 @@ async function openPartySheet() {
     );
   }
 
-  let folderId = folderIds[0];
+  // O último grupo aberto vira o padrão — quem joga sempre no mesmo não
+  // precisa escolher de novo a cada vez.
+  const ultimo = game.settings.get(SETTINGS_NS, "ultimoGrupo");
+  let folderId = folderIds.includes(ultimo) ? ultimo : folderIds[0];
+
   if (folderIds.length > 1) {
     const options = folderIds
       .map(
         (fid) =>
-          `<option value="${fid}">${esc(game.folders.get(fid)?.name ?? "?")}</option>`
+          `<option value="${fid}"${fid === folderId ? " selected" : ""}>${esc(game.folders.get(fid)?.name ?? "?")}</option>`
       )
       .join("");
     const choice = await foundry.applications.api.DialogV2.wait({
@@ -2181,6 +2391,7 @@ async function openPartySheet() {
     folderId = choice;
   }
 
+  await game.settings.set(SETTINGS_NS, "ultimoGrupo", folderId);
   const app = PartySheetApp.instances.get(folderId) ?? new PartySheetApp(folderId);
   app.render(true);
 }
@@ -2521,7 +2732,7 @@ async function postWelcomeMessage() {
   await ChatMessage.create({
     content,
     speaker: { alias: loc("THM.ModuleTitle") },
-    flags: { [MODULE_ID]: { welcome: true } }
+    flags: { [FLAG_SCOPE]: { welcome: true } }
   });
 }
 
@@ -2546,11 +2757,24 @@ async function runFirstUseFlow() {
 ============================================================ */
 
 Hooks.once("socketlib.ready", () => {
-  socket = socketlib.registerModule(MODULE_ID);
+  // Registra no módulo ANFITRIÃO: o socketlib recusa quem não está ativo
+  // (socketlib.js: "no module with that name is active"), e o id antigo
+  // deixou de existir como módulo quando a fusão foi concluída. Isso é
+  // registro em tempo de execução, sem dado persistido — todos os clientes
+  // usam a mesma constante, então basta trocar.
+  socket = socketlib.registerModule(ASSET_MODULE_ID);
+  if (!socket) {
+    // O socketlib só loga no console e devolve undefined. Sem esta guarda o
+    // `register` abaixo lançava, e o sintoma chegava ao jogador bem longe da
+    // causa ("socketlib indisponível" só na hora de transferir).
+    console.error(`${ASSET_MODULE_ID} | socketlib recusou o registro — transferências indisponíveis`);
+    return;
+  }
   socket.register("gmExecuteTransfer", gmExecuteTransfer);
   socket.register("promptConfirm", promptConfirm);
   socket.register("notify", (message, type) => ui.notifications[type]?.(message));
   socket.register("skillRequest", handleSkillRequest);
+  socket.register("gmDeleteStashItem", gmDeleteStashItem);
 });
 
 Hooks.once("init", () => {

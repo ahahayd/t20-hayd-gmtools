@@ -1,0 +1,21 @@
+<div class="t20g-tesouro-body t20g-livros">
+  <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosLivrosDica"}}</p>
+
+  <div class="t20g-livros-lista">
+    {{#each livros as |l|}}
+      <label class="t20g-livros-linha {{#unless l.habilitado}}t20g-livros-off{{/unless}}">
+        <input type="checkbox" data-livro="{{l.livro}}" {{#if l.habilitado}}checked{{/if}} />
+        <span class="t20g-livros-info">
+          <b>{{l.livro}}</b>
+          <span class="t20g-hint">{{localize "T20HaydGMTools.TesourosLivroEntradas" entradas=l.entradas}}</span>
+          {{!-- Avisa antes de desligar, em vez de o filtro ser ignorado calado. --}}
+          {{#if l.aviso}}<span class="t20g-livros-aviso"><i class="fa-solid fa-triangle-exclamation"></i> {{l.aviso}}</span>{{/if}}
+        </span>
+      </label>
+    {{/each}}
+  </div>
+
+  <button type="button" data-action="habilitarTodos">
+    <i class="fa-solid fa-check-double"></i> {{localize "T20HaydGMTools.TesourosLivrosTodos"}}
+  </button>
+</div>

@@ -1,4 +1,4 @@
-<div class="t20g-tesouro-body">
+<div class="t20g-tesouro-body t20g-homebrew">
 <div class="form-group">
   <label>{{localize "T20HaydGMTools.TesourosTabela"}}</label>
   {{!-- Sem data-action: no ApplicationV2 ele dispara no CLIQUE, e abrir o
@@ -10,6 +10,9 @@
     {{/each}}
   </select>
 </div>
+{{!-- Miolo rolável: o seletor de tabela fica fixo no topo e os botões de
+     restaurar fixos embaixo, para não sumirem numa tabela longa. --}}
+<div class="t20g-homebrew-miolo">
 
 <p class="t20g-hint">
   {{localize "T20HaydGMTools.TesourosHomebrewDado" dadoOficial=dadoOficial dadoAtual=dadoAtual}}
@@ -50,4 +53,58 @@
   </div>
   <button type="button" data-action="adicionar"><i class="fa-solid fa-plus"></i> {{localize "T20HaydGMTools.TesourosHomebrewAdicionar"}}</button>
 </fieldset>
+
+{{!-- Entradas do livro: dá para renomear ou tirar do sorteio sem editar o
+      código. O que o Mestre muda fica guardado por cima da tabela oficial. --}}
+<fieldset class="t20g-tesouro-homebrew-oficiais">
+  <legend>{{localize "T20HaydGMTools.TesourosOficiais"}}</legend>
+  <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosOficiaisDica"}}</p>
+  {{!-- Quantas de fato entram no sorteio com a configuração atual. --}}
+  <p class="t20g-tesouro-emjogo">
+    {{localize "T20HaydGMTools.TesourosEmJogo" emJogo=emJogo total=totalOficiais dado=dadoAtual}}
+  </p>
+
+  <div class="t20g-tesouro-homebrew-lista">
+    {{#each oficiais as |o|}}
+      {{!-- Fora do sorteio (por livro desligado ou tirada à mão) aparece
+            apagada, com a faixa de origem só como referência. --}}
+      <div class="t20g-tesouro-homebrew-linha {{#unless o.emJogo}}t20g-tesouro-removida{{/unless}}">
+        <span class="t20g-tesouro-homebrew-faixa">{{o.faixa}}</span>
+        <div class="t20g-tesouro-vinculo-info">
+          {{!-- Sem data-action: ele dispara no clique, e clicar no campo para
+                digitar já salvaria. A gravação escuta "change" (_onRender). --}}
+          <input type="text" name="nome-{{o.chave}}" value="{{o.nome}}"
+                 data-chave="{{o.chave}}"
+                 title="{{localize 'T20HaydGMTools.TesourosRenomearDica'}}" />
+          {{#if o.renomeada}}<div class="t20g-hint">{{localize "T20HaydGMTools.TesourosOriginal"}}: {{o.original}}</div>{{/if}}
+          {{#unless o.renomeada}}{{#if o.fonte}}<div class="t20g-hint">{{o.fonte}}</div>{{/if}}{{/unless}}
+          {{!-- Diz POR QUE está fora: livro desligado é configuração de
+                livros, não algo que se resolva com o botão daqui. --}}
+          {{#if o.foraPorLivro}}
+            <div class="t20g-tesouro-fora">{{localize "T20HaydGMTools.TesourosForaPorLivro" livro=o.livro}}</div>
+          {{/if}}
+        </div>
+        {{#if o.foraPorLivro}}
+          <i class="fa-solid fa-book-open t20g-tesouro-fora-icone"
+             title="{{localize 'T20HaydGMTools.TesourosForaPorLivro' livro=o.livro}}"></i>
+        {{else}}
+          <button type="button" data-action="alternarOficial" data-chave="{{o.chave}}" data-removida="{{o.removida}}"
+                  title="{{#if o.removida}}{{localize 'T20HaydGMTools.TesourosDevolver'}}{{else}}{{localize 'T20HaydGMTools.TesourosTirarDoSorteio'}}{{/if}}">
+            <i class="fa-solid {{#if o.removida}}fa-rotate-left{{else}}fa-ban{{/if}}"></i>
+          </button>
+        {{/if}}
+      </div>
+    {{/each}}
+  </div>
+</fieldset>
+
+</div>
+<div class="t20g-tesouro-homebrew-restaurar">
+  <button type="button" data-action="restaurarTabela">
+    <i class="fa-solid fa-rotate-left"></i> {{localize "T20HaydGMTools.TesourosRestaurarTabela"}}
+  </button>
+  <button type="button" data-action="restaurarTudo">
+    <i class="fa-solid fa-trash-arrow-up"></i> {{localize "T20HaydGMTools.TesourosRestaurarTudo"}}
+  </button>
+</div>
 </div>

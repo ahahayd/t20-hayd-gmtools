@@ -59,7 +59,7 @@ export function capturarRolagemDeJogador({ n = 1, faces, timeoutMs = 600000 }) {
  * Pede a `userId` que role `formula` no chat. Resolve com `{ roll, cancelado }`
  * quando a rolagem chega (ou `{ roll: null, cancelado: true }` se expirar).
  */
-export function pedirRolagemAoJogador({ userId, formula, rotulo, timeoutMs = 180000 }) {
+export function pedirRolagemAoJogador({ userId, formula, rotulo, timeoutMs = 180000, registrarCancelamento }) {
   const requestId = foundry.utils.randomID();
   const usuario = game.users.get(userId);
   const destinatarios = [...new Set([...game.users.filter(u => u.isGM).map(u => u.id), userId])];
@@ -84,6 +84,11 @@ export function pedirRolagemAoJogador({ userId, formula, rotulo, timeoutMs = 180
     };
     Hooks.on('createChatMessage', aoChegarMensagem);
     const timer = setTimeout(() => finalizar({ roll: null, cancelado: true, expirado: true }), timeoutMs);
+
+    // Permite ao Mestre desistir sem esperar o jogador nem o tempo limite.
+    // `abortado` distingue "eu cancelei" de "o jogador não rolou a tempo": o
+    // primeiro interrompe a geração, o segundo cai na rolagem automática.
+    registrarCancelamento?.(() => finalizar({ roll: null, cancelado: true, abortado: true }));
 
     const content = `
       <div class="t20g-tesouro-pedido">

@@ -24,6 +24,18 @@ import {
   FAIXAS_VALOR_RIQUEZA, EXEMPLOS_RIQUEZA, ESPACOS_RIQUEZA, faixaValorPor
 } from './dados-riquezas.mjs';
 import { obterHomebrewTabela } from './homebrew.mjs';
+import { livroHabilitado } from './livros.mjs';
+
+/** Avisa uma vez por tabela que o filtro de livros teve de ser ignorado. */
+const tabelasAvisadas = new Set();
+function avisarTabelaSemLivro(tabelaId) {
+  if (tabelasAvisadas.has(tabelaId)) return;
+  tabelasAvisadas.add(tabelaId);
+  console.warn(
+    `t20-hayd-tesouros | A tabela "${tabelaId}" ficaria vazia com os livros ativos — ` +
+    'o filtro de livros foi ignorado nela para a geração não quebrar.'
+  );
+}
 
 export { TABELA_POR_CATEGORIA_EQUIPAMENTO, TABELA_SUPERIOR_POR_CATEGORIA, TABELA_MAGICO_POR_CATEGORIA };
 export { TABELAS_ESPECIFICAS, TABELA_ACESSORIO_POR_NIVEL };
@@ -68,18 +80,152 @@ function tabelaBase(tabelaId) {
   return base;
 }
 
-/** Entradas oficiais + homebrew de uma tabela genérica, na ordem de faixa. */
-export function entradasResolvidas(tabelaId) {
-  const base = tabelaBase(tabelaId);
-  const hb = obterHomebrewTabela(tabelaId);
-  return [...base.entradas, ...hb.entradas].sort((a, b) => a.min - b.min);
+/**
+ * Redistribui as faixas das entradas sobreviventes para cobrir o dado inteiro,
+ * sem buracos.
+ *
+ * Quando uma entrada sai (livro desligado, ou o Mestre a removeu), a faixa
+ * dela ficaria vazia e a rolagem teria de ser refeita — o que estraga o
+ * momento de rolar o tesouro. Em vez disso, o espaço é redividido entre quem
+ * ficou.
+ *
+ * A divisão é PROPORCIONAL ao peso original, não igual: as entradas do livro
+ * têm larguras diferentes de propósito (Armadura Completa ocupa 10 números,
+ * Sagna ocupa 1) e isso é o desenho de raridade da tabela. Dar a mesma fatia
+ * para todas tornaria o item lendário tão comum quanto o mundano.
+ *
+ * O que sobra da divisão inteira vai para as PRIMEIRAS entradas, uma unidade
+ * cada, até acabar.
+ *
+ * Sem nada removido o resultado é idêntico à tabela original: as cotas
+ * proporcionais devolvem exatamente as larguras de partida.
+ */
+function redistribuirFaixas(entradas, dado) {
+  if (!entradas.length) return { entradas: [], dado: 0 };
+
+  const larguras = entradas.map(e => Math.max(1, (e.max - e.min + 1) || 1));
+  const totalOriginal = larguras.reduce((s, w) => s + w, 0);
+  // Nunca menos números do que entradas — cada uma precisa de ao menos um.
+  const alvo = Math.max(dado, entradas.length);
+
+  const cotas = larguras.map(w => Math.max(1, Math.floor((w * alvo) / totalOriginal)));
+  let sobra = alvo - cotas.reduce((s, c) => s + c, 0);
+
+  // Sobra: as primeiras entradas ganham a diferença.
+  for (let i = 0; sobra > 0; i = (i + 1) % cotas.length) { cotas[i]++; sobra--; }
+  // Falta (o piso de 1 pode ter estourado o alvo): tira das maiores, sem zerar.
+  while (sobra < 0) {
+    const maior = cotas.indexOf(Math.max(...cotas));
+    if (cotas[maior] <= 1) break;
+    cotas[maior]--;
+    sobra++;
+  }
+
+  let cursor = 1;
+  const redistribuidas = entradas.map((entrada, i) => {
+    const min = cursor;
+    cursor += cotas[i];
+    return { ...entrada, min, max: cursor - 1 };
+  });
+  return { entradas: redistribuidas, dado: cursor - 1 };
 }
 
-/** Tamanho do dado a rolar para uma tabela genérica, já considerando extensão por homebrew. */
-export function dadoResolvido(tabelaId) {
+/**
+ * Tabela pronta para rolar: `{ entradas, dado }` já com livros, overrides e
+ * homebrew aplicados e as faixas redistribuídas. Fonte única — `dadoResolvido`
+ * e `entradaPorRolagem` derivam daqui para nunca discordarem entre si.
+ */
+export function tabelaEfetiva(tabelaId) {
   const base = tabelaBase(tabelaId);
   const hb = obterHomebrewTabela(tabelaId);
-  return Math.max(base.dado, hb.dadoMax ?? 0);
+  const dadoBruto = Math.max(base.dado, hb.dadoMax ?? 0);
+  return redistribuirFaixas(entradasSobreviventes(tabelaId), dadoBruto);
+}
+
+function entradasSobreviventes(tabelaId) {
+  const base = tabelaBase(tabelaId);
+  const hb = obterHomebrewTabela(tabelaId);
+  const overrides = hb.overrides ?? {};
+
+  const aplicar = (entrada) => {
+    const ov = overrides[entrada.chave];
+    if (ov?.removida) return null;
+    return ov?.nome ? { ...entrada, nome: ov.nome, renomeada: true } : entrada;
+  };
+
+  // Livro desligado pela mesa sai do sorteio, igual a uma entrada removida.
+  let oficiais = base.entradas.filter(livroHabilitado).map(aplicar).filter(Boolean);
+
+  // Há tabela de livro único (ENCANTOS_ESOTERICOS é toda de Heróis de Arton):
+  // desligar aquele livro a deixaria vazia, e uma rolagem que caísse ali não
+  // teria o que devolver. Nesse caso o filtro de livro é ignorado SÓ nesta
+  // tabela — melhor um resultado de um livro que a mesa não usa do que uma
+  // geração que quebra no meio.
+  if (!oficiais.length && !hb.entradas.length) {
+    oficiais = base.entradas.map(aplicar).filter(Boolean);
+    if (oficiais.length) avisarTabelaSemLivro(tabelaId);
+  }
+
+  return [...oficiais, ...hb.entradas].sort((a, b) => a.min - b.min);
+}
+
+/**
+ * Entradas oficiais de uma tabela com o override de cada uma (para a UI).
+ *
+ * Cobre os dois formatos: as tabelas genéricas do registry e as pseudo-tabelas
+ * "riqueza-<faixa>", cujas entradas são os EXEMPLOS da faixa indexados 1..N —
+ * elas não existem em TABELAS, e chamar `tabelaBase` com elas lançava
+ * "Tabela desconhecida".
+ *
+ * Os exemplos de riqueza não têm `chave` própria; o índice serve de
+ * identificador estável do override, já que a lista é fixa no código.
+ */
+export function entradasOficiaisComOverride(tabelaId) {
+  const overrides = obterHomebrewTabela(tabelaId).overrides ?? {};
+  const ehRiqueza = tabelaId.startsWith('riqueza-');
+  const faixaId = ehRiqueza ? Number(tabelaId.slice('riqueza-'.length)) : null;
+
+  // Faixas EFETIVAS (já com livros desligados e a redistribuição aplicada),
+  // para o editor mostrar como a tabela realmente vai rolar — e não as faixas
+  // de partida, que deixariam de bater com o que sai na mesa.
+  const efetivas = new Map(
+    (ehRiqueza ? entradasResolvidasExemplosRiqueza(faixaId) : entradasResolvidas(tabelaId))
+      .map(e => [e.chave ?? e.nome, e])
+  );
+
+  const comOverride = (entrada, chave) => {
+    const efetiva = efetivas.get(entrada.chave ?? entrada.nome);
+    const foraPorLivro = !livroHabilitado(entrada);
+    return {
+      ...entrada,
+      chave,
+      override: overrides[chave] ?? null,
+      nomeExibido: overrides[chave]?.nome ?? entrada.nome,
+      removida: !!overrides[chave]?.removida,
+      foraPorLivro,
+      // Faixa em jogo agora; `null` quando a entrada está fora do sorteio.
+      faixaEfetiva: efetiva ? { min: efetiva.min, max: efetiva.max } : null
+    };
+  };
+
+  if (ehRiqueza) {
+    const oficiais = EXEMPLOS_RIQUEZA[faixaId] ?? [];
+    return oficiais.map((ex, i) =>
+      comOverride({ ...ex, min: i + 1, max: i + 1, tipo: 'riquezaExemplo' }, `exemplo-${i + 1}`)
+    );
+  }
+
+  return tabelaBase(tabelaId).entradas.map((entrada) => comOverride(entrada, entrada.chave));
+}
+
+/** Entradas prontas para rolar, com as faixas já redistribuídas. */
+export function entradasResolvidas(tabelaId) {
+  return tabelaEfetiva(tabelaId).entradas;
+}
+
+/** Tamanho do dado a rolar, derivado da mesma redistribuição das faixas. */
+export function dadoResolvido(tabelaId) {
+  return tabelaEfetiva(tabelaId).dado;
 }
 
 /** Entrada correspondente a uma rolagem já feita, numa tabela genérica. */
@@ -93,16 +239,29 @@ export function entradaPorRolagem(tabelaId, rolagem) {
  * homebrew/rolagem das tabelas genéricas.
  */
 export function dadoResolvidoExemplosRiqueza(faixaId) {
-  const oficiais = EXEMPLOS_RIQUEZA[faixaId] ?? [];
-  const hb = obterHomebrewTabela(idTabelaExemplosRiqueza(faixaId));
-  return Math.max(oficiais.length, hb.dadoMax ?? 0);
+  return entradasResolvidasExemplosRiqueza(faixaId).length;
 }
 
 export function entradasResolvidasExemplosRiqueza(faixaId) {
   const oficiais = EXEMPLOS_RIQUEZA[faixaId] ?? [];
   const hb = obterHomebrewTabela(idTabelaExemplosRiqueza(faixaId));
-  const base = oficiais.map((ex, i) => ({ min: i + 1, max: i + 1, tipo: 'riquezaExemplo', ...ex }));
-  return [...base, ...hb.entradas].sort((a, b) => a.min - b.min);
+  const overrides = hb.overrides ?? {};
+
+  // Mesmo tratamento das tabelas genéricas: renomeadas saem com o nome novo e
+  // as removidas somem.
+  const base = oficiais.reduce((acc, ex, i) => {
+    const ov = overrides[`exemplo-${i + 1}`];
+    if (ov?.removida) return acc;
+    const entrada = { min: i + 1, max: i + 1, tipo: 'riquezaExemplo', ...ex };
+    acc.push(ov?.nome ? { ...entrada, nome: ov.nome } : entrada);
+    return acc;
+  }, []);
+
+  // Reindexa 1..N sem buracos: aqui as faixas são de um número cada, então
+  // "redistribuir" é só renumerar em sequência.
+  return [...base, ...hb.entradas]
+    .sort((a, b) => a.min - b.min)
+    .map((entrada, i) => ({ ...entrada, min: i + 1, max: i + 1 }));
 }
 
 export function exemploRiquezaPorRolagem(faixaId, rolagem) {

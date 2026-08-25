@@ -191,22 +191,49 @@ Hooks.once('setup', () => {
   console.log('T20 Hayd GMTools | Régua para efeitos instalada');
 });
 
-// A grade espelho depende das dimensões da cena — descarta ao trocar de cena.
-Hooks.on('canvasReady', () => { _grade = null; });
+/**
+ * A ferramenta deve existir nesta cena?
+ *
+ * Só faz sentido em grade quadrada: em hexágono ou sem grade não há diagonal a
+ * descontar, e a ferramenta seria uma cópia exata da régua padrão.
+ *
+ * Exige o canvas PRONTO de propósito. O Foundry monta os controles duas vezes
+ * na carga: a primeira antes de o canvas existir e a segunda já com a cena
+ * carregada, dentro de `Canvas##initialize` (board.mjs) — que roda ANTES do
+ * hook `canvasReady`. Responder "sim" na primeira, sem saber a grade, é o que
+ * fazia a ferramenta aparecer e sumir logo depois numa cena sem grade.
+ */
+function deveMostrarFerramenta() {
+  if (!reguaAtiva()) return false;
+  if (!canvas?.ready) return false;
+  return canvas.grid?.isSquare === true;
+}
+
+/** Presença da ferramenta na última montagem dos controles. */
+let _ferramentaVisivel = null;
 
 /**
- * Acrescenta a ferramenta ao lado da régua padrão, nos controles de tokens.
- * O hook é chamado a cada reconstrução dos controles (troca de cena, ou o
- * `render({reset: true})` do onChange), então ligar/desligar vale na hora.
+ * A grade espelho depende das dimensões da cena — descarta ao trocar de cena.
+ *
+ * A remontagem aqui é rede de segurança: o núcleo já refaz os controles ao
+ * desenhar a cena, mas se a última montagem tiver ocorrido com o canvas ainda
+ * não pronto, a ferramenta ficaria de fora sem nada para trazê-la de volta.
  */
+Hooks.on('canvasReady', () => {
+  _grade = null;
+  if (_ferramentaVisivel === deveMostrarFerramenta()) return;
+  ui.controls?.render({ reset: true });
+});
+
+/** Acrescenta a ferramenta ao lado da régua padrão, nos controles de tokens. */
 Hooks.on('getSceneControlButtons', controls => {
-  if (!reguaAtiva()) return;
+  _ferramentaVisivel = false;
+  if (!deveMostrarFerramenta()) return;
+
   const tokens = controls.tokens;
   if (!tokens?.tools?.ruler) return;
-  // Sem grade quadrada não existe diagonal a descontar: a ferramenta seria
-  // uma cópia exata da régua padrão.
-  if (canvas?.grid && !canvas.grid.isSquare) return;
 
+  _ferramentaVisivel = true;
   tokens.tools[TOOL] = {
     name: TOOL,
     order: tokens.tools.ruler.order + 0.5,

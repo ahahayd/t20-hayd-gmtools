@@ -717,7 +717,13 @@ a.header-button.t20g-atr-header {
 
 /* ═══ Gerador de Tesouros ════════════════════════════════════════════════ */
 
-.t20g-tesouros .window-content { overflow-y: auto; }
+.t20g-tesouros .window-content {
+  overflow: hidden;
+  display: flex;
+  min-height: 0;
+}
+/* O corpo precisa ocupar a janela inteira para as metades poderem rolar. */
+.t20g-tesouros .t20g-tesouro-body { flex: 1 1 auto; min-height: 0; }
 .t20g-tesouros .form-group { margin-bottom: 6px; }
 .t20g-tesouros .t20g-hint { font-size: 0.82em; opacity: 0.7; }
 
@@ -751,14 +757,17 @@ a.header-button.t20g-atr-header {
   display: grid;
   grid-template-columns: 220px 1fr;
   gap: 12px;
-  align-items: start;
+  align-items: stretch;
+  min-height: 0;
 }
+/* A barra lateral rola sozinha: com muitos destinos ela crescia e empurrava
+   o resto para fora da janela. */
 .t20g-tesouro-sidebar {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  position: sticky;
-  top: 0;
+  min-height: 0;
+  overflow-y: auto;
 }
 .t20g-tesouro-sidebar-grupo {
   border: 1px solid var(--color-border-light-tertiary, #999);
@@ -790,11 +799,24 @@ a.header-button.t20g-atr-header {
   color: #d29922;
   margin: 6px 0 0;
 }
+/* Duas metades empilhadas: o que foi gerado em cima, para onde vai embaixo.
+   Cada uma rola por dentro para a janela não crescer. */
 .t20g-tesouro-principal {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.t20g-tesouro-resultado {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   min-width: 0;
+  min-height: 0;
+  max-height: 45%;
+  overflow-y: auto;
 }
 .t20g-tesouro-coluna-header h3 { display: flex; align-items: center; gap: 6px; }
 .t20g-tesouro-coluna {
@@ -852,9 +874,22 @@ a.header-button.t20g-atr-header {
 .t20g-tesouro-drop-compacto { padding: 4px 8px; font-size: 0.82em; flex: 0 0 auto; }
 
 /* --- app-vinculos ---------------------------------------------------------*/
-.t20g-tesouro-vinculos-topo { display: flex; align-items: flex-end; gap: 10px; }
-.t20g-tesouro-vinculos-resumo { display: flex; gap: 8px; margin: 8px 0; }
+/* A janela de Vínculos é uma coluna: topo e resumo fixos, lista rolando.
+   Sem isto a lista (centenas de entradas) transbordava para fora da janela,
+   já que .t20g-tesouros .window-content é overflow:hidden. */
+.t20g-tesouros .t20g-tesouro-vinculos-lista { min-height: 0; overflow-y: auto; flex: 1 1 auto; }
+.t20g-tesouro-vinculos-topo {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+}
+.t20g-tesouro-vinculos-topo button { width: auto; flex: 0 0 auto; }
+.t20g-tesouro-vinculos-resumo { display: flex; gap: 8px; margin: 8px 0; flex: 0 0 auto; }
 .t20g-tesouro-vinculos-lista { display: flex; flex-direction: column; gap: 4px; }
+/* O corpo desta janela precisa ser coluna para a lista poder rolar. */
+.t20g-tesouros .t20g-tesouro-body:has(.t20g-tesouro-vinculos-lista) { display: flex; flex-direction: column; min-height: 0; }
 .t20g-tesouro-vinculo-linha {
   display: flex;
   align-items: center;
@@ -955,3 +990,343 @@ a.header-button.t20g-atr-header {
 }
 .t20g-cfg-titulo:first-child { margin-top: 4px; }
 .t20g-cfg-titulo i { opacity: 0.7; }
+
+/* Marcador de valor cortado pela metade (botão de tesoura) */
+.t20g-tesouro-cortado {
+  font-size: 0.82em;
+  opacity: 0.75;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+.t20g-tesouro-cortado del { margin-left: 3px; }
+
+/* Botão de cancelar as rolagens (ocupa o lugar de "Rolar tudo") */
+.t20g-botao-cancelar { --cor: #c0392b; }
+.t20g-botao-cancelar i { color: var(--cor); }
+
+/* Entrada com trilha de rolagens no tooltip */
+.t20g-tesouro-entrada[data-tooltip] { cursor: help; }
+
+/* Ícone de ajuda ao lado do rótulo de ND */
+.t20g-tesouro-ajuda { margin-left: 4px; opacity: 0.6; cursor: help; }
+.t20g-tesouro-ajuda:hover { opacity: 1; }
+
+/* Entradas oficiais no editor de homebrew */
+.t20g-tesouro-homebrew-oficiais { margin-top: 10px; }
+.t20g-tesouro-homebrew-oficiais .t20g-tesouro-homebrew-linha input[type=text] { width: 100%; }
+.t20g-tesouro-removida { opacity: 0.45; }
+.t20g-tesouro-removida input[type=text] { text-decoration: line-through; }
+.t20g-tesouro-homebrew-restaurar { display: flex; gap: 6px; margin-top: 10px; }
+.t20g-tesouro-homebrew-restaurar button { flex: 1; font-size: 0.85em; }
+
+/* Conteúdo de tooltip em lista: alinhado à esquerda.
+   A classe vive DENTRO do HTML do tooltip, então não afeta os tooltips
+   de outros módulos (ao contrário de estilizar #tooltip direto). */
+.t20g-dica-lista { text-align: left; }
+
+/* ═══ Tela de distribuição do tesouro ═══════════════════════════════════ */
+.t20g-dist2 {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  flex: 1 1 auto;
+  border-top: 1px solid var(--color-border-light-2, #999);
+  padding-top: 8px;
+}
+
+.t20g-dist2-moedas { border: 1px solid var(--color-border-light-2, #999); border-radius: 6px; padding: 8px; }
+.t20g-dist2-moedas-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.t20g-dist2-moedas-topo h3 { margin: 0; font-size: 1em; }
+.t20g-dist2-moedas-acoes { display: flex; gap: 6px; }
+.t20g-dist2-moedas-acoes button { width: auto; font-size: 0.85em; padding: 2px 8px; }
+.t20g-dist2-disputa { margin: 4px 0 0; font-weight: 600; color: #c0392b; }
+
+.t20g-dist2-colunas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-content: start;
+}
+.t20g-dist2-coluna {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--color-border-light-2, #999);
+  border-radius: 6px;
+  padding: 6px;
+  min-height: 120px;
+  /* Nada escapa da borda arredondada do cartão, aconteça o que acontecer
+     com a altura da lista. */
+  overflow: hidden;
+}
+.t20g-dist2-coluna.t20g-dist2-sobre,
+.t20g-dist2-coluna.t20g-dist-sobre { border-color: var(--t20a-chat-cor, #c0392b); box-shadow: 0 0 6px rgba(192,57,43,0.4); }
+.t20g-dist2-coluna-topo { display: flex; align-items: center; gap: 6px; }
+.t20g-dist2-coluna-topo img { border: none; border-radius: 4px; flex: 0 0 auto; }
+.t20g-dist2-nome { font-weight: 600; font-size: 0.9em; }
+
+.t20g-dist2-moedas-campos { display: flex; flex-wrap: wrap; gap: 4px; }
+.t20g-dist2-moeda { display: flex; align-items: center; gap: 3px; font-size: 0.8em; }
+.t20g-dist2-moeda input { width: 52px; text-align: center; }
+
+/* A lista rola DENTRO do cartão. Sem isto, um ator com muitos itens
+   esticava o cartão e a lista passava do limite inferior do painel.
+   O teto é generoso o bastante para caber um loot normal sem rolar. */
+.t20g-dist2-itens {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 170px;
+  overflow-y: auto;
+}
+/* Os cartões de item não encolhem: espremer 12 itens em 170px deixaria cada
+   um ilegível — melhor rolar. */
+.t20g-dist2-itens > .t20g-dist2-item { flex: 0 0 auto; }
+.t20g-dist2-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  background: rgba(0,0,0,0.05);
+  cursor: grab;
+}
+.t20g-dist2-item img { border: none; border-radius: 3px; flex: 0 0 auto; }
+.t20g-dist2-item-nome { flex: 1 1 auto; font-size: 0.85em; min-width: 0; }
+.t20g-dist2-item button { flex: 0 0 auto; width: 20px; height: 20px; padding: 0; line-height: 1; }
+.t20g-dist2-vazio { text-align: center; padding: 8px 0; font-style: italic; }
+
+.t20g-dist2-acoes { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.t20g-dist2-acoes > div { display: flex; gap: 6px; }
+.t20g-dist2-acoes button { width: auto; }
+
+.t20g-dist2-topo { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.t20g-dist2-topo h3 { margin: 0; font-size: 1em; display: flex; align-items: center; gap: 6px; }
+.t20g-dist2-disputa:empty { display: none; }
+
+/* Destaque de personagem recém-arrastado para a distribuição.
+   Dura poucos segundos — só para o olho achar o que acabou de entrar. */
+@keyframes t20g-dist2-entrou {
+  from { box-shadow: 0 0 0 2px var(--t20a-chat-cor, #c0392b); }
+  to   { box-shadow: 0 0 0 2px transparent; }
+}
+.t20g-dist2-novo {
+  border-color: var(--t20a-chat-cor, #c0392b);
+  animation: t20g-dist2-entrou 2.5s ease-out;
+}
+
+/* Botão de tirar alguém da distribuição */
+.t20g-dist2-coluna-topo { position: relative; }
+.t20g-dist2-remover {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  line-height: 1;
+  margin-left: auto;
+  opacity: 0.55;
+}
+.t20g-dist2-remover:hover { opacity: 1; }
+
+/* Etiqueta de convidado: quem entrou por arrasto e não é membro do grupo */
+.t20g-dist2-convidado {
+  flex: 0 0 auto;
+  font-size: 0.7em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: var(--t20a-chat-cor, #c0392b);
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* ═══ Card de chat da partilha do tesouro ═══════════════════════════════
+   Mesmo vocabulário visual dos cartões do t20-hayd-loja: barra lateral na
+   cor de destaque, cabeçalho com ícone e chips de moeda. */
+.t20g-part.t20g-card {
+  border: 1px solid rgba(120, 120, 130, 0.35);
+  border-left: 3px solid var(--t20a-chat-cor, #b5891f);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: var(--font-size-13, 13px);
+  line-height: 1.4;
+}
+.t20g-part-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(120, 120, 130, 0.25);
+}
+.t20g-part-head > i {
+  font-size: 1.15em;
+  color: var(--t20a-chat-cor, #b5891f);
+  width: 20px;
+  text-align: center;
+}
+.t20g-part-head strong { display: block; line-height: 1.15; }
+.t20g-part-head span { font-size: 0.85em; opacity: 0.75; }
+
+.t20g-part-total {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(120, 120, 130, 0.25);
+}
+.t20g-part-total > span {
+  font-size: 0.8em;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  opacity: 0.65;
+  flex: 0 0 auto;
+}
+.t20g-part-total > div { display: flex; flex-wrap: wrap; gap: 3px; }
+
+.t20g-part-linha {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(120, 120, 130, 0.15);
+}
+.t20g-part-linha:last-of-type { border-bottom: none; }
+.t20g-part-linha > img {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: none;
+  flex: 0 0 auto;
+}
+.t20g-part-info { flex: 1 1 auto; min-width: 0; }
+.t20g-part-moedas { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 2px; }
+.t20g-part-itens { margin: 3px 0 0; padding: 0; list-style: none; }
+.t20g-part-itens li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.92em;
+  padding: 1px 0;
+}
+.t20g-part-itens img {
+  width: 18px;
+  height: 18px;
+  object-fit: cover;
+  border-radius: 3px;
+  border: none;
+  flex: 0 0 auto;
+}
+.t20g-part-vazio { opacity: 0.5; }
+.t20g-part-nada { font-style: italic; font-size: 0.9em; opacity: 0.7; }
+.t20g-part-aviso {
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid rgba(120, 120, 130, 0.25);
+  font-size: 0.9em;
+  color: #c0392b;
+}
+
+/* Chip de moeda */
+.t20g-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 0 6px;
+  border-radius: 9px;
+  font-size: 0.9em;
+  line-height: 1.5;
+  background: rgba(120, 120, 130, 0.18);
+  white-space: nowrap;
+}
+
+/* Cartão de destino apagado (fora da divisão desta vez) */
+.t20g-dist2-desativado { opacity: 0.4; }
+.t20g-dist2-desativado .t20g-dist2-itens,
+.t20g-dist2-desativado .t20g-dist2-moedas-campos { pointer-events: none; }
+
+/* Botões do cabeçalho do destino: quadrados, não retangulares */
+.t20g-dist2-botao {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  opacity: 0.6;
+}
+.t20g-dist2-botao:hover { opacity: 1; }
+
+/* ═══ Escolha de livros nas tabelas de tesouro ══════════════════════════ */
+.t20g-livros { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.t20g-livros-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+.t20g-livros-linha {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border-light-2, #999);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.t20g-livros-linha:hover { border-color: var(--t20a-chat-cor, #c0392b); }
+.t20g-livros-linha input[type="checkbox"] { flex: 0 0 auto; margin-top: 3px; }
+.t20g-livros-info { display: flex; flex-direction: column; gap: 1px; line-height: 1.25; }
+.t20g-livros-off { opacity: 0.5; }
+.t20g-livros-aviso { font-size: 0.8em; color: #c0392b; }
+.t20g-livros button { width: auto; align-self: flex-start; }
+
+/* Nome clicável na auditoria de vínculos: só quem tem item de verdade.
+   Sublinhado só no hover para a lista não virar um mar de links. */
+.t20g-tesouro-vinculo-abrir { cursor: pointer; text-decoration: none; }
+.t20g-tesouro-vinculo-abrir:hover { text-decoration: underline; color: var(--t20a-chat-cor, #c0392b); }
+
+/* ═══ Editor de homebrew: rolagem interna ═══════════════════════════════
+   Mesma razão da janela de Vínculos — .t20g-tesouros .window-content é
+   overflow:hidden, então sem a cadeia de altura o conteúdo transbordava.
+   Agora o seletor de tabela fica fixo no topo, os botões de restaurar fixos
+   embaixo, e só o miolo rola. Ficou pior desde que as entradas oficiais
+   entraram na tela: algumas tabelas passam de 100 linhas. */
+.t20g-tesouros .t20g-homebrew {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  height: 100%;
+}
+.t20g-homebrew > .form-group,
+.t20g-homebrew > .t20g-tesouro-homebrew-restaurar { flex: 0 0 auto; }
+.t20g-homebrew-miolo {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* Espaço para a barra de rolagem não colar no conteúdo. */
+  padding-right: 4px;
+}
+
+/* Resumo e marcação de entradas fora do sorteio no editor de homebrew */
+.t20g-tesouro-emjogo {
+  margin: 4px 0 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(120, 120, 130, 0.15);
+  font-size: 0.85em;
+}
+.t20g-tesouro-fora { font-size: 0.8em; color: #c0392b; }
+.t20g-tesouro-fora-icone { flex: 0 0 auto; width: 22px; text-align: center; opacity: 0.55; }

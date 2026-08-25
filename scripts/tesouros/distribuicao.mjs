@@ -102,25 +102,52 @@ export async function materializarItem(node) {
     base.system.description.value = (base.system.description.value ?? '') + listaEntradas(rotulo, naoAutomatizadas);
     foundry.utils.setProperty(base, 'flags.t20-hayd-gmtools.tesouroGerado', {
       tipo: node.tipo, categoria: node.item.categoria, nivel: node.nivel ?? null,
-      melhorias: node.melhorias ?? [], encantos: node.encantos ?? []
+      melhorias: node.melhorias ?? [], encantos: node.encantos ?? [],
+      // Com o t20-hayd-itens ativo a lista NÃO entra na descrição, porque será
+      // aplicada de verdade depois. `pendente` marca que isso ainda não
+      // aconteceu — é o que permite aplicar quando o item vira um Document,
+      // inclusive saindo do estoque do grupo (que guarda só dado cru).
+      pendente: itensSuperioresAtivo()
     });
     return base;
   }
   return dadosBaseDoNode(node);
 }
 
-/** Aplica de verdade as melhorias/encantos via t20-hayd-itens NO ITEM JÁ CRIADO (precisa do Document). */
-export async function finalizarPosCriacao(itemDocumento, node) {
-  if (node.tipo !== 'itemSuperior' && node.tipo !== 'itemMagico') return;
-  const categoria = node.item.categoria;
-  const melhorias = node.tipo === 'itemSuperior' ? node.melhorias : [];
-  const encantos = node.tipo === 'itemMagico' ? node.encantos : [];
-  const { naoAplicadas } = await aplicarEntradasNoItem(itemDocumento, { melhorias, encantos, categoria });
+/**
+ * Aplica de verdade as melhorias/encantos NO ITEM JÁ CRIADO, a partir da flag
+ * gravada por `materializarItem`.
+ *
+ * Trabalha pela FLAG, e não pelo nó da rolagem, porque o item pode chegar aqui
+ * muito depois — uma entrada de estoque do grupo é dado cru numa flag da
+ * pasta, sem Document para atualizar na hora. A flag viaja com o item e a
+ * aplicação acontece quando ele finalmente vira um Item de verdade na ficha.
+ *
+ * Idempotente: baixa a marca `pendente` ANTES de aplicar, então a chamada
+ * direta e o hook de criação nunca duplicam os efeitos.
+ */
+export async function aplicarBuildPendente(itemDocumento) {
+  const flag = itemDocumento?.getFlag?.('t20-hayd-gmtools', 'tesouroGerado');
+  if (!flag?.pendente) return;
+  await itemDocumento.setFlag('t20-hayd-gmtools', 'tesouroGerado', { ...flag, pendente: false });
+
+  const melhorias = flag.tipo === 'itemSuperior' ? (flag.melhorias ?? []) : [];
+  const encantos = flag.tipo === 'itemMagico' ? (flag.encantos ?? []) : [];
+  if (!melhorias.length && !encantos.length) return;
+
+  const { naoAplicadas } = await aplicarEntradasNoItem(itemDocumento, {
+    melhorias, encantos, categoria: flag.categoria
+  });
   if (naoAplicadas.length) {
-    const rotulo = node.tipo === 'itemSuperior' ? 'Melhorias (aplicar manualmente)' : 'Encantos (aplicar manualmente)';
+    const rotulo = flag.tipo === 'itemSuperior' ? 'Melhorias (aplicar manualmente)' : 'Encantos (aplicar manualmente)';
     const atual = itemDocumento.system?.description?.value ?? '';
     await itemDocumento.update({ 'system.description.value': atual + listaEntradas(rotulo, naoAplicadas) });
   }
+}
+
+/** Compatibilidade: os caminhos diretos continuam chamando isto após criar o Item. */
+export async function finalizarPosCriacao(itemDocumento) {
+  return aplicarBuildPendente(itemDocumento);
 }
 
 /* ─── Conceder a um ator ────────────────────────────────────────────────── */
@@ -141,7 +168,7 @@ export async function concederTesouro(tesouro, actor) {
     const dados = await materializarItem(node);
     const [doc] = await actor.createEmbeddedDocuments('Item', [dados]);
     if (doc) {
-      await finalizarPosCriacao(doc, node);
+      await finalizarPosCriacao(doc);
       criados.push(doc);
     }
   }

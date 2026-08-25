@@ -22,16 +22,53 @@ function tudo() {
   return foundry.utils.deepClone(game.settings.get(MODULE_ID, SETTING) ?? {});
 }
 
-/** `{ entradas: [], dadoMax: null }` da tabela — nunca null, sempre com as chaves. */
+/**
+ * `{ entradas, dadoMax, overrides }` da tabela — nunca null, sempre com as
+ * chaves. `overrides` mapeia a chave de uma entrada OFICIAL para uma
+ * customização do Mestre: `{ nome }` renomeia e `{ removida: true }` tira a
+ * entrada do sorteio.
+ */
 export function obterHomebrewTabela(tabelaId) {
   const registro = tudo()[tabelaId];
-  return { entradas: registro?.entradas ?? [], dadoMax: registro?.dadoMax ?? null };
+  return {
+    entradas: registro?.entradas ?? [],
+    dadoMax: registro?.dadoMax ?? null,
+    overrides: registro?.overrides ?? {}
+  };
 }
 
 async function salvar(tabelaId, dados) {
   const todos = tudo();
   todos[tabelaId] = dados;
   await game.settings.set(MODULE_ID, SETTING, todos);
+}
+
+/**
+ * Customiza uma entrada OFICIAL da tabela: `{ nome }` renomeia,
+ * `{ removida: true }` tira do sorteio, `null` volta ao padrão.
+ *
+ * As entradas oficiais não são editadas no lugar — ficam no código, e o que o
+ * Mestre muda vive aqui por cima. Assim uma atualização do módulo pode corrigir
+ * a tabela sem apagar o que a mesa customizou.
+ */
+export async function definirOverrideOficial(tabelaId, chave, dados) {
+  const atual = obterHomebrewTabela(tabelaId);
+  const overrides = { ...atual.overrides };
+  if (dados) overrides[chave] = dados;
+  else delete overrides[chave];
+  await salvar(tabelaId, { entradas: atual.entradas, dadoMax: atual.dadoMax, overrides });
+}
+
+/** Descarta TODA a customização de uma tabela (entradas novas e overrides). */
+export async function restaurarPadraoTabela(tabelaId) {
+  const todos = tudo();
+  delete todos[tabelaId];
+  await game.settings.set(MODULE_ID, SETTING, todos);
+}
+
+/** Descarta a customização de TODAS as tabelas. */
+export async function restaurarPadraoTudo() {
+  await game.settings.set(MODULE_ID, SETTING, {});
 }
 
 /**
