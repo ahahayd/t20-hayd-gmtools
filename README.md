@@ -87,19 +87,17 @@ Clique com o botão direito em uma mensagem de rolagem no chat para **rerolar** 
 
 ### Gerador de tesouros
 
-O botão do saco de moedas na barra de ferramentas de tokens (só para o Mestre) abre o **Gerador de Tesouros**, que segue as tabelas de tesouro dos livros: você escolhe o nível de desafio e o tipo de cada coluna — **Normal** (rola uma vez), **Dobro** (rola duas e acumula), **Metade** (a tesoura ao lado do valor corta o dinheiro pela metade) ou **Nenhum** —, e o gerador rola o dado de cada tabela até chegar no item final.
+O botão do saco de moedas na barra de ferramentas de tokens (só para o Mestre) abre o **Gerador de Tesouros**, que segue as tabelas de tesouro citada abaixo, criada pelo Svaldi: você escolhe o nível de desafio e o tipo de cada coluna — **Normal** (rola uma vez), **Dobro** (rola duas e acumula) e **Metade** (a tesoura ao lado do valor corta o dinheiro pela metade), e o gerador rola automaticamente, ou auxlia na rolagem de cada tabela até chegar no item final.
 
 ![Barra de ferramentas de tokens com o ícone de saco de moedas destacado](docs/Icone%20de%20tesouro.png)
 
 *O gerador fica na barra de tokens, ao lado da régua de efeitos.*
 
-Cada resultado guarda a **trilha de rolagens** que levou até ele — passe o mouse por cima para ver qual d100 caiu em qual faixa, em qual tabela, até o item. O dinheiro é somado nas denominações do sistema (TL, TO, TP e TC), sem conversão automática.
-
-A metade de baixo da janela é a **distribuição**: arraste atores (ou uma pasta inteira) para montar a lista de quem vai receber, arraste cada item para um personagem e reparta o dinheiro. A divisão **não converte moedas** — o que não dá para dividir por igual fica marcado como sobra *em disputa*, para a mesa resolver. No fim, um resumo diagramado vai para o chat.
+A metade de baixo da janela é a **distribuição**: arraste atores individualmente (ou uma pasta inteira) para montar a lista de quem vai receber, arraste cada item para um personagem e reparta o dinheiro. No fim, um resumo vai para o chat.
 
 Três janelas de configuração ajustam as tabelas, em *Configurar → Configurações → T20 Hayd GMTools → Gerador de tesouros*:
 
-- **Escolher livros** — desligue os livros que a sua mesa não usa (*Tormenta20*, *Heróis de Arton*, *Deuses de Arton*, *Ameaças de Arton*) e as entradas deles saem das rolagens. O espaço das entradas desligadas é **redividido entre as que ficam**, proporcionalmente à raridade original: o dado continua o mesmo e nada é rerrolado, então a hora de rolar o tesouro não trava nem repete.
+- **Escolher livros** — desligue os livros que a sua mesa não usa (*Tormenta20*, *Heróis de Arton*, *Deuses de Arton*, *Ameaças de Arton*) e as entradas deles saem das rolagens. O espaço das entradas desligadas é **redividido entre as que ficam**, proporcionalmente à raridade original.
 - **Gerenciar homebrew** — adiciona resultados personalizados a qualquer tabela, estendendo o dado (d100 → d101…) quando precisa, e permite renomear ou tirar do sorteio qualquer entrada oficial. A lista das entradas do livro mostra as faixas **como elas realmente vão rolar** com os livros que você tem ligados, e marca quem está fora e por quê.
 - **Gerenciar vínculos** — mostra quais resultados das tabelas apontam para um item do mundo, quais estão ambíguos e quais não têm vínculo nenhum. Dá para corrigir arrastando um item para a linha, clicar no nome para abrir o item, e refazer tudo do zero em *Resetar vínculos*.
 
@@ -107,7 +105,7 @@ As tabelas de tesouro do gerador foram construídas a partir da [planilha criada
 
 ### Ficha do Grupo
 
-Uma ficha compartilhada por todos os personagens de uma pasta de atores, com um **estoque e um dinheiro em comum**. A tecla **B** abre a ficha do grupo a que você pertence (com mais de um, ela pergunta qual, já vindo marcado o último que você abriu); o Mestre também tem um botão no diretório de Atores.
+Uma ficha compartilhada por todos os personagens de uma pasta de atores, com um **estoque e um dinheiro em comum**. A tecla **B** abre a ficha do grupo a que você pertence (com mais de um, ela pergunta qual).
 
 ![Diretório de Atores com a pasta "Exemplo de Grupo" e os ícones de usuários ao lado direito destacados](docs/Botao%20de%20ficha%20de%20grupo.png)
 
