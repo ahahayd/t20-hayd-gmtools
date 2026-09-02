@@ -31,7 +31,7 @@ import { efeitoPorChave, efeitosPorChave, efeitoEmDia } from './efeitos.mjs';
 import { criarBotao } from './ui.mjs';
 import { aura as auras } from './aura/index.mjs';
 import { ocultarContagemDe } from './segredos.mjs';
-import { sugerirAutomacoes } from './sugestao.mjs';
+import { sugerirAutomacoes, normalizarNome } from './sugestao.mjs';
 import { abrirDistribuicao } from './seta-infalivel.mjs';
 import {
   GP_CARREGADO,
@@ -193,34 +193,46 @@ async function abrirDialogoAutomacao(item) {
   // casar vai para um grupo próprio no topo, para não caçar na lista inteira.
   const sugeridas = sugerirAutomacoes(item.name, disponiveis);
   const sugeridasIds = new Set(sugeridas.map((a) => a.id));
-  const demais = disponiveis.filter((a) => !sugeridasIds.has(a.id));
 
-  // Só o nome do poder: a fonte é longa e deixava a lista difícil de ler.
-  // Ela continua na página do diário de cada automação.
-  const opcao = (a) =>
-    `<option value="${a.id}" ${atual === a.id ? 'selected' : ''}>${a.nome}</option>`;
+  // Sem automação salva, a sugestão já vem marcada: no caso mais comum, abrir
+  // e salvar basta.
+  const marcado = atual ?? sugeridas[0]?.id ?? '';
+
+  const rotuloDaCategoria = (id) => {
+    const cat = CATEGORIAS.find((c) => c.id === id);
+    return cat ? game.i18n.localize(cat.rotulo) : '';
+  };
+
+  /**
+   * Uma linha por automação. `data-busca` já vem normalizado (sem acento, sem
+   * caixa) para o filtro ser uma comparação simples, e inclui a classe: digitar
+   * "paladino" acha as três auras.
+   */
+  const linha = (a) => `
+    <label class="t20g-auto-item" data-busca="${normalizarNome(`${a.nome} ${rotuloDaCategoria(a.categoria)}`)}">
+      <input type="radio" name="automacao" value="${a.id}" ${marcado === a.id ? 'checked' : ''}>
+      <i class="${a.icone ?? 'fa-solid fa-wand-magic-sparkles'}"></i>
+      <span class="t20g-auto-nome">${a.nome}</span>
+      <span class="t20g-auto-como notes">${a.comoUsar ?? ''}</span>
+    </label>`;
 
   const grupo = (rotulo, lista) => (lista.length
-    ? `<optgroup label="${rotulo}">${lista.map(opcao).join('')}</optgroup>`
+    ? `<div class="t20g-auto-grupo"><h4>${rotulo}</h4>${lista.map(linha).join('')}</div>`
     : '');
 
-  const opcoes = [
-    `<option value="" ${!atual ? 'selected' : ''}>${game.i18n.localize('T20HaydGMTools.AutoNenhuma')}</option>`,
-    grupo(game.i18n.localize('T20HaydGMTools.AutoSugeridas'), sugeridas),
-    sugeridas.length
-      ? grupo(game.i18n.localize('T20HaydGMTools.AutoDemais'), demais)
-      : demais.map(opcao).join('')
-  ].join('');
+  const fora = (a) => !sugeridasIds.has(a.id);
+  const categorizadas = new Set(CATEGORIAS.map((c) => c.id));
 
-  // Sem a regra do poder: quem abre isto já tem o poder na ficha e sabe o que
-  // ele faz. O que falta é o que a AUTOMAÇÃO faz.
-  const detalhes = disponiveis
-    .map(
-      (a) => `<div class="t20g-auto-detalhe" data-para="${a.id}">
-        ${a.comoUsar ? `<p>${a.comoUsar}</p>` : ''}
-      </div>`
-    )
-    .join('');
+  const grupos = [
+    grupo(game.i18n.localize('T20HaydGMTools.AutoSugeridas'), sugeridas),
+    ...CATEGORIAS.map((c) => grupo(
+      game.i18n.localize(c.rotulo),
+      disponiveis.filter((a) => a.categoria === c.id && fora(a))
+    )),
+    // Categoria nova no catálogo sem entrada em CATEGORIAS não pode sumir daqui
+    grupo(game.i18n.localize('T20HaydGMTools.AutoDemais'),
+      disponiveis.filter((a) => !categorizadas.has(a.categoria) && fora(a)))
+  ].join('');
 
   const escolha = await DialogV2.wait({
     window: { title: game.i18n.localize('T20HaydGMTools.AutoTitulo'), icon: 'fa-solid fa-wand-magic-sparkles' },
@@ -228,11 +240,21 @@ async function abrirDialogoAutomacao(item) {
     content: `
       <div class="t20g-auto-dialogo">
         <p class="notes">${game.i18n.localize('T20HaydGMTools.AutoAjuda')}</p>
-        <div class="form-group">
-          <label>${game.i18n.localize('T20HaydGMTools.AutoCampo')}</label>
-          <select name="automacao">${opcoes}</select>
+        <div class="t20g-auto-busca">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="search" name="busca" autocomplete="off"
+            placeholder="${game.i18n.localize('T20HaydGMTools.AutoBuscar')}">
+          <span class="t20g-auto-contagem"></span>
         </div>
-        ${detalhes}
+        <div class="t20g-auto-lista">
+          ${grupos}
+          <p class="t20g-auto-vazio notes" hidden>${game.i18n.localize('T20HaydGMTools.AutoBuscaVazia')}</p>
+        </div>
+        <label class="t20g-auto-item t20g-auto-nenhuma">
+          <input type="radio" name="automacao" value="" ${marcado ? '' : 'checked'}>
+          <i class="fa-solid fa-ban"></i>
+          <span class="t20g-auto-nome">${game.i18n.localize('T20HaydGMTools.AutoNenhuma')}</span>
+        </label>
       </div>`,
     buttons: [
       {
@@ -246,14 +268,52 @@ async function abrirDialogoAutomacao(item) {
     ],
     render: (ev, dialogo) => {
       const el = dialogo.element;
-      const select = el.querySelector('select[name="automacao"]');
-      const atualizar = () => {
-        for (const d of el.querySelectorAll('.t20g-auto-detalhe')) {
-          d.style.display = d.dataset.para === select.value ? '' : 'none';
+      const busca = el.querySelector('input[name="busca"]');
+      const itens = [...el.querySelectorAll('.t20g-auto-lista .t20g-auto-item')];
+      const gruposEl = [...el.querySelectorAll('.t20g-auto-grupo')];
+      const vazio = el.querySelector('.t20g-auto-vazio');
+      const contagem = el.querySelector('.t20g-auto-contagem');
+      const todos = [...itens, el.querySelector('.t20g-auto-nenhuma')];
+
+      const marcarSelecionado = () => {
+        for (const item of todos) {
+          item.classList.toggle('t20g-selecionado', !!item.querySelector('input')?.checked);
         }
       };
-      select.addEventListener('change', atualizar);
-      atualizar();
+
+      const filtrar = () => {
+        const termo = normalizarNome(busca.value);
+        let visiveis = 0;
+        for (const item of itens) {
+          const cabe = !termo || item.dataset.busca.includes(termo);
+          item.hidden = !cabe;
+          if (cabe) visiveis += 1;
+        }
+        // Título de grupo sem nenhuma linha visível só ocupa espaço
+        for (const g of gruposEl) g.hidden = !g.querySelector('.t20g-auto-item:not([hidden])');
+        vazio.hidden = visiveis > 0;
+        contagem.textContent = game.i18n.format('T20HaydGMTools.AutoContagem',
+          { n: visiveis, total: itens.length });
+      };
+
+      busca.addEventListener('input', filtrar);
+      busca.addEventListener('keydown', (evento) => {
+        if (evento.key !== 'Enter') return;
+        // Enter marca o primeiro da lista filtrada em vez de salvar: quem
+        // digitou já mirou nele, e salvar aqui gravaria a escolha anterior.
+        evento.preventDefault();
+        const primeiro = itens.find((i) => !i.hidden)?.querySelector('input');
+        if (primeiro) { primeiro.checked = true; marcarSelecionado(); }
+      });
+      el.addEventListener('change', marcarSelecionado);
+
+      filtrar();
+      marcarSelecionado();
+      busca.focus();
+
+      // Abrir já com a escolha atual à vista, mesmo lá embaixo na lista
+      el.querySelector('.t20g-auto-lista .t20g-selecionado')
+        ?.scrollIntoView({ block: 'center' });
     },
     rejectClose: false
   });

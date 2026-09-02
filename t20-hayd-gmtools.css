@@ -375,22 +375,86 @@ a.header-button.t20g-atr-header {
   margin-right: 4px;
 }
 
-/* Diálogo de escolha da automação */
-.t20g-auto-dialogo .t20g-auto-detalhe {
-  margin-top: 6px;
-  padding: 6px 8px;
-  border-left: 3px solid #782e22;
-  background: rgba(120, 46, 34, 0.06);
-  border-radius: 0 4px 4px 0;
+/* Diálogo de escolha da automação: busca + lista agrupada por classe */
+.t20g-auto-dialogo .t20g-auto-busca {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
 }
 
-.t20g-auto-dialogo .t20g-auto-detalhe p {
-  margin: 0 0 4px;
+.t20g-auto-dialogo .t20g-auto-busca input {
+  flex: 1;
+}
+
+.t20g-auto-dialogo .t20g-auto-contagem {
+  font-size: 11px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.t20g-auto-dialogo .t20g-auto-lista {
+  max-height: 42vh;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 4px;
+}
+
+/* `font-family: inherit` porque o <h4> puxa a fonte decorativa de título do
+   sistema, que destoa do resto da lista. */
+.t20g-auto-dialogo .t20g-auto-grupo h4 {
+  margin: 8px 0 2px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  opacity: 0.65;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.t20g-auto-dialogo .t20g-auto-grupo:first-child h4 {
+  margin-top: 0;
+}
+
+.t20g-auto-dialogo .t20g-auto-item {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.t20g-auto-dialogo .t20g-auto-item:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.t20g-auto-dialogo .t20g-auto-item.t20g-selecionado {
+  background: rgba(120, 46, 34, 0.12);
+}
+
+.t20g-auto-dialogo .t20g-auto-nome {
+  font-weight: 600;
+}
+
+/* O "como usar" só aparece na linha escolhida: sempre visível, a lista vira
+   um paredão de texto e some a vantagem de varrer os nomes. */
+.t20g-auto-dialogo .t20g-auto-como {
+  display: none;
+  grid-column: 1 / -1;
+  margin: 2px 0 4px 26px;
   font-size: 0.9em;
 }
 
-.t20g-auto-dialogo .t20g-auto-detalhe p:last-child {
-  margin-bottom: 0;
+.t20g-auto-dialogo .t20g-auto-item.t20g-selecionado .t20g-auto-como:not(:empty) {
+  display: block;
+}
+
+.t20g-auto-dialogo .t20g-auto-nenhuma {
+  margin-top: 6px;
 }
 
 /* Diálogo de distribuição de projéteis */

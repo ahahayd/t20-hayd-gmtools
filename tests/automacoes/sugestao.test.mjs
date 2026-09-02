@@ -88,6 +88,34 @@ test('a fonte nomeia só o livro, sem capítulo', () => {
   assert.equal(AUTOMACOES['combinacao-um-dois'].fonte, 'Heróis de Arton');
 });
 
+test('o seletor é lista com busca, agrupada por classe', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const motor = await readFile(
+    new URL('../../scripts/automacoes/motor.mjs', import.meta.url), 'utf8');
+
+  const dialogo = motor.slice(
+    motor.indexOf('async function abrirDialogoAutomacao'),
+    motor.indexOf('if (typeof escolha !== \'string\')')
+  );
+
+  // <select> não filtra: esconder <option> só funciona em alguns navegadores
+  assert.doesNotMatch(dialogo, /<select name="automacao">/);
+  assert.match(dialogo, /input type="radio" name="automacao"/);
+
+  // Busca normalizada (sem acento, sem caixa), incluindo o nome da classe
+  assert.match(dialogo, /data-busca="\$\{normalizarNome\(/);
+  assert.match(dialogo, /item\.dataset\.busca\.includes\(termo\)/);
+
+  // Agrupa pelas MESMAS categorias do diário, sem uma segunda lista de nomes
+  assert.match(dialogo, /CATEGORIAS\.map\(\(c\) => grupo\(/);
+
+  // Sem automação salva, a sugestão já vem marcada
+  assert.match(dialogo, /const marcado = atual \?\? sugeridas\[0\]\?\.id \?\? ''/);
+
+  // Categoria fora de CATEGORIAS não pode sumir da lista
+  assert.match(dialogo, /!categorizadas\.has\(a\.categoria\)/);
+});
+
 test('o diário não repete a regra do poder — só o que a automação faz', async () => {
   const { readFile } = await import('node:fs/promises');
   const motor = await readFile(
