@@ -9,6 +9,8 @@
 import './t20-hayd-automacoes.mjs';
 // Régua opcional para efeitos (ignora diagonais). Mesmo motivo do import acima.
 import './t20-hayd-regua.mjs';
+// Correção opcional do "Custo de Mana Total" do sistema. Mesmo motivo acima.
+import './t20-hayd-custo-pm.mjs';
 // Gerador de Tesouros (Tabela 8-1 e associadas). Mesmo motivo do import acima.
 import './t20-hayd-tesouros.mjs';
 // Ficha do Grupo, estoque compartilhado e transferências (ex-t20-hayd-management).
@@ -1364,7 +1366,8 @@ const CATEGORIAS_CONFIG = [
   { rotulo: 'CatTesouros',    icone: 'fa-sack-dollar',    chaves: ['tesourosVinculosMenu', 'tesourosLivrosMenu', 'tesourosHomebrewMenu'] },
   { rotulo: 'CatParty',       icone: 'fa-users',          chaves: ['partySheetEnabled', 'visibility', 'requireConfirmation', 'chatMode', 'lojaCompat'] },
   { rotulo: 'CatAtributos',   icone: 'fa-dice-d6',        chaves: ['atributosMetodoPadrao', 'atributosPontos', 'atributosMultiNegativos', 'atributosCustosMenu', 'atributosConversaoMenu'] },
-  { rotulo: 'CatFerramentas', icone: 'fa-ruler-combined', chaves: ['reguaEfeitos'] }
+  { rotulo: 'CatFerramentas', icone: 'fa-ruler-combined', chaves: ['reguaEfeitos'] },
+  { rotulo: 'CatCorrecoes',   icone: 'fa-screwdriver-wrench', chaves: ['custoPmTotal'] }
 ];
 
 /**
