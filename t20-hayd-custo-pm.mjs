@@ -15,9 +15,12 @@
  * Vale para TODO item com custo em PM — magia, poder, arma, equipamento e
  * consumível —, não só magias.
  *
- * Escopo: isto corrige o que é EXIBIDO. O consumo automático de PM do sistema
- * é feito por outro caminho (`system.ativacao.custo`, direto) e não passa por
- * aqui — nem para melhor nem para pior.
+ * Escopo: isto corrige o que é EXIBIDO, e só. O desconto automático de PM do
+ * sistema JÁ ESTÁ CORRETO e não passa por aqui: ele lê `ativacao.custo` do
+ * item, mas `applyOnUseEffects` soma os aprimoramentos aplicados nesse mesmo
+ * campo antes (`id.ativacao.custo += ouEff.cost`). Ler só o trecho do consumo
+ * dá a impressão de que ele ignora os aprimoramentos — não ignora, e mexer
+ * nisso descontaria PM duas vezes.
  */
 
 import { custoTotalDePM } from './scripts/custo-pm.mjs';
