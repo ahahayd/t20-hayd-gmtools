@@ -53,3 +53,25 @@ export function usuarioResponsavelPeloAtor(ator) {
 export function souResponsavelPeloAtor(ator) {
   return usuarioResponsavelPeloAtor(ator)?.id === game.user?.id;
 }
+
+/**
+ * Quem pode MEXER nos controles de um personagem.
+ *
+ * Ver é liberado para a mesa inteira (a contagem é informação de jogo, não
+ * segredo); alterar continua restrito a quem é dono da ficha. O Mestre passa
+ * aqui porque o Foundry trata GM como OWNER de tudo.
+ */
+export function podeControlar(ator) {
+  return !!ator?.isOwner;
+}
+
+/**
+ * Este cliente é o Mestre ativo?
+ *
+ * As auras escrevem efeitos em fichas de outros jogadores, o que só o Mestre
+ * tem permissão de fazer. Elegendo um único GM, dois Mestres conectados não
+ * duplicam o trabalho.
+ */
+export function souGmAtivo() {
+  return !!game.user?.isGM && game.user === game.users?.activeGM;
+}

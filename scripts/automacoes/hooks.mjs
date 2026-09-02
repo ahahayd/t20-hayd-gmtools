@@ -14,7 +14,52 @@ export function registrarHooksAutomacoes(s) {
   const invalidarIndices = () => {
     s.indiceCombinacoes.invalidar();
     s.indiceEstudo.invalidar();
+    s.aura.indice.invalidar();
   };
+
+  /**
+   * Geometria e ficha mudaram: as auras podem ter ganhado ou perdido alguém.
+   *
+   * São gatilhos de infraestrutura, não "um hook por poder" — qualquer aura
+   * futura reusa os mesmos três laços. O early-out sai antes de qualquer
+   * trabalho quando não há nenhuma aura ligada na mesa.
+   */
+  const aoMexerNaCena = () => {
+    if (!automacoesAtivas() || !s.aura.existeAlguma()) return;
+    s.aura.agendarRecalculo();
+  };
+
+  // Token: só posição, tamanho, visibilidade e disposição mexem na área
+  for (const evento of ['createToken', 'deleteToken']) Hooks.on(evento, aoMexerNaCena);
+  Hooks.on('updateToken', (doc, mudancas) => {
+    const relevante = ['x', 'y', 'elevation', 'hidden', 'disposition', 'width', 'height']
+      .some((campo) => campo in mudancas);
+    if (relevante) aoMexerNaCena();
+  });
+
+  // Movimento do v13 tem hook próprio, disparado depois que a posição é
+  // aplicada. `updateToken` já cobre o caso normal; este é a garantia de que
+  // nenhum caminho de movimento (arrastar, teclado, régua) fique de fora.
+  Hooks.on('moveToken', () => aoMexerNaCena());
+
+  // Parede: só importa para auras que respeitam linha de visão
+  for (const evento of ['createWall', 'updateWall', 'deleteWall']) Hooks.on(evento, aoMexerNaCena);
+
+  // Prévia da área ao passar o mouse: só desenho, roda em qualquer cliente.
+  // Sem o early-out de existeAlguma() — aoPassarMouse limpa a prévia anterior
+  // primeiro, mesmo que a aura tenha sido cancelada com o mouse ainda em cima.
+  Hooks.on('hoverToken', (token, sobre) => {
+    if (!automacoesAtivas()) return;
+    try { s.aura.aoPassarMouse(token, sobre); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao desenhar a prévia da aura`, err); }
+  });
+
+  // Efeito ativo: é o que faz o bônus acompanhar uma magia de atributo na fonte
+  for (const evento of ['createActiveEffect', 'updateActiveEffect', 'deleteActiveEffect']) {
+    Hooks.on(evento, (efeito) => {
+      if (efeito?.parent?.documentName === 'Actor') aoMexerNaCena();
+    });
+  }
 
   Hooks.on('getItemSheetHeaderButtons', (app, buttons) => {
     if (!automacoesAtivas()) return;
@@ -37,6 +82,7 @@ export function registrarHooksAutomacoes(s) {
     try {
       s.injetarControlesAutomacao(message, html);
       const container = html?.querySelector ? html : (html?.[0] ?? null);
+      if (container) s.aura.ligarBotoes(message, container);
       const zerar = container?.querySelector?.('.t20g-auto-zerar-tudo');
       if (zerar && game.user.isGM) {
         zerar.addEventListener('click', async (ev) => {
@@ -90,6 +136,7 @@ export function registrarHooksAutomacoes(s) {
 
     (async () => {
       await s.encerrarContadoresDeTurno(combate);
+      await s.aura.aoAvancarTurno(combate);
 
       const novaRodada = Number(combate.round) || 0;
       const velhaRodada = Number(combate.previous?.round ?? novaRodada);
@@ -157,8 +204,24 @@ export function registrarHooksAutomacoes(s) {
    */
   Hooks.on('updateActor', (ator, mudancas) => {
     if (!automacoesAtivas()) return;
+
+    // O bônus da aura é o Carisma da fonte AGORA. Mudou qualquer coisa do
+    // sistema na ficha (magia de atributo, edição à mão, PV que entra na cura),
+    // o valor pode ter mudado junto — sem isto ele só acertava no próximo
+    // movimento de alguém. É barato: o recálculo é debounced e só o Mestre
+    // trabalha.
+    if (mudancas?.system) aoMexerNaCena();
+
     const flags = mudancas?.flags?.[MODULE_ID];
     if (!flags) return;
+    if ('auras' in flags || `-=auras` in flags) {
+      // Repinta antes de qualquer trabalho assíncrono: quem clicou precisa ver
+      // o botão virar "Cancelar" na hora, não depois do recálculo do Mestre.
+      s.atualizarBarrasAura(ator);
+      s.aura.aoMudarEstado(ator).catch((err) =>
+        console.error(`${MODULE_ID} | Falha ao processar estado da aura`, err));
+    }
+
     const mexeuNaContagem = ['combinacoes', 'estudarAdversario']
       .some((chave) => chave in flags || `-=${chave}` in flags);
     if (!mexeuNaContagem) return;
@@ -207,6 +270,8 @@ export function registrarHooksAutomacoes(s) {
     if (!automacoesAtivas() || userId !== game.user.id) return;
     const ator = item.actor;
     if (!ator?.isOwner) return;
+    s.aura.cancelarPorItem(ator, item.id).catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao encerrar aura do item apagado`, err));
     for (const efeito of s.efeitosDoItem(ator, item.id)) {
       efeito.delete().catch((err) =>
         console.error(`${MODULE_ID} | Falha ao remover efeito da automação`, err)
@@ -214,5 +279,9 @@ export function registrarHooksAutomacoes(s) {
     }
   });
 
-  Hooks.on('canvasReady', () => invalidarIndices());
+  Hooks.on('canvasReady', () => {
+    invalidarIndices();
+    s.aura.aoTrocarCena(canvas?.scene?.id).catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao trocar a cena das auras`, err));
+  });
 }

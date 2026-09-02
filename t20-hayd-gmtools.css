@@ -1330,3 +1330,41 @@ a.header-button.t20g-atr-header {
 }
 .t20g-tesouro-fora { font-size: 0.8em; color: #c0392b; }
 .t20g-tesouro-fora-icone { flex: 0 0 auto; width: 22px; text-align: center; opacity: 0.55; }
+
+/* Auras — cartões e botões no chat */
+.t20g-aura-card p { margin: 2px 0; }
+
+.t20g-aura-acoes {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.t20g-aura-acoes .t20g-aura-btn {
+  flex: 1;
+  cursor: pointer;
+}
+
+.t20g-aura-lista {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+}
+
+.t20g-aura-lista li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+}
+
+.t20g-aura-lista .t20g-aura-desfazer {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+}
+
+.t20g-aura-cheio { opacity: 0.7; font-style: italic; }

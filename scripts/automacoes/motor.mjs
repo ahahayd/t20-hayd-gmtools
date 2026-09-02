@@ -13,7 +13,9 @@
 import {
   MODULE_ID,
   automacoesAtivas,
-  souResponsavelPeloAtor
+  souResponsavelPeloAtor,
+  podeControlar,
+  souGmAtivo
 } from './runtime.mjs';
 import { IndiceAtoresAutomacoes } from './indice-atores.mjs';
 import { AUTOMACOES } from './catalogo.mjs';
@@ -25,6 +27,9 @@ import {
   rotuloTipo
 } from './estado.mjs';
 import { registrarHooksAutomacoes } from './hooks.mjs';
+import { efeitoPorChave, efeitosPorChave, efeitoEmDia } from './efeitos.mjs';
+import { criarBotao } from './ui.mjs';
+import { aura as auras } from './aura/index.mjs';
 import { ocultarContagemDe } from './segredos.mjs';
 import { sugerirAutomacoes } from './sugestao.mjs';
 import { abrirDistribuicao } from './seta-infalivel.mjs';
@@ -77,18 +82,6 @@ const FLAG_ORIGEM = 'automacaoOrigem';
  * contador.alvos        → flags tormenta20 que definem onde o efeito aparece
  *                         (attack = rolagens de arma, power = poderes, ...)
  */
-/**
- * Quem pode MEXER nos contadores de um personagem.
- *
- * Ver é liberado para a mesa inteira (o valor da contagem é informação de
- * jogo, não segredo); alterar continua restrito a quem é dono da ficha. O
- * Mestre passa aqui porque o Foundry trata GM como OWNER de tudo, então ele
- * mantém o controle para ajudar os jogadores.
- */
-function podeControlar(ator) {
-  return !!ator?.isOwner;
-}
-
 /** Efeito de uso que este item mantém na ficha do ator (ou undefined). */
 function efeitoDoItem(item) {
   return item.actor?.effects?.find((ef) => ef.getFlag(MODULE_ID, FLAG_ORIGEM) === item.id);
@@ -645,51 +638,6 @@ async function _sincronizarCombinacoes(ator) {
       }
     }
   }
-}
-
-/** Efeito mantido pelo módulo sob uma chave (item.id, ou item.id:sufixo). */
-function efeitoPorChave(ator, chave) {
-  return ator?.effects?.find((ef) => ef.getFlag(MODULE_ID, FLAG_ORIGEM) === chave);
-}
-
-/** Todos os efeitos que usam exatamente a mesma chave de automação. */
-function efeitosPorChave(ator, chave) {
-  return (ator?.effects ?? []).filter((ef) => ef.getFlag(MODULE_ID, FLAG_ORIGEM) === chave);
-}
-
-/**
- * O efeito já está exatamente como o módulo quer?
- *
- * Mirar um token dispara duas sincronizações (desmarcar o antigo, marcar o
- * novo) e a mesa troca de alvo o tempo todo. Sem esta comparação, cada clique
- * reescrevia todos os efeitos de Combinação do personagem — e cada escrita é
- * banco de dados, socket para todos os clientes e re-preparo da ficha.
- *
- * Compara só o que o módulo define: o sistema pode guardar outras flags no
- * efeito, e elas não são motivo para reescrever.
- */
-function efeitoEmDia(efeito, dados) {
-  if (!efeito) return false;
-  if (efeito.name !== dados.name) return false;
-  if (efeito.img !== dados.img) return false;
-  if (!!efeito.disabled !== !!dados.disabled) return false;
-
-  const atuais = efeito.changes ?? [];
-  const novas = dados.changes ?? [];
-  if (atuais.length !== novas.length) return false;
-  for (let i = 0; i < novas.length; i += 1) {
-    const a = atuais[i];
-    const n = novas[i];
-    if (a?.key !== n?.key || a?.mode !== n?.mode || String(a?.value) !== String(n?.value)) {
-      return false;
-    }
-  }
-
-  const t20 = efeito.flags?.tormenta20 ?? {};
-  for (const [chave, valor] of Object.entries(dados.flags?.tormenta20 ?? {})) {
-    if (t20[chave] !== valor) return false;
-  }
-  return true;
 }
 
 /** Atualiza as barras de combinações já renderizadas no chat. */
@@ -2603,22 +2551,6 @@ function atorDoCard(card, message) {
 }
 
 /** Cria um botão de ação da barra. */
-function criarBotao(item, acao, icone, dica, { largo = false } = {}) {
-  const b = document.createElement('button');
-  b.type = 'button';
-  b.className = largo ? 't20g-auto-btn t20g-auto-btn-largo' : 't20g-auto-btn';
-  b.dataset.acao = acao;
-  b.dataset.itemId = item.id;
-  b.dataset.tooltip = dica;
-  const i = document.createElement('i');
-  // Aceita tanto "fa-minus" quanto uma classe completa ("fa-solid fa-heart-pulse")
-  i.className = /\bfa-(solid|regular|light|thin|duotone|brands)\b/.test(icone)
-    ? icone
-    : `fa-solid ${icone}`;
-  b.appendChild(i);
-  return b;
-}
-
 /**
  * Monta a barra de controles de um item no cartão.
  *
@@ -2650,6 +2582,19 @@ function montarBarra(item, { completo }) {
     numero.textContent = `+${valorContador(item)}`;
     rotulo.appendChild(numero);
   }
+
+  // Aura: mostra raio e bônus atual, ligada ou não
+  const resumoAura = def.aura ? auras.resumoDaAura(item) : null;
+  if (resumoAura) {
+    rotulo.append(': ');
+    const estado = document.createElement('b');
+    estado.textContent = resumoAura.ativa
+      ? game.i18n.format('T20HaydGMTools.AuraAtiva', {
+        raio: resumoAura.raio, valor: resumoAura.valor
+      })
+      : game.i18n.format('T20HaydGMTools.AuraInativa', { raio: resumoAura.raio });
+    rotulo.appendChild(estado);
+  }
   linha.appendChild(rotulo);
 
   // Sem permissão, a barra fica só com o valor — todos veem, ninguém de fora
@@ -2671,6 +2616,15 @@ function montarBarra(item, { completo }) {
         criarBotao(item, 'zerar', 'fa-rotate-left', game.i18n.localize('T20HaydGMTools.AutoZerar'))
       );
     }
+  } else if (resumoAura) {
+    const acao = resumoAura.ativa ? 'aura-cancelar' : 'aura-ativar';
+    const icone = resumoAura.ativa ? 'fa-solid fa-ban' : 'fa-solid fa-sun';
+    const texto = game.i18n.localize(resumoAura.ativa
+      ? 'T20HaydGMTools.AuraCancelar'
+      : 'T20HaydGMTools.AuraAtivar');
+    const botao = criarBotao(item, acao, icone, texto, { largo: true });
+    botao.append(` ${texto}`);
+    linha.appendChild(botao);
   } else if (def.acao) {
     const botao = criarBotao(item, 'executar', def.acao.icone ?? 'fa-solid fa-bolt', def.acao.rotulo, { largo: true });
     botao.append(` ${def.acao.rotulo}`);
@@ -2707,7 +2661,7 @@ export function injetarControlesAutomacao(message, html) {
   // Itens do ator com automação que tem controles próprios no chat
   const comControles = ator.items.filter((i) => {
     const def = definicaoDe(i);
-    return def?.contador || def?.acao || def?.distribuicao || def?.golpe;
+    return def?.contador || def?.acao || def?.distribuicao || def?.golpe || def?.aura;
   });
   const combinacoes = poderesDeCombinacao(ator);
   const estudos = poderesDeEstudo(ator);
@@ -2732,6 +2686,8 @@ export function injetarControlesAutomacao(message, html) {
       continue;
     }
 
+    // Aura e distribuição só fazem sentido no cartão do próprio item
+    if (def.aura && !ehOProprioItem) continue;
     // Distribuição só faz sentido no cartão da própria magia (precisa da rolagem)
     if (def.distribuicao && !ehOProprioItem) continue;
     if (!ehAtaque && !ehOProprioItem) continue;
@@ -2847,7 +2803,11 @@ export function injetarControlesAutomacao(message, html) {
 
     botao.disabled = true;
     try {
-      if (botao.dataset.acao === 'executar') {
+      if (botao.dataset.acao === 'aura-ativar') {
+        await auras.ativar(item);
+      } else if (botao.dataset.acao === 'aura-cancelar') {
+        await auras.cancelar(ator, item.id);
+      } else if (botao.dataset.acao === 'executar') {
         await executarAcao(item);
         return;
       }
@@ -2898,6 +2858,46 @@ function atualizarRotulos(item) {
   for (const barra of document.querySelectorAll(seletor)) {
     const alvo = barra.querySelector('.t20g-auto-rotulo b');
     if (alvo) alvo.textContent = `+${valor}`;
+  }
+}
+
+/**
+ * Repinta a barra da aura nos cartões já abertos no chat.
+ *
+ * Ligar e cancelar mexem numa FLAG do ator, não no item, então nada no chat se
+ * redesenha sozinho: sem isto o botão continuaria dizendo "Ativar aura" até o
+ * jogador reenviar o poder. Roda em todos os clientes, como a contagem.
+ */
+function atualizarBarrasAura(ator) {
+  for (const item of ator?.items ?? []) {
+    if (!definicaoDe(item)?.aura) continue;
+
+    const resumo = auras.resumoDaAura(item);
+    if (!resumo) continue;
+
+    const seletor = `.t20g-contador-barra[data-item-id="${CSS.escape(item.id)}"]`;
+    for (const barra of document.querySelectorAll(seletor)) {
+      const estado = barra.querySelector('.t20g-auto-rotulo b');
+      if (estado) {
+        estado.textContent = resumo.ativa
+          ? game.i18n.format('T20HaydGMTools.AuraAtiva', { raio: resumo.raio, valor: resumo.valor })
+          : game.i18n.format('T20HaydGMTools.AuraInativa', { raio: resumo.raio });
+      }
+
+      const botao = barra.querySelector('.t20g-auto-btn[data-acao^="aura-"]');
+      if (!botao) continue;
+
+      const texto = game.i18n.localize(resumo.ativa
+        ? 'T20HaydGMTools.AuraCancelar'
+        : 'T20HaydGMTools.AuraAtivar');
+      botao.dataset.acao = resumo.ativa ? 'aura-cancelar' : 'aura-ativar';
+      botao.dataset.tooltip = texto;
+      botao.replaceChildren();
+      const icone = document.createElement('i');
+      icone.className = resumo.ativa ? 'fa-solid fa-ban' : 'fa-solid fa-sun';
+      botao.append(icone, ` ${texto}`);
+      botao.disabled = false;
+    }
   }
 }
 
@@ -3162,7 +3162,7 @@ function paginaDaAutomacao(def) {
     comoFunciona = `
       <ul>
         <li>Botão <b>${def.acao.rotulo}</b> nos cartões de ataque e no cartão do poder.</li>
-        ${ganhos.length ? `<li>Recupera ${ganhos.join(' e ')}, sem passar do máximo da ficha.</li>` : ''}
+        ${ganhos.length ? `<li>Recupera ${ganhos.join(' e ')}.</li>` : ''}
         <li>A recuperação é anunciada no chat.</li>
       </ul>`;
   } else if (def.distribuicao) {
@@ -3185,6 +3185,34 @@ function paginaDaAutomacao(def) {
             mirado.</li>
         <li>Não expira com o tempo: no fim do encontro sai um aviso no chat com um botão
             para zerar.</li>
+      </ul>`;
+  } else if (def.aura) {
+    comoFunciona = `
+      <ul>
+        <li>Botão <b>Ativar aura</b> no cartão do poder; o mesmo botão cancela depois.</li>
+        <li>Raio de ${def.aura.raio} m.${def.aura.bloqueavel
+              ? ' Paredes bloqueiam: o efeito precisa de linha de efeito.'
+              : ' Paredes não bloqueiam.'}</li>
+        <li>Aliados dentro recebem o bônus sozinhos; ele sai quando eles se afastam
+            ou uma parede entra no caminho.</li>
+        <li>O valor acompanha a ficha ao vivo — uma magia que aumente o atributo
+            sobe o bônus de todo mundo.</li>
+        <li>No início do seu turno, uma mensagem no chat pergunta se quer manter.
+            O custo de ${def.aura.custo} PM é só avisado: o módulo não desconta.
+            Não clicar <b>não</b> encerra a aura.</li>
+      </ul>`;
+  } else if (def.auraModificador?.raio) {
+    comoFunciona = `
+      <ul><li>Com este poder na ficha, o raio da sua aura passa a ser
+        ${def.auraModificador.raio} m.</li></ul>`;
+  } else if (def.auraModificador?.cura) {
+    comoFunciona = `
+      <ul>
+        <li>Com este poder na ficha, a mensagem de manter a aura ganha o botão de curar.</li>
+        <li>Cura ${def.auraModificador.cura.fixo} + o atributo da fonte, em todos que
+            estiverem na área naquele instante.</li>
+        <li>O chat mostra quanto cada um curou, com um botão para o Mestre desfazer
+            caso a caso.</li>
       </ul>`;
   } else if (def.marcador === 'incremento2') {
     comoFunciona = `
@@ -3219,7 +3247,7 @@ function paginaGolpePessoal(def, tipos) {
     <ol>
       <li>Ligue a automação <b>Golpe Pessoal</b> no poder.</li>
       <li>Role o poder para o chat e clique em <b>Montar Golpe Pessoal</b>.</li>
-      <li>Dê um nome ao golpe e marque os efeitos.</li>
+      <li>Dê um nome épico ao golpe e marque os efeitos.</li>
       <li>Salvar cria <b>um único efeito de uso</b>, "Golpe Pessoal: nome do golpe", com o custo
           em PM já somado. Ele aparece desmarcado na janela de rolagem de qualquer arma —
           marque-o quando for desferir o golpe.</li>
@@ -3268,6 +3296,7 @@ const CATEGORIAS = [
   { id: 'barbaro', rotulo: 'T20HaydGMTools.DiarioCatBarbaro' },
   { id: 'guerreiro', rotulo: 'T20HaydGMTools.DiarioCatGuerreiro' },
   { id: 'lutador', rotulo: 'T20HaydGMTools.DiarioCatLutador', abre: paginaCombinacoes },
+  { id: 'paladino', rotulo: 'T20HaydGMTools.DiarioCatPaladino' },
   { id: 'combate', rotulo: 'T20HaydGMTools.DiarioCatCombate' },
   { id: 'magia', rotulo: 'T20HaydGMTools.DiarioCatMagia' }
 ];
@@ -3280,7 +3309,9 @@ const CATEGORIAS = [
 function paginaDaCategoria(categoria) {
   const poderes = Object.values(AUTOMACOES)
     .filter((def) => def.categoria === categoria.id)
-    .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+    .sort((a, b) =>
+      (a.ordemDiario ?? Number.MAX_SAFE_INTEGER) - (b.ordemDiario ?? Number.MAX_SAFE_INTEGER)
+      || a.nome.localeCompare(b.nome, 'pt-BR'));
 
   // O Lutador abre com a mecânica compartilhada das Combinações
   const abertura = categoria.abre
@@ -3401,6 +3432,8 @@ registrarHooksAutomacoes({
   sincronizarEstudo,
   atualizarBarrasEstudo,
   atualizarRotulos,
+  atualizarBarrasAura,
+  aura: auras,
   encerrarContadoresDeTurno,
   anunciarContagensEncerradas,
   expirarAplicacoesCombinacao,

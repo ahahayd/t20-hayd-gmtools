@@ -16,7 +16,19 @@ function listar(dir) {
   return out;
 }
 
-const fonte = new Map(listar(RAIZ).map((f) => [f, fs.readFileSync(f, 'utf8')]));
+/**
+ * Comentários fora: uma frase como "não há efeito a manter (…)" casaria com o
+ * padrão de chamada e viraria falso positivo.
+ */
+function semComentarios(codigo) {
+  return codigo
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+}
+
+const fonte = new Map(
+  listar(RAIZ).map((f) => [f, semComentarios(fs.readFileSync(f, 'utf8'))])
+);
 
 /** Nome -> arquivo onde é definido no topo do módulo. */
 function mapaDeDefinicoes() {

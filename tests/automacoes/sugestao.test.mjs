@@ -62,7 +62,7 @@ test('a lista de origem é respeitada (magia não vira sugestão de poder)', () 
 });
 
 test('todas as automações têm categoria conhecida', () => {
-  const validas = new Set(['barbaro', 'guerreiro', 'lutador', 'combate', 'magia']);
+  const validas = new Set(['barbaro', 'guerreiro', 'lutador', 'paladino', 'combate', 'magia']);
   for (const a of catalogo) {
     assert.ok(validas.has(a.categoria), `${a.nome} está sem categoria válida: ${a.categoria}`);
   }
@@ -96,7 +96,8 @@ test('o diário não repete a regra do poder — só o que a automação faz', a
   // A regra vinha em <blockquote>${def.resumo}</blockquote>
   assert.doesNotMatch(motor, /blockquote/,
     'a regra do poder saiu das páginas do diário');
-  assert.doesNotMatch(motor, /\.resumo/,
+  // \b evita casar `.resumoDaAura`, que é outra coisa
+  assert.doesNotMatch(motor, /\.resumo\b/,
     'nem o diário nem o seletor devem exibir a descrição do poder');
 });
 
@@ -105,9 +106,9 @@ test('o diário tem UMA página por categoria, não uma por poder', async () => 
   const motor = await readFile(
     new URL('../../scripts/automacoes/motor.mjs', import.meta.url), 'utf8');
 
-  const ordem = [...motor.matchAll(/id: '(barbaro|guerreiro|lutador|combate|magia)'/g)]
+  const ordem = [...motor.matchAll(/id: '(barbaro|guerreiro|lutador|paladino|combate|magia)'/g)]
     .map((m) => m[1]);
-  assert.deepEqual(ordem, ['barbaro', 'guerreiro', 'lutador', 'combate', 'magia']);
+  assert.deepEqual(ordem, ['barbaro', 'guerreiro', 'lutador', 'paladino', 'combate', 'magia']);
 
   // A chave da página é a categoria: uma página agrupa todos os poderes dela
   assert.match(motor, /pagina: `cat-\$\{categoria\.id\}`/);
@@ -119,6 +120,16 @@ test('o diário tem UMA página por categoria, não uma por poder', async () => 
   assert.match(motor, /sort: \(i \+ 1\) \* 100/);
   // A mecânica compartilhada abre a página do Lutador
   assert.match(motor, /abre: paginaCombinacoes/);
+});
+
+test('Aura Sagrada é a primeira automação do Paladino no diário', () => {
+  const paladino = catalogo
+    .filter((a) => a.categoria === 'paladino')
+    .sort((a, b) =>
+      (a.ordemDiario ?? Number.MAX_SAFE_INTEGER) - (b.ordemDiario ?? Number.MAX_SAFE_INTEGER)
+      || a.nome.localeCompare(b.nome, 'pt-BR'));
+
+  assert.equal(paladino[0]?.nome, 'Aura Sagrada');
 });
 
 test('páginas do formato antigo são removidas ao atualizar o diário', async () => {

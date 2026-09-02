@@ -103,6 +103,65 @@ export const AUTOMACOES = {
     }
   },
 
+  'aura-sagrada': {
+    categoria: 'paladino',
+    nome: 'Aura Sagrada',
+    ordemDiario: 0,
+    fonte: 'Livro Básico',
+    icone: 'fa-solid fa-sun',
+    tipos: ['poder'],
+    comoUsar:
+      'Role o poder e use <b>Ativar aura</b> no cartão. Os aliados dentro do raio recebem o '
+      + 'bônus sozinhos, e ele sai quando eles se afastam ou uma parede entra no caminho.',
+    aura: {
+      // Parâmetros que mudam de aura para aura
+      raio: 9,             // metros
+      bloqueavel: true,    // respeita parede (linha de visão)
+      custo: 1,            // PM por rodada — só avisado, nunca descontado
+      disposicoes: ['FRIENDLY'],
+      incluirFonte: true,  // "você e os aliados dentro da aura"
+
+      // Lido da ficha JÁ preparada da fonte, então uma magia que aumente o
+      // Carisma entra no valor sem nada especial.
+      valor: (fonte) => Number(fonte?.system?.atributos?.car?.value) || 0,
+      rotuloValor: (n) => `+${n}`,
+
+      // Número CONCRETO: o sistema simplifica os modificadores na preparação,
+      // então uma fórmula com @ congelaria no valor da hora em que foi escrita.
+      changes: (n) => (n !== 0
+        ? [{
+          key: 'system.modificadores.pericias.resistencia',
+          mode: 2,
+          value: String(n),
+          priority: 20
+        }]
+        : []),
+      efeitoTexto: ['Soma o Carisma da fonte nos <b>testes de resistência</b>.']
+    }
+  },
+
+  'aura-poderosa': {
+    categoria: 'paladino',
+    nome: 'Aura Poderosa',
+    fonte: 'Livro Básico',
+    icone: 'fa-solid fa-arrows-left-right',
+    tipos: ['poder'],
+    comoUsar: 'Basta ter o poder na ficha: o raio da sua aura passa a ser 30 m.',
+    auraModificador: { raio: 30 }
+  },
+
+  'aura-de-cura': {
+    categoria: 'paladino',
+    nome: 'Aura de Cura',
+    fonte: 'Livro Básico',
+    icone: 'fa-solid fa-hand-holding-medical',
+    tipos: ['poder'],
+    comoUsar:
+      'Com o poder na ficha, a mensagem de manter a aura ganha o botão de curar. Não há cura '
+      + 'na ativação — só nos turnos seguintes.',
+    auraModificador: { cura: { fixo: 5, atributo: 'car' } }
+  },
+
   'sede-sanguinaria': {
     categoria: 'barbaro',
     nome: 'Sede Sanguinária',

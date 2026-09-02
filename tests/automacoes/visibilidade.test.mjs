@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const raiz = new URL('../../', import.meta.url);
 const motor = await readFile(new URL('scripts/automacoes/motor.mjs', raiz), 'utf8');
 const hooks = await readFile(new URL('scripts/automacoes/hooks.mjs', raiz), 'utf8');
+const runtime = await readFile(new URL('scripts/automacoes/runtime.mjs', raiz), 'utf8');
 
 const trecho = (inicio, fim) => {
   const i = motor.indexOf(inicio);
@@ -27,7 +28,10 @@ test('a barra é injetada para quem não é dono da ficha', () => {
 });
 
 test('permissão é decidida por podeControlar, não por isOwner espalhado', () => {
-  assert.match(motor, /function podeControlar\(ator\)\s*\{\s*return !!ator\?\.isOwner;/);
+  // Mora no runtime desde que as auras passaram a precisar dele: `aura/*` não
+  // pode importar `motor.mjs` sem criar ciclo.
+  assert.match(runtime, /export function podeControlar\(ator\)\s*\{\s*return !!ator\?\.isOwner;/);
+  assert.match(motor, /podeControlar/, 'o motor continua consumindo a permissão');
 
   // Cada construtor de barra precisa consultar a permissão em algum ponto
   const construtores = {

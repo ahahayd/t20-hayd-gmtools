@@ -17,6 +17,8 @@
  * Foundry — só o cálculo da distância e o rótulo mudam.
  */
 
+import { gradeSemDiagonal, invalidarGrade } from './scripts/grade.mjs';
+
 const MODULE_ID = 't20-hayd-gmtools';
 
 /** Configuração de mundo que faz a régua existir. */
@@ -32,30 +34,6 @@ function reguaAtiva() {
 }
 
 // ─── Medição sem diagonal ─────────────────────────────────────────────────────
-
-/**
- * Grade espelho da cena atual, idêntica em tamanho e escala, mas com a regra de
- * diagonal EQUIDISTANT (diagonal custa o mesmo que ortogonal). Medir por ela dá
- * exatamente a distância que ignora o dobro das diagonais, sem tocar na grade
- * real da cena — a régua padrão e o movimento de tokens seguem intactos.
- *
- * Só faz sentido em grade quadrada; em hexágonos ou sem grade não há diagonal
- * a descontar e devolvemos null (a régua cai na medição normal).
- */
-let _grade = null;
-function gradeSemDiagonal() {
-  const grade = canvas?.grid;
-  if (!grade?.isSquare) return null;
-
-  const { size, distance, units } = grade;
-  if (_grade && _grade.size === size && _grade.distance === distance) return _grade;
-
-  _grade = new foundry.grid.SquareGrid({
-    size, distance, units,
-    diagonals: CONST.GRID_DIAGONALS.EQUIDISTANT
-  });
-  return _grade;
-}
 
 // ─── Subclasse da régua ───────────────────────────────────────────────────────
 
@@ -220,7 +198,7 @@ let _ferramentaVisivel = null;
  * não pronto, a ferramenta ficaria de fora sem nada para trazê-la de volta.
  */
 Hooks.on('canvasReady', () => {
-  _grade = null;
+  invalidarGrade();
   if (_ferramentaVisivel === deveMostrarFerramenta()) return;
   ui.controls?.render({ reset: true });
 });
