@@ -1432,3 +1432,263 @@ a.header-button.t20g-atr-header {
 }
 
 .t20g-aura-cheio { opacity: 0.7; font-style: italic; }
+
+/* --- Engenhocas --------------------------------------------------------- */
+.t20g-eng-dialogo .t20g-eng-lista {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+  max-height: 540px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.t20g-eng-aparato {
+  display: grid;
+  grid-template-columns: 34px 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 8px;
+  border: 1px solid rgba(120, 46, 34, 0.22);
+  border-radius: 5px;
+  background: rgba(120, 46, 34, 0.04);
+}
+
+.t20g-eng-aparato:hover { background: rgba(120, 46, 34, 0.09); }
+.t20g-eng-aparato > input { margin: 0; max-width: 34px; }
+.t20g-eng-aparato > i { color: #782e22; text-align: center; }
+.t20g-eng-aparato span { display: flex; flex-direction: column; min-width: 0; }
+.t20g-eng-aparato small { line-height: 1.25; opacity: 0.8; }
+.t20g-eng-aparato em { font-size: 0.72em; white-space: nowrap; opacity: 0.65; }
+.t20g-eng-aparato.t20g-eng-inaplicavel { opacity: 0.68; }
+
+/* Painel próprio, sem reutilizar `.item`/`.item-list`: isso evita que a ficha
+   nativa e o t20-hayd-ui instalem listeners ou grades de item nestes controles. */
+.t20g-eng-painel {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 8px;
+  border: 1px solid rgba(120, 46, 34, 0.38);
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(120, 46, 34, 0.055);
+}
+
+.t20g-eng-painel > button {
+  flex: 1 1 50%;
+  width: auto;
+  margin: 0;
+}
+
+.t20g-eng-painel > button span {
+  display: inline-block;
+  min-width: 20px;
+  margin-left: 5px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(120, 46, 34, 0.18);
+}
+
+.t20g-eng-painel > header {
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(120, 46, 34, 0.12);
+}
+
+.t20g-eng-painel button {
+  min-height: 28px;
+  margin: 0;
+  line-height: 1.1;
+}
+
+.t20g-eng-painel-alternar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 auto;
+  text-align: left;
+}
+
+.t20g-eng-painel-alternar span { flex: 1 1 auto; font-weight: 700; }
+.t20g-eng-painel-alternar em {
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 10px;
+  text-align: center;
+  font-style: normal;
+  background: rgba(120, 46, 34, 0.18);
+}
+
+.t20g-eng-painel-resetar { flex: 0 0 auto; width: auto; padding-inline: 9px; }
+.t20g-eng-painel-corpo { padding: 4px; }
+.t20g-eng-painel-corpo[hidden] { display: none !important; }
+
+.t20g-eng-painel-item {
+  display: grid;
+  grid-template-columns: 34px minmax(130px, 1fr) 52px minmax(205px, auto);
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 4px 5px;
+  border-bottom: 1px solid rgba(120, 46, 34, 0.16);
+}
+
+.t20g-eng-painel-item:last-child { border-bottom: 0; }
+.t20g-eng-painel-item > img {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.t20g-eng-painel-info { min-width: 0; }
+.t20g-eng-painel-info > div { display: flex; align-items: center; gap: 6px; }
+.t20g-eng-painel-info b,
+.t20g-eng-painel-info small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t20g-eng-painel-info small { opacity: 0.72; }
+.t20g-eng-painel-alerta { color: #9b241a; font-size: 0.78em; white-space: nowrap; }
+
+.t20g-eng-painel-cd { text-align: center; }
+.t20g-eng-painel-cd small { display: block; font-size: 0.68em; opacity: 0.72; }
+.t20g-eng-painel-cd b { font-size: 1.35em; color: #782e22; }
+
+.t20g-eng-painel-controles {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.t20g-eng-painel-controles button { flex: 0 0 28px; width: 28px; padding: 0; }
+.t20g-eng-painel-controles span { min-width: 48px; text-align: center; font-size: 0.78em; }
+.t20g-eng-painel-controles .t20g-eng-painel-ativar {
+  flex: 0 0 auto;
+  width: auto;
+  padding-inline: 8px;
+  color: #25773d;
+}
+.t20g-eng-painel-controles .t20g-eng-painel-aparatos {
+  flex: 0 0 auto;
+  width: auto;
+  padding-inline: 7px;
+}
+
+.t20g-eng-painel-controles .t20g-eng-painel-consertar {
+  flex: 1 0 150px;
+  width: auto;
+  padding-inline: 7px;
+  color: #8f2119;
+}
+
+.t20g-eng-painel-janela { max-height: 68vh; overflow-y: auto; padding-right: 4px; }
+.t20g-eng-painel-janela-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.t20g-eng-painel-janela-topo p { margin: 0; }
+.t20g-eng-painel-janela-topo button { flex: 0 0 auto; width: auto; }
+.t20g-eng-painel-circulo { margin: 0 0 10px; }
+.t20g-eng-painel-circulo > h3 {
+  margin: 2px 0 3px;
+  padding: 2px 5px;
+  border-bottom: 1px solid rgba(120, 46, 34, 0.22);
+  background: transparent;
+  font-size: 0.8em;
+  font-weight: 600;
+  opacity: 0.72;
+}
+
+.t20g-eng-ativacao-resultado {
+  margin: 7px 0 0;
+  padding: 8px;
+  border: 1px solid rgba(120, 46, 34, 0.3);
+  border-radius: 5px;
+  background: rgba(120, 46, 34, 0.06);
+}
+.t20g-eng-ativacao-resultado > div { display: flex; align-items: center; gap: 6px; }
+.t20g-eng-ativacao-resultado > p { margin: 5px 0; }
+.t20g-eng-ativacao-resultado.sucesso { border-color: rgba(37, 119, 61, 0.55); background: rgba(37, 119, 61, 0.08); }
+.t20g-eng-ativacao-resultado.sucesso > div > i { color: #25773d; }
+.t20g-eng-ativacao-resultado.falha > div > i { color: #9b241a; }
+.t20g-eng-ativacao-resultado button { width: 100%; margin: 4px 0 0; }
+
+/* Marca simples no cartão da PRÓPRIA MAGIA quando ela veio de um teste de
+   engenhoca que falhou — a magia é gerada de qualquer jeito, então sem isto
+   o cartão fica idêntico ao de um sucesso comum. */
+.t20g-eng-conjuracao-falhou {
+  border: 1px solid rgba(155, 36, 26, 0.5) !important;
+  border-radius: 5px;
+}
+.t20g-eng-conjuracao-falhou-aviso {
+  margin: 0 0 4px !important;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(155, 36, 26, 0.1);
+  color: #9b241a;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+@media (max-width: 620px) {
+  .t20g-eng-painel-item { grid-template-columns: 34px 1fr 52px; }
+  .t20g-eng-painel-controles { grid-column: 2 / -1; justify-content: flex-start; }
+  .t20g-eng-painel-resetar { font-size: 0; }
+  .t20g-eng-painel-resetar i { font-size: 13px; }
+}
+
+.t20g-eng-ativacao .t20g-eng-cd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin-bottom: 6px;
+  border-radius: 5px;
+  background: rgba(120, 46, 34, 0.1);
+}
+
+.t20g-eng-ativacao .t20g-eng-cd b {
+  color: #782e22;
+  font-size: 1.65em;
+}
+
+/* Fundo e texto FIXOS, opacos: sem herdar cor nenhuma de fora. A mensagem em
+   si pode sair com fundo escuro dependendo de quem a publica (o Mestre, por
+   exemplo) — um <h3> sem cor própria fica ilegível se isso acontecer, porque
+   herdaria a cor de título pensada só para fundo claro. */
+.t20g-eng-descanso {
+  background: #f4ede9;
+  color: #43201a;
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.t20g-eng-descanso h3 { margin: 0 0 6px; color: #782e22; }
+.t20g-eng-descanso ul { margin: 6px 0; padding-left: 20px; }
+.t20g-eng-descanso li { margin: 3px 0; }
+.t20g-eng-descanso small { opacity: 0.72; }
+.t20g-eng-descanso button { width: 100%; margin-top: 5px; }
+
+.t20g-eng-checagem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 0.92em;
+}
+.t20g-eng-checagem input { margin: 0; }
+
+.tormenta20.chat-card .t20g-engenhoca-barra .t20g-auto-linha {
+  flex-wrap: wrap;
+}
+
+.tormenta20.chat-card .t20g-engenhoca-barra .t20g-auto-rotulo {
+  flex-basis: 100%;
+  white-space: normal;
+}

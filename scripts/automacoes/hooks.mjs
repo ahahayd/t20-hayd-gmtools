@@ -75,6 +75,23 @@ export function registrarHooksAutomacoes(s) {
         s.abrirDialogoAutomacao(item);
       }
     });
+    if (s.engenhocas.ehEngenhoca(item) && !buttons.some((b) => b.class === 't20g-aparatos')) {
+      buttons.unshift({
+        label: 'Aparatos',
+        class: 't20g-aparatos',
+        icon: 'fa-solid fa-gears',
+        onclick: (ev) => {
+          ev?.preventDefault?.();
+          s.engenhocas.abrirAparatos(item);
+        }
+      });
+    }
+  });
+
+  Hooks.on('renderActorSheet', (app, html) => {
+    if (!automacoesAtivas()) return;
+    try { s.engenhocas.injetarPainel(app, html); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao montar o painel de engenhocas`, err); }
   });
 
   Hooks.on('renderChatMessageHTML', (message, html) => {
@@ -82,6 +99,8 @@ export function registrarHooksAutomacoes(s) {
     try {
       s.injetarControlesAutomacao(message, html);
       const container = html?.querySelector ? html : (html?.[0] ?? null);
+      s.engenhocas.injetarBarra(message, container);
+      s.engenhocas.ligarBotoesChat(message, container);
       if (container) s.aura.ligarBotoes(message, container);
       const zerar = container?.querySelector?.('.t20g-auto-zerar-tudo');
       if (zerar && game.user.isGM) {
@@ -180,13 +199,18 @@ export function registrarHooksAutomacoes(s) {
     // O botão nativo do Tormenta20 não atualiza a Scene nem o Combat. Seu
     // sinal confiável é o cartão criado depois que os efeitos de cena foram
     // removidos. Somente o GM ativo publica a sugestão para evitar duplicatas.
-    if (ehMensagemDeCenaEncerrada(message)
-      && game.user.isGM && game.user === game.users.activeGM) {
-      s.sugerirZerarContadores(
-        game.i18n.localize('T20HaydGMTools.FimCenaManual')
-      ).catch((err) =>
-        console.error(`${MODULE_ID} | Falha ao sugerir zerar contadores`, err)
-      );
+    if (ehMensagemDeCenaEncerrada(message)) {
+      if (game.user.isGM && game.user === game.users.activeGM) {
+        s.sugerirZerarContadores(
+          game.i18n.localize('T20HaydGMTools.FimCenaManual')
+        ).catch((err) =>
+          console.error(`${MODULE_ID} | Falha ao sugerir zerar contadores`, err)
+        );
+      }
+      // Roda em todos os clientes; a eleição de responsabilidade faz cada
+      // ficha ser gravada exatamente uma vez, inclusive as dos jogadores.
+      s.engenhocas.resetarSupressores().catch((err) =>
+        console.error(`${MODULE_ID} | Falha ao resetar supressores`, err));
     }
 
     if (userId !== game.user.id) return;
@@ -195,7 +219,12 @@ export function registrarHooksAutomacoes(s) {
     );
   });
 
-  Hooks.on('createItem', () => invalidarIndices());
+  Hooks.on('createItem', (item) => {
+    invalidarIndices();
+    s.engenhocas.aoMudarItem(item);
+    if (item.actor) s.engenhocas.atualizarPaineis(item.actor);
+    if (item.type === 'poder') item.actor?.sheet?.render(false);
+  });
 
   /**
    * Contagens de Combinação e de Estudo vivem em flags do ATOR. Este hook roda
@@ -237,6 +266,8 @@ export function registrarHooksAutomacoes(s) {
     ).catch((err) =>
       console.error(`${MODULE_ID} | Falha ao sugerir zerar contadores`, err)
     );
+    s.engenhocas.resetarSupressores().catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao resetar supressores`, err));
   });
 
   Hooks.on('updateScene', (cena, mudancas) => {
@@ -244,10 +275,17 @@ export function registrarHooksAutomacoes(s) {
     s.sugerirZerarContadores(
       game.i18n.format('T20HaydGMTools.FimCenaTroca', { cena: cena.name })
     ).catch((err) => console.error(`${MODULE_ID} | Falha ao sugerir zerar contadores`, err));
+    s.engenhocas.resetarSupressores().catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao resetar supressores`, err));
   });
 
   Hooks.on('updateItem', (item, mudancas, options, userId) => {
     invalidarIndices();
+    s.engenhocas.aoMudarItem(item, mudancas);
+    if (item.actor) s.engenhocas.atualizarPaineis(item.actor);
+    const mudouAutomacao = foundry.utils.hasProperty(mudancas, `flags.${MODULE_ID}.automacao`)
+      || foundry.utils.hasProperty(mudancas, `flags.${MODULE_ID}.-=automacao`);
+    if (item.type === 'poder' && mudouAutomacao) item.actor?.sheet?.render(false);
     if (!automacoesAtivas()) return;
 
     // Roda em TODOS os clientes: a contagem é visível para a mesa inteira, e
@@ -267,6 +305,9 @@ export function registrarHooksAutomacoes(s) {
 
   Hooks.on('deleteItem', (item, options, userId) => {
     invalidarIndices();
+    s.engenhocas.aoMudarItem(item);
+    if (item.actor) s.engenhocas.atualizarPaineis(item.actor);
+    if (item.type === 'poder') item.actor?.sheet?.render(false);
     if (!automacoesAtivas() || userId !== game.user.id) return;
     const ator = item.actor;
     if (!ator?.isOwner) return;

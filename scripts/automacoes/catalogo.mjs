@@ -103,6 +103,19 @@ export const AUTOMACOES = {
     }
   },
 
+  engenhoqueiro: {
+    categoria: 'inventor',
+    nome: 'Engenhoqueiro',
+    fonte: 'Livro Básico e Heróis de Arton',
+    icone: 'fa-solid fa-gears',
+    tipos: ['poder'],
+    ordemDiario: 0,
+    comoUsar:
+      'Ligue no poder. Todas as magias do ator com tipo Engenhoca passam a usar o fluxo de '
+      + 'ativação, CD diária e aparatos; o cartão do poder mostra a quantidade fabricada.',
+    engenhoqueiro: true
+  },
+
   'aura-sagrada': {
     categoria: 'paladino',
     nome: 'Aura Sagrada',

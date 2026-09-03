@@ -30,6 +30,7 @@ import { registrarHooksAutomacoes } from './hooks.mjs';
 import { efeitoPorChave, efeitosPorChave, efeitoEmDia } from './efeitos.mjs';
 import { criarBotao } from './ui.mjs';
 import { aura as auras } from './aura/index.mjs';
+import { engenhocas } from './engenhocas/index.mjs';
 import { ocultarContagemDe } from './segredos.mjs';
 import { sugerirAutomacoes, normalizarNome } from './sugestao.mjs';
 import { abrirDistribuicao } from './seta-infalivel.mjs';
@@ -327,11 +328,13 @@ async function abrirDialogoAutomacao(item) {
     await item.unsetFlag(MODULE_ID, FLAG_AUTOMACAO);
     await item.unsetFlag(MODULE_ID, FLAG_CONTADOR);
     await item.unsetFlag(MODULE_ID, FLAG_GOLPE);
+    engenhocas.agendarSincronizacao(item.actor);
     return ui.notifications.info(game.i18n.localize('T20HaydGMTools.AutoRemovida'));
   }
 
   await item.setFlag(MODULE_ID, FLAG_AUTOMACAO, escolha);
   await sincronizarEfeito(item);
+  engenhocas.agendarSincronizacao(item.actor);
   ui.notifications.info(
     game.i18n.format('T20HaydGMTools.AutoAplicada', { nome: AUTOMACOES[escolha].nome })
   );
@@ -2643,6 +2646,14 @@ function montarBarra(item, { completo }) {
     rotulo.appendChild(numero);
   }
 
+  if (def.engenhoqueiro) {
+    const { total, inteligencia } = engenhocas.resumoPoder(item);
+    rotulo.append(': ');
+    const numero = document.createElement('b');
+    numero.textContent = `${total} engenhoca(s) / Int ${inteligencia}`;
+    rotulo.appendChild(numero);
+  }
+
   // Aura: mostra raio e bônus atual, ligada ou não
   const resumoAura = def.aura ? auras.resumoDaAura(item) : null;
   if (resumoAura) {
@@ -2721,7 +2732,8 @@ export function injetarControlesAutomacao(message, html) {
   // Itens do ator com automação que tem controles próprios no chat
   const comControles = ator.items.filter((i) => {
     const def = definicaoDe(i);
-    return def?.contador || def?.acao || def?.distribuicao || def?.golpe || def?.aura;
+    return def?.contador || def?.acao || def?.distribuicao || def?.golpe || def?.aura
+      || def?.engenhoqueiro;
   });
   const combinacoes = poderesDeCombinacao(ator);
   const estudos = poderesDeEstudo(ator);
@@ -3202,6 +3214,8 @@ function paginaDaAutomacao(def) {
   // Golpe Pessoal: a lista de efeitos é grande demais para caber no padrão
   if (def.golpe) return paginaGolpePessoal(def, tipos);
 
+  if (def.engenhoqueiro) return engenhocas.paginaDiario();
+
   let comoFunciona = '';
   if (def.contador) {
     comoFunciona = `
@@ -3355,6 +3369,7 @@ function paginaGolpePessoal(def, tipos) {
 const CATEGORIAS = [
   { id: 'barbaro', rotulo: 'T20HaydGMTools.DiarioCatBarbaro' },
   { id: 'guerreiro', rotulo: 'T20HaydGMTools.DiarioCatGuerreiro' },
+  { id: 'inventor', rotulo: 'T20HaydGMTools.DiarioCatInventor' },
   { id: 'lutador', rotulo: 'T20HaydGMTools.DiarioCatLutador', abre: paginaCombinacoes },
   { id: 'paladino', rotulo: 'T20HaydGMTools.DiarioCatPaladino' },
   { id: 'combate', rotulo: 'T20HaydGMTools.DiarioCatCombate' },
@@ -3506,7 +3521,8 @@ registrarHooksAutomacoes({
   valorContador,
   golpeDoItem,
   sincronizarEfeito,
-  efeitosDoItem
+  efeitosDoItem,
+  engenhocas
 });
 
 /** Registro do diário: id do documento criado no mundo + botão nas configurações. */
@@ -3551,6 +3567,8 @@ Hooks.once('init', () => {
 Hooks.once('ready', () => {
   // Conjurador: a magia do Golpe Pessoal precisa sair antes do ataque
   ligarConjurador();
+  engenhocas.ligarFluxo();
+  for (const ator of game.actors ?? []) engenhocas.agendarSincronizacao(ator);
 
   const mod = game.modules.get(MODULE_ID);
   if (mod) {
@@ -3564,6 +3582,7 @@ Hooks.once('ready', () => {
         abrirDialogo: abrirDialogoAutomacao,
         diario: garantirDiario,
         abrirDiario,
+        engenhocas,
         golpePessoal: {
           efeitos: GP_EFEITOS,
           abrirConstrutor: abrirConstrutorGolpe,

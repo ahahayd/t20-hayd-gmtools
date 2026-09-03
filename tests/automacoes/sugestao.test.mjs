@@ -62,7 +62,7 @@ test('a lista de origem é respeitada (magia não vira sugestão de poder)', () 
 });
 
 test('todas as automações têm categoria conhecida', () => {
-  const validas = new Set(['barbaro', 'guerreiro', 'lutador', 'paladino', 'combate', 'magia']);
+  const validas = new Set(['barbaro', 'guerreiro', 'inventor', 'lutador', 'paladino', 'combate', 'magia']);
   for (const a of catalogo) {
     assert.ok(validas.has(a.categoria), `${a.nome} está sem categoria válida: ${a.categoria}`);
   }
@@ -134,9 +134,9 @@ test('o diário tem UMA página por categoria, não uma por poder', async () => 
   const motor = await readFile(
     new URL('../../scripts/automacoes/motor.mjs', import.meta.url), 'utf8');
 
-  const ordem = [...motor.matchAll(/id: '(barbaro|guerreiro|lutador|paladino|combate|magia)'/g)]
+  const ordem = [...motor.matchAll(/id: '(barbaro|guerreiro|inventor|lutador|paladino|combate|magia)'/g)]
     .map((m) => m[1]);
-  assert.deepEqual(ordem, ['barbaro', 'guerreiro', 'lutador', 'paladino', 'combate', 'magia']);
+  assert.deepEqual(ordem, ['barbaro', 'guerreiro', 'inventor', 'lutador', 'paladino', 'combate', 'magia']);
 
   // A chave da página é a categoria: uma página agrupa todos os poderes dela
   assert.match(motor, /pagina: `cat-\$\{categoria\.id\}`/);

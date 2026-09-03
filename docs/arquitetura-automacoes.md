@@ -20,7 +20,7 @@ automações sem quebrar itens e mundos existentes.
 - O escopo das flags continua sendo `t20-hayd-gmtools`.
 - As flags `automacao`, `contador`, `combinacoes`, `automacaoOrigem`,
   `combDebuff`, `condicoesDeCombinacao`, `msgRetroativa`, `golpe`,
-  `estudarAdversario`, `auras`, `auraEfeito` e `auraCura` não devem ser
+  `estudarAdversario`, `auras`, `auraEfeito`, `auraCura` e `engenhoca` não devem ser
   renomeadas sem uma migração de mundo.
 - `t20-hayd-automacoes.mjs` é a fachada pública e deve manter os exports já
   publicados.
@@ -51,6 +51,53 @@ pelo motor, sem criar hooks globais adicionais para cada poder.
 Os testes em `tests/automacoes` cobrem os serviços puros. Casos ligados a
 rolagens do Tormenta20 devem usar dados serializados de mensagens e efeitos,
 sem depender de um mundo real.
+
+## Engenhocas
+
+`scripts/automacoes/engenhocas/` mantém o catálogo de Aparatos, as regras puras
+de CD/estado e a integração. Engenhoca não ocupa a flag `automacao` da magia:
+ela é ativada pela presença do poder Engenhoqueiro automatizado e pelo tipo
+nativo `system.tipo === "eng"`. Assim uma magia preserva uma automação própria,
+como Seta Infalível, simultaneamente.
+
+A flag `engenhoca` do item guarda o custo original (o custo visível fica zero),
+contagem diária, enguiço, perícia e Aparatos. Nunca derive o custo original do
+zero preparado sem consultar essa flag.
+
+O domínio injeta somente os botões **Painel de Engenhocas** e **Resetar
+engenhocas** antes da lista nativa de magias nas fichas normal e em abas. O
+painel completo abre em uma janela, agrupado por círculo, e usa classes próprias
+(não imita linhas `.item`) para não receber listeners nem regras de layout do
+sistema ou do `t20-hayd-ui`.
+
+A engenhoca conjura SEMPRE, sucesso ou falha do teste — só o enguiço muda.
+Conjurar apenas no sucesso exigia corrigir uma falha chamando `item.roll()` de
+novo, e uma segunda chamada reabre o diálogo nativo do zero: os aparatos
+aplicados na primeira rolagem (Estimulador de Sobrecarga, Estabilizador…) não
+sobrevivem a um segundo diálogo. Com uma rolagem só, `aplicarEfeitosDosAparatos`
+roda uma vez, sempre, e nada se perde.
+
+O cartão do teste guarda a CD e o resultado, com um botão que sempre oferece o
+resultado OPOSTO ao atual — **Transformar em sucesso** ou **em falha**, uma
+correção manual do Mestre, não detecção de rerrolagem. Os dois só corrigem
+CD/enguiço retroativamente (`corrigirFalhaParaSucesso`/`corrigirSucessoParaFalha`
+em `regras.mjs`) — nenhum rola nada de novo, porque a conjuração já aconteceu.
+O cartão da MAGIA em si (não o do teste) recebe uma marca visual simples quando
+vem de um teste que falhou (`marcarConjuracaoFalhou`/`desmarcarConjuracaoFalhou`),
+já que a magia é idêntica à de um sucesso fora isso.
+
+A CD de resistência de uma magia (Estabilizador) não aparece em `system.
+resistencia.cd` em NENHUM template — o cartão mostra `labels.header`, uma
+string tipo "Resistência: Vontade (CD 15);" já montada em `_prepareLabels()`
+antes do aparato entrar em jogo. Mutar o número sem chamar `item._prepareLabels()`
+de novo deixa o cartão com a CD antiga.
+
+O Supressor de Segurança não trava sozinho por já ter sido usado na cena —
+`depoisDaTentativa` confia no `usarSupressor` que recebe, sem checar
+`supressorUsado`. O checkbox em `escolherPericia` nunca fica desabilitado,
+só desmarcado por padrão quando `supressorUsado` já é verdadeiro: "uma vez
+por cena" é sugestão da UI, não trava imposta pela regra pura — o Mestre
+pode marcar de novo de propósito e o Supressor age de novo.
 
 ## Auras
 
