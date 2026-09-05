@@ -2,7 +2,7 @@
   "id": "t20-hayd-gmtools",
   "title": "T20 Hayd GMTools",
   "description": "<p>Ferramentas de Mestre para Tormenta20: oculta dos jogadores os modificadores de rolagens e os detalhes de magias/habilidades de criaturas do Mestre — com um <b>Nível de metagame</b> em que o Mestre escolhe o que fica oculto (soma do ataque, dano, CDs, descrições, crítico, dados 3D) ou desliga a ocultação por completo —, além de deixar magias, poderes e efeitos ativos das criaturas como \"não identificados\" até o Mestre revelar, permite rerolar ou inserir manualmente resultados pelo menu de contexto do chat (com recálculo automático de dano crítico), oferece uma régua opcional para efeitos que ignora o dobro das diagonais, automatiza poderes com funcionamento específico (com um diário de instruções), gera tesouros pela Tabela 8-1 e associadas, e adiciona a definição de atributos iniciais dos personagens — compra por pontos, rolagens do Livro Básico e do Heróis de Arton (Clássica, Épica, Valkaria, Nimb) e arranjo Khalmyr — com método padrão, custos e tabela de conversão personalizáveis pelo mestre. Reúne também a antiga <b>T20 Hayd Gestão de Party</b>: uma Ficha do Grupo opcional com estoque compartilhado, além de transferência nativa de dinheiro e itens entre personagens.</p>",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "compatibility": {
     "minimum": "13",
     "verified": "13"
@@ -54,7 +54,7 @@
   },
   "url": "https://github.com/ahahayd/t20-hayd-gmtools",
   "manifest": "https://github.com/ahahayd/t20-hayd-gmtools/releases/latest/download/module.json",
-  "download": "https://github.com/ahahayd/t20-hayd-gmtools/releases/download/v2.0.2/module.zip",
+  "download": "https://github.com/ahahayd/t20-hayd-gmtools/releases/download/v2.0.3/module.zip",
   "readme": "https://github.com/ahahayd/t20-hayd-gmtools/blob/main/README.md",
   "bugs": "https://github.com/ahahayd/t20-hayd-gmtools/issues",
   "license": "MIT",
