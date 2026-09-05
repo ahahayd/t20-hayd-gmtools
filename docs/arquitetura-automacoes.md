@@ -121,6 +121,18 @@ Raio e "paredes bloqueiam" são parâmetros do catálogo, não código: uma aura
 uma entrada com bloco `aura`. Ampliações e variações entram como `auraModificador`
 na mesma ficha.
 
+Um ator nunca pode ficar com dois efeitos da MESMA aura. Arrastar a fonte por mais
+tempo que o debounce de `agendarRecalculo` (100ms) disparava um novo `recalcular()`
+antes do anterior terminar de gravar — duas sincronizações correndo ao mesmo tempo
+podiam cada uma ver "este aliado ainda não tem o efeito" e criar um cada, dobrando o
+bônus. `dispararRecalculo`, em `aura/index.mjs`, agora serializa isso: enquanto uma
+rodada está em `_executando`, a próxima só fica pendente e roda depois, nunca em
+paralelo. Como segunda trava — a real garantia, não só a causa raiz corrigida —
+`efeitosDaAura`, em `efeitos.mjs`, agrupa por ator antes de qualquer diff e apaga
+toda duplicata que encontrar, mantendo só uma; mesmo que uma corrida diferente
+volte a criar duas, a sincronização seguinte (chamada com muita frequência) desfaz
+sozinha.
+
 ### Quem escreve
 
 Os efeitos entram em fichas de OUTROS jogadores, o que só o Mestre pode fazer. O

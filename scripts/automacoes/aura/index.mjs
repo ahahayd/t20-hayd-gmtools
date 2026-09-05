@@ -48,12 +48,37 @@ async function recalcular() {
  */
 let _agendado = null;
 
+/**
+ * Uma rodada de `recalcular()` em andamento, ou null. Um arrasto mais longo
+ * que os 100ms do debounce dispara um NOVO ciclo antes do anterior terminar
+ * de gravar — duas chamadas de sincronizarAura correndo ao mesmo tempo podem
+ * cada uma ver "este aliado ainda não tem o efeito" e criar um cada, dobrando
+ * o bônus. Enquanto uma rodada está rodando, a próxima só é agendada para
+ * depois que ela terminar, nunca em paralelo.
+ */
+let _executando = null;
+let _pendente = false;
+
+function dispararRecalculo() {
+  if (_executando) {
+    _pendente = true;
+    return;
+  }
+  _executando = recalcular()
+    .catch((err) => console.error(`${MODULE_ID} | Falha ao recalcular auras`, err))
+    .finally(() => {
+      _executando = null;
+      if (_pendente) {
+        _pendente = false;
+        dispararRecalculo();
+      }
+    });
+}
+
 export function agendarRecalculo() {
   // Criado na primeira chamada, não no import: durante o carregamento do
   // módulo o `foundry.utils` ainda pode não existir.
-  _agendado ??= foundry.utils.debounce(() => {
-    recalcular().catch((err) => console.error(`${MODULE_ID} | Falha ao recalcular auras`, err));
-  }, 100);
+  _agendado ??= foundry.utils.debounce(dispararRecalculo, 100);
   _agendado();
 }
 

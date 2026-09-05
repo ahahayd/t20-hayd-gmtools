@@ -41,16 +41,34 @@ function tokenVivoDaFonte(fonte, estado) {
   return canvas?.tokens?.placeables?.find((t) => t.actor?.uuid === uuid) ?? null;
 }
 
-/** Efeitos de uma aura específica espalhados pela mesa. */
-function efeitosDaAura(fonteId, itemId) {
-  const achados = [];
+/**
+ * Efeitos de uma aura específica espalhados pela mesa — no máximo um por
+ * ator.
+ *
+ * Duas sincronizações sobrepostas (token arrastado por mais tempo que o
+ * debounce, com a rodada anterior ainda gravando) podem cada uma decidir
+ * "este aliado ainda não tem o efeito" antes de qualquer uma das duas
+ * terminar de criar o dela, e o aliado acaba com dois. Aqui é onde isso se
+ * corrige: se um ator tiver mais de um efeito desta aura, mantém só o mais
+ * antigo e apaga o resto — assim nenhuma chamada seguinte de sincronizarAura
+ * pode deixar uma duplicata viva por muito tempo.
+ */
+async function efeitosDaAura(fonteId, itemId) {
+  const porAtor = new Map();
   for (const ator of atoresAlcancaveis()) {
     for (const efeito of ator.effects ?? []) {
       const marca = efeito.getFlag(MODULE_ID, FLAG_AURA_EFEITO);
-      if (marca?.fonte === fonteId && marca?.item === itemId) {
-        achados.push({ ator, efeito });
-      }
+      if (marca?.fonte !== fonteId || marca?.item !== itemId) continue;
+      if (!porAtor.has(ator.uuid)) porAtor.set(ator.uuid, []);
+      porAtor.get(ator.uuid).push({ ator, efeito });
     }
+  }
+
+  const achados = [];
+  for (const lista of porAtor.values()) {
+    const [primeiro, ...duplicatas] = lista;
+    achados.push(primeiro);
+    for (const { efeito } of duplicatas) await efeito.delete().catch(() => null);
   }
   return achados;
 }
@@ -97,7 +115,7 @@ export async function sincronizarAura(fonte, { item, def, estado }) {
     : [];
 
   const desejados = alvos.map((t) => t.actor?.uuid).filter(Boolean);
-  const existentes = efeitosDaAura(fonte.id, item.id);
+  const existentes = await efeitosDaAura(fonte.id, item.id);
   const atuais = existentes.map(({ ator }) => ator.uuid);
 
   const { criar, remover } = diferencaDeAlvos(atuais, desejados);
@@ -125,7 +143,7 @@ export async function sincronizarAura(fonte, { item, def, estado }) {
 
 /** Tira uma aura de todo mundo. */
 export async function limparAura(fonteId, itemId) {
-  const existentes = efeitosDaAura(fonteId, itemId);
+  const existentes = await efeitosDaAura(fonteId, itemId);
   for (const { efeito } of existentes) await efeito.delete();
   return existentes.length;
 }

@@ -356,3 +356,38 @@ test('o efeito no aliado tem duração só para virar ícone, mas quem remove é
   assert.match(efeitos, /sincronizarAura/);
 });
 
+test('um ator nunca pode ficar com dois efeitos da mesma aura', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const raiz = new URL('../../scripts/automacoes/', import.meta.url);
+  const efeitos = await readFile(new URL('aura/efeitos.mjs', raiz), 'utf8');
+
+  // Bug relatado: arrastar a fonte por mais tempo que o debounce disparava
+  // duas sincronizações sobrepostas, cada uma vendo "ainda não tem efeito" e
+  // criando um cada — o aliado ficava com dois, somando bônus em dobro.
+  // efeitosDaAura agora agrupa por ator e apaga toda duplicata, mantendo só
+  // uma; os dois pontos que a chamam (sincronizarAura e limparAura) esperam
+  // essa limpeza terminar antes de decidir o que criar/remover.
+  const efeitosDaAura = efeitos.slice(
+    efeitos.indexOf('async function efeitosDaAura'), efeitos.indexOf('/** Dados do efeito'));
+  assert.match(efeitosDaAura, /porAtor\.get\(ator\.uuid\)\.push/);
+  assert.match(efeitosDaAura, /for \(const \{ efeito \} of duplicatas\) await efeito\.delete\(\)/);
+  assert.match(efeitos, /const existentes = await efeitosDaAura\(fonte\.id, item\.id\);/);
+  assert.match(efeitos, /const existentes = await efeitosDaAura\(fonteId, itemId\);/);
+});
+
+test('duas rodadas de recalcular() nunca correm ao mesmo tempo', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const raiz = new URL('../../scripts/automacoes/', import.meta.url);
+  const index = await readFile(new URL('aura/index.mjs', raiz), 'utf8');
+
+  // Causa raiz da corrida acima: um arrasto mais longo que os 100ms do
+  // debounce dispara recalcular() de novo antes do anterior terminar de
+  // gravar. Enquanto uma rodada está em `_executando`, a próxima só fica
+  // pendente e roda depois — nunca em paralelo com a que ainda está de pé.
+  const dispararRecalculo = index.slice(
+    index.indexOf('function dispararRecalculo'), index.indexOf('export function agendarRecalculo'));
+  assert.match(dispararRecalculo, /if \(_executando\) \{\s*\n\s*_pendente = true;\s*\n\s*return;/);
+  assert.match(dispararRecalculo, /_executando = recalcular\(\)/);
+  assert.match(index, /_agendado \?\?= foundry\.utils\.debounce\(dispararRecalculo, 100\);/);
+});
+
