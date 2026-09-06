@@ -8,14 +8,33 @@
 
 /* --- Indicador de rerolagem --------------------------------------------- */
 
-/* Total(is) anterior(es), riscado(s) e apagado(s), ao lado do novo resultado.
+/* `.dice-total` fica exatamente como o sistema estiliza (a barra cheia,
+   colorida no crítico/falha) — sem `display` nem largura mexidos aqui. O
+   histórico é IRMÃO dela (nunca filho: ver injetarIndicador, é o que evita o
+   sistema ler o total anterior junto no botão "Aplicar dano"), numa linha
+   PRÓPRIA logo abaixo, centralizada como o total.
+   Altura FIXA de propósito (16px = 2px de margem + 14px de linha): os botões
+   de aplicar dano/cura do sistema, logo abaixo, são `position: absolute`
+   pinados no fundo do `.roll` de fora — cada px que esta linha cresce empurra
+   esses botões pra baixo por igual. Com a altura travada, dá pra subir os
+   botões de volta pelo MESMO valor (ver `.dice-btn.result` mais abaixo) em
+   vez de deixá-los flutuar soltos. */
+.t20g-reroll-historico {
+  display: block;
+  height: 14px;
+  line-height: 14px;
+  overflow: hidden;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* Total(is) anterior(es), riscado(s) e apagado(s), abaixo do novo resultado.
    Usa currentColor (a cor do texto do tema) para nunca sumir no fundo. */
 .t20g-reroll-prev {
-  margin-left: 0.3em;
-  font-size: 0.62em;
+  margin: 0 0.15em;
+  font-size: 0.68em;
   font-weight: 400;
-  opacity: 0.5;
-  vertical-align: middle;
+  opacity: 0.55;
   color: currentColor;
 }
 .t20g-reroll-prev del { text-decoration: line-through; }
@@ -24,10 +43,17 @@
    (--t20a-chat-cor, definida na mensagem); sem ele, cai num vermelho que
    contrasta com o card claro padrão do sistema. */
 .t20g-reroll-icon {
-  margin-left: 0.35em;
-  font-size: 0.62em;
-  vertical-align: middle;
+  margin-left: 0.3em;
+  font-size: 0.68em;
   color: var(--t20a-chat-cor, #c0392b);
+}
+
+/* Sobe de volta os botões nativos de aplicar dano/cura, que `.roll` empurra
+   pra baixo (posição `bottom` deles é relativa à altura TOTAL de `.roll`,
+   que cresce 16px com a linha de histórico acima). 1px (posição original do
+   sistema) + 16px (altura exata da linha) = 17px. */
+.roll:has(.t20g-reroll-historico) .dice-btn.result {
+  bottom: 17px;
 }
 
 /* --- Diálogo de inserção manual do resultado ---------------------------- */

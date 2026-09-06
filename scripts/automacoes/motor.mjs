@@ -451,39 +451,97 @@ function alvosMirados() {
   return [...(game.user?.targets ?? [])].filter((t) => t?.id);
 }
 
+/** Flag na MENSAGEM: quem estava na mira de quem rolou. */
+const FLAG_ALVOS = 'alvosDaRolagem';
+
 /**
- * Oponentes com contagem viva contra este ator, para quem só assiste.
+ * Guarda na mensagem os alvos de QUEM ROLOU, no momento em que ela nasce.
  *
- * `alvosMirados()` é o alvo de QUEM OLHA, não de quem rolou — para um
- * espectador ele mostraria a contagem contra o próprio alvo dele, que não tem
- * relação com o cartão. Aqui a lista sai do que está de fato registrado na
- * ficha, que é a informação útil para a mesa acompanhar.
+ * Sem isto o cartão só conhece os alvos de QUEM OLHA: o Mestre abrindo o
+ * ataque de um jogador via a própria seleção (quase sempre vazia) e não o
+ * oponente que o jogador tinha mirado — a barra de Combinações/Estudo saía
+ * "sem alvo" justamente para quem mais precisa da informação.
+ *
+ * Gravar no `preCreate` faz o dado nascer junto com a mensagem: chega pronto
+ * em todos os clientes, sem uma segunda escrita e sem depender de quem estava
+ * conectado na hora.
+ *
+ * Só os IDs são guardados — o nome é resolvido na hora de desenhar, para que
+ * o metagame continue mandando em quem pode ler o quê.
  */
-function oponentesComContagem(ator, contar) {
-  const tudo = ator?.getFlag?.(MODULE_ID, FLAG_COMBINACOES) ?? {};
-  return Object.keys(tudo)
-    .map((tokenId) => ({ id: tokenId, name: nomeDoToken(tokenId), valor: contar(tokenId) }))
-    .filter((linha) => linha.valor > 0 && linha.name);
+export function marcarAlvosDaRolagem(message) {
+  const fonte = message?._source ?? {};
+  const temRolagem = (fonte.rolls?.length ?? 0) > 0;
+  const temCartao = String(fonte.content ?? '').includes('chat-card');
+  if (!temRolagem && !temCartao) return;
+
+  const tokens = alvosMirados().map((t) => t.id);
+  if (!tokens.length) return;
+  message.updateSource({
+    [`flags.${MODULE_ID}.${FLAG_ALVOS}`]: { cena: canvas?.scene?.id ?? null, tokens }
+  });
 }
 
-/** Mesma ideia, para o registro de Estudar o Adversário. */
-function oponentesComEstudo(ator) {
-  const tudo = ator?.getFlag?.(MODULE_ID, FLAG_ESTUDO) ?? {};
-  return Object.keys(tudo)
-    .map((tokenId) => ({
-      id: tokenId, name: nomeDoToken(tokenId), valor: normalizarEstudo(tudo[tokenId]).n
-    }))
-    .filter((linha) => linha.valor > 0 && linha.name);
+/** Alvos que a mensagem guardou, já sem os que sumiram da cena. */
+function alvosDaMensagem(message) {
+  const marca = message?.getFlag?.(MODULE_ID, FLAG_ALVOS);
+  const ids = Array.isArray(marca?.tokens) ? marca.tokens : [];
+  return ids
+    .map((id) => ({ id, name: nomeDoToken(id, marca?.cena) }))
+    .filter((alvo) => alvo.name);
 }
 
-/** Maior contagem entre os oponentes mirados, com o token correspondente. */
-function maiorContagemMirada(ator) {
+/** A mensagem dona de uma barra já renderizada no log. */
+function mensagemDaBarra(barra) {
+  const id = barra?.closest?.('.chat-message')?.dataset?.messageId;
+  return id ? game.messages.get(id) : null;
+}
+
+/**
+ * Alvos que valem para a barra deste cartão: somente o retrato persistido na
+ * mensagem. A mira atual nunca entra durante um repinte; trocar/definir o alvo
+ * é uma ação explícita do botão da própria barra.
+ */
+function alvosDaBarra(message) {
+  return alvosDaMensagem(message);
+}
+
+/** Autor do cartão e Mestres podem substituir o alvo persistido. */
+function podeTrocarAlvoDaMensagem(message, ator) {
+  return podeControlar(ator) && (game.user.isGM || message?.isAuthor);
+}
+
+/** Substitui o alvo do cartão pela única criatura atualmente mirada. */
+async function trocarAlvoDaMensagem(message, ator) {
+  // O DOM não é fronteira de permissão: cobre botão antigo ou forjado.
+  if (!podeTrocarAlvoDaMensagem(message, ator)) return false;
+
+  const alvos = alvosMirados();
+  if (alvos.length !== 1) {
+    ui.notifications.warn(game.i18n.localize('T20HaydGMTools.CombAlvoUnico'));
+    return false;
+  }
+
+  await message.setFlag(MODULE_ID, FLAG_ALVOS, {
+    cena: canvas?.scene?.id ?? null,
+    tokens: [alvos[0].id]
+  });
+  return true;
+}
+
+/** Maior contagem entre uma lista de oponentes, com o token correspondente. */
+function maiorContagemEntre(ator, tokens) {
   let melhor = { valor: 0, token: null };
-  for (const token of alvosMirados()) {
+  for (const token of tokens) {
     const valor = contagemAtual(ator, token.id);
     if (valor > melhor.valor || !melhor.token) melhor = { valor, token };
   }
   return melhor;
+}
+
+/** Maior contagem entre os oponentes mirados, com o token correspondente. */
+function maiorContagemMirada(ator) {
+  return maiorContagemEntre(ator, alvosMirados());
 }
 
 /** Histórico de acertos do ator contra um oponente. */
@@ -579,9 +637,13 @@ async function somarCombinacao(ator, chaveAlvo) {
     criarEntrada(rodadaAtual(), incrementoDaContagem(ator))
   ];
   await gravarHistorico(ator, chaveAlvo, historico);
+  // O dano no cartão é o que a mesa está olhando: corrige ANTES de sincronizar
+  // efeitos e debuffs, que são várias escritas de banco e não mudam nada na
+  // tela. Deixado por último, o número só subia um ou dois segundos depois do
+  // clique numa mesa online.
+  await atualizarMensagensRetroativas(ator, chaveAlvo);
   await sincronizarCombinacoes(ator);
   await atualizarDebuffsAplicados(ator, chaveAlvo);
-  await atualizarMensagensRetroativas(ator, chaveAlvo);
 }
 
 /** Diminui a contagem na rodada atual sem apagar o histórico anterior. */
@@ -597,9 +659,10 @@ async function subtrairCombinacao(ator, chaveAlvo) {
     criarEntradaValor(rodadaAtual(), novo)
   ];
   await gravarHistorico(ator, chaveAlvo, historico);
+  // Mesma ordem do somar: primeiro o que aparece no chat (ver somarCombinacao).
+  await atualizarMensagensRetroativas(ator, chaveAlvo);
   await sincronizarCombinacoes(ator);
   await atualizarDebuffsAplicados(ator, chaveAlvo);
-  await atualizarMensagensRetroativas(ator, chaveAlvo);
 }
 
 /**
@@ -608,8 +671,8 @@ async function subtrairCombinacao(ator, chaveAlvo) {
  */
 async function zerarCombinacao(ator, chaveAlvo) {
   await gravarHistorico(ator, chaveAlvo, []);
-  await sincronizarCombinacoes(ator);
   await atualizarMensagensRetroativas(ator, chaveAlvo);
+  await sincronizarCombinacoes(ator);
   await removerEfeitosDaCombinacao(ator, chaveAlvo);
   await removerEfeitosProprios(ator);
 }
@@ -707,9 +770,15 @@ async function _sincronizarCombinacoes(ator) {
 function atualizarBarrasCombinacao(ator) {
   const seletor = `.t20g-comb-barra[data-actor-id="${CSS.escape(ator.id)}"]`;
   for (const barra of document.querySelectorAll(seletor)) {
-    const nova = montarBarraCombinacoes(ator, { completo: barra.dataset.completo === '1' });
-    // Trocar de alvo repinta todas as barras do log; quando o resultado é
-    // idêntico, trocar o nó só causaria relayout à toa.
+    // A mensagem sai do próprio log: é dela que vêm os alvos da rolagem, que
+    // não podem se perder num repinte disparado por outra pessoa.
+    const nova = montarBarraCombinacoes(ator, {
+      completo: barra.dataset.completo === '1',
+      message: mensagemDaBarra(barra)
+    });
+    if (!nova) { barra.remove(); continue; }
+    // Mudanças de contagem repintam todas as barras do log; quando o resultado
+    // é idêntico, trocar o nó só causaria relayout à toa.
     if (nova.outerHTML === barra.outerHTML) continue;
     barra.replaceWith(nova);
   }
@@ -719,8 +788,10 @@ function atualizarBarrasCombinacao(ator) {
 /* --- Aviso de contagem encerrada ---------------------------------------- */
 
 /** Nome de um token ainda presente na cena ou no encontro atual. */
-function nomeDoToken(tokenId) {
+function nomeDoToken(tokenId, cenaId = null) {
   if (!tokenId) return null;
+  const naCenaDaMensagem = cenaId ? game.scenes?.get(cenaId)?.tokens?.get(tokenId) : null;
+  if (naCenaDaMensagem) return naCenaDaMensagem.name;
   const naCena = canvas?.scene?.tokens?.get(tokenId);
   if (naCena) return naCena.name;
   for (const combatente of game.combat?.combatants ?? []) {
@@ -1028,6 +1099,24 @@ async function reescreverHtmlDaRolagem(conteudo, dadosRoll, indice, antigo, novo
 }
 
 /**
+ * Quem grava a correção retroativa desta mensagem.
+ *
+ * Corrigir exige permissão na MENSAGEM, não na ficha: outro dono do
+ * personagem (ou o Mestre) pode clicar no "+", mas quem edita o cartão é o
+ * autor dele. Antes o clique de quem não era autor nem Mestre simplesmente
+ * não atualizava nada, e o dano ficava no valor velho até alguém rolar de
+ * novo.
+ *
+ * Exatamente um cliente responde em cada caso: o autor enquanto estiver
+ * conectado; o Mestre ativo quando ele não estiver. Sem isso os dois
+ * escreveriam a mesma correção em cima da outra.
+ */
+function podeCorrigirMensagem(message) {
+  if (message?.author?.active) return message.isAuthor;
+  return game.user.isGM && game.user === game.users.activeGM;
+}
+
+/**
  * Põe a última mensagem de cada combinação retroativa em dia com a contagem.
  * Chamado sempre que a contagem daquele oponente muda.
  */
@@ -1044,7 +1133,7 @@ async function atualizarMensagensRetroativas(ator, chaveAlvo) {
 
     const message = game.messages.get(reg.mensagem);
     if (!message) { delete registros[itemId]; mudou = true; continue; }
-    if (!message.isAuthor && !game.user.isGM) continue;
+    if (!podeCorrigirMensagem(message)) continue;
 
     const posicao = await reescreverBonusNaMensagem(message, reg, valorAtual);
     if (!posicao) continue;
@@ -1054,6 +1143,21 @@ async function atualizarMensagensRetroativas(ator, chaveAlvo) {
   }
 
   if (mudou) await ator.setFlag(MODULE_ID, FLAG_RETRO, registros);
+}
+
+/**
+ * Põe TODAS as mensagens retroativas do ator em dia, sem saber qual oponente
+ * mudou.
+ *
+ * É o caminho de quem NÃO clicou: a contagem muda na ficha, o hook de
+ * `updateActor` roda em todos os clientes e o responsável por cada mensagem
+ * (ver podeCorrigirMensagem) corrige a sua. Sem isto, o dano retroativo só
+ * acertava quando quem clicou por acaso era o autor do cartão.
+ */
+export async function corrigirRetroativasDoAtor(ator) {
+  const registros = registrosRetroativos(ator);
+  const alvos = new Set(Object.values(registros).map((reg) => reg.alvo ?? null));
+  for (const alvo of alvos) await atualizarMensagensRetroativas(ator, alvo);
 }
 
 /**
@@ -1076,7 +1180,12 @@ async function registrarMensagemRetroativa(message) {
 
   // Registra contra o mesmo oponente que o efeito usou (a maior contagem
   // entre os alvos), senão a correção nunca casaria com vários alvos mirados.
-  const { valor, token: alvo } = maiorContagemMirada(ator);
+  // A lista sai da própria mensagem (é a mesma que o cartão mostra para a
+  // mesa); a mira de agora é só reserva para mensagens sem a marca.
+  const doCartao = alvosDaMensagem(message);
+  const { valor, token: alvo } = doCartao.length
+    ? maiorContagemEntre(ator, doCartao)
+    : maiorContagemMirada(ator);
   const registros = foundry.utils.deepClone(registrosRetroativos(ator));
   for (const item of usadas) {
     // `retroativo` pode ser true (bônus numérico) ou { dados: N } (Nd6)
@@ -1499,13 +1608,11 @@ function montarBarraEfeitoAlvo(item) {
  * A contagem é individual por inimigo, então com vários alvos marcados cada um
  * ganha a própria linha e os próprios botões — nada de adivinhar "o alvo".
  */
-function montarBarraCombinacoes(ator, { completo }) {
+function montarBarraCombinacoes(ator, { completo, message }) {
   const controla = podeControlar(ator);
-  // Quem controla enxerga pelos próprios alvos (é assim que ele age); quem só
-  // assiste enxerga o que está registrado na ficha.
-  const alvos = controla
-    ? alvosMirados()
-    : oponentesComContagem(ator, (id) => contagemAtual(ator, id));
+  // O alvo do cartão é o que QUEM ROLOU mirou, congelado na mensagem. A mira
+  // atual só é lida quando alguém aciona explicitamente "trocar alvo".
+  const alvos = alvosDaBarra(message);
 
   // Espectador sem nada registrado não precisa de barra nenhuma no cartão.
   if (!controla && !alvos.length) return null;
@@ -1529,10 +1636,7 @@ function montarBarraCombinacoes(ator, { completo }) {
     rotulo.appendChild(dica);
     linha.appendChild(rotulo);
     barra.appendChild(linha);
-    return barra;
-  }
-
-  for (const alvo of alvos) {
+  } else for (const alvo of alvos) {
     const valor = contagemAtual(ator, alvo.id);
 
     const linha = document.createElement('div');
@@ -1578,6 +1682,26 @@ function montarBarraCombinacoes(ator, { completo }) {
       }
     }
     barra.appendChild(linha);
+  }
+
+  // O autor da rolagem e o Mestre podem corrigir/definir o alvo do cartão.
+  // A mudança é gravada na mensagem, portanto todos os clientes veem o mesmo
+  // oponente; apenas mudar a mira local não altera nada.
+  if (podeTrocarAlvoDaMensagem(message, ator)) {
+    const linhaAlvo = document.createElement('div');
+    linhaAlvo.className = 't20g-auto-linha';
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 't20g-auto-btn t20g-auto-btn-largo';
+    b.dataset.acaoComb = 'trocar-alvo';
+    b.dataset.actorId = ator.id;
+    b.dataset.tooltip = game.i18n.localize('T20HaydGMTools.CombTrocarAlvoDica');
+    const i = document.createElement('i');
+    i.className = 'fa-solid fa-crosshairs';
+    const chave = alvos.length ? 'T20HaydGMTools.CombTrocarAlvo' : 'T20HaydGMTools.CombDefinirAlvo';
+    b.append(i, ` ${game.i18n.localize(chave)}`);
+    linhaAlvo.appendChild(b);
+    barra.appendChild(linhaAlvo);
   }
 
   // Botão de segurança: refaz os efeitos já aplicados nas criaturas com a
@@ -1738,7 +1862,10 @@ function atualizarBarrasEstudo(ator) {
   for (const barra of document.querySelectorAll(seletor)) {
     const item = ator.items.get(barra.dataset.itemId);
     if (!item) continue;
-    const nova = montarBarraEstudo(item, { completo: barra.dataset.completo === '1' });
+    const nova = montarBarraEstudo(item, {
+      completo: barra.dataset.completo === '1',
+      message: mensagemDaBarra(barra)
+    });
     if (!nova) { barra.remove(); continue; }
     if (nova.outerHTML === barra.outerHTML) continue;
     barra.replaceWith(nova);
@@ -1779,13 +1906,13 @@ function estudosRegistrados() {
  * contador (Sangue dos Inimigos e afins) — é assim que o jogador reconhece
  * de onde vem o bônus no cartão.
  */
-function montarBarraEstudo(item, { completo }) {
+function montarBarraEstudo(item, { completo, message }) {
   const ator = item.actor;
   const def = definicaoDe(item);
   const controla = podeControlar(ator);
-  // Mesma regra da barra de Combinações: quem age vê pelos próprios alvos,
-  // quem assiste vê o que está registrado na ficha.
-  const alvos = controla ? alvosMirados() : oponentesComEstudo(ator);
+  // Mesma regra da barra de Combinações: o alvo vem da rolagem e permanece
+  // congelado na mensagem até uma troca explícita no cartão.
+  const alvos = alvosDaBarra(message);
 
   if (!controla && !alvos.length) return null;
 
@@ -2772,7 +2899,9 @@ export function injetarControlesAutomacao(message, html) {
   if (combinacoes.length) {
     const noCartaoDeCombinacao = combinacoes.some((i) => i.id === itemDoCard?.id);
     if (ehAtaque || noCartaoDeCombinacao) {
-      const barraComb = montarBarraCombinacoes(ator, { completo: noCartaoDeCombinacao });
+      const barraComb = montarBarraCombinacoes(ator, {
+        completo: noCartaoDeCombinacao, message
+      });
       if (barraComb) card.appendChild(barraComb);
       // Botões para aplicar os efeitos das combinações realmente usadas.
       // São ação, não informação: só para quem pode mexer na ficha.
@@ -2791,7 +2920,7 @@ export function injetarControlesAutomacao(message, html) {
   for (const item of estudos) {
     const ehOProprioItem = item.id === itemDoCard?.id;
     if (!ehAtaque && !ehOProprioItem) continue;
-    const barraEstudo = montarBarraEstudo(item, { completo: ehOProprioItem });
+    const barraEstudo = montarBarraEstudo(item, { completo: ehOProprioItem, message });
     if (barraEstudo) card.appendChild(barraEstudo);
   }
 
@@ -2818,6 +2947,17 @@ export function injetarControlesAutomacao(message, html) {
 
     // Botões da barra de Combinações (cada linha age no seu oponente)
     if (botao.dataset.acaoComb) {
+      if (botao.dataset.acaoComb === 'trocar-alvo') {
+        botao.disabled = true;
+        try { await trocarAlvoDaMensagem(message, ator); }
+        catch (err) {
+          console.error(`${MODULE_ID} | Falha ao trocar alvo da mensagem`, err);
+        } finally {
+          botao.disabled = false;
+        }
+        return;
+      }
+
       // Reaplicar não depende de alvo mirado: refaz o que já está nas criaturas
       if (botao.dataset.acaoComb === 'reaplicar') {
         botao.disabled = true;
@@ -3516,6 +3656,8 @@ registrarHooksAutomacoes({
   anunciarRetrocessoCombinacoes,
   apagarMensagensRetrocesso,
   registrarMensagemRetroativa,
+  corrigirRetroativasDoAtor,
+  marcarAlvosDaRolagem,
   sugerirZerarContadores,
   definicaoDe,
   valorContador,

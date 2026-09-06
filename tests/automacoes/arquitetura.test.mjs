@@ -46,7 +46,7 @@ test('flags persistentes mantêm seus nomes publicados', () => {
   for (const flag of [
     'automacao', 'contador', 'automacaoOrigem', 'combinacoes',
     'msgRetroativa', 'combDebuff', 'condicoesDeCombinacao', 'golpe',
-    'estudarAdversario'
+    'estudarAdversario', 'alvosDaRolagem'
   ]) assert.ok(motor.includes(`'${flag}'`), `flag ausente: ${flag}`);
 });
 
@@ -99,4 +99,38 @@ test('Golpe Pessoal substitui a configuração e elimina efeitos duplicados', ()
   );
   assert.match(construtor, /unsetFlag\(MODULE_ID, FLAG_GOLPE\)/);
   assert.match(construtor, /setFlag\(MODULE_ID, FLAG_GOLPE, salvo\)/);
+});
+
+test('o dano retroativo é corrigido antes das escritas de efeito', () => {
+  // O número no cartão é o que a mesa está olhando. Deixado por último, atrás
+  // de sincronizarCombinacoes e atualizarDebuffsAplicados (várias escritas de
+  // banco), ele só subia um ou dois segundos depois do clique numa mesa
+  // online.
+  for (const nome of ['somarCombinacao', 'subtrairCombinacao']) {
+    const inicio = motor.indexOf(`async function ${nome}(ator, chaveAlvo)`);
+    assert.ok(inicio > 0, `não achei ${nome}`);
+    const corpo = motor.slice(inicio, motor.indexOf('\n}', inicio));
+    const retro = corpo.indexOf('atualizarMensagensRetroativas');
+    const sync = corpo.indexOf('sincronizarCombinacoes');
+    assert.ok(retro > 0 && sync > 0, `${nome} perdeu uma das chamadas`);
+    assert.ok(retro < sync, `${nome} deve corrigir a mensagem antes de sincronizar efeitos`);
+  }
+});
+
+test('a correção retroativa tem um dono só, e não depende de quem clicou', () => {
+  // Editar a mensagem exige permissão NELA, não na ficha: outro dono do
+  // personagem pode clicar no "+" e não conseguir corrigir o cartão alheio.
+  // O autor assume enquanto está conectado; o Mestre ativo cobre o resto —
+  // exatamente um cliente em cada caso, senão os dois escreviam por cima.
+  const eleicao = motor.slice(
+    motor.indexOf('function podeCorrigirMensagem(message)'),
+    motor.indexOf('async function atualizarMensagensRetroativas'));
+  assert.match(eleicao, /message\?\.author\?\.active/);
+  assert.match(eleicao, /game\.user === game\.users\.activeGM/);
+  assert.match(motor, /if \(!podeCorrigirMensagem\(message\)\) continue;/);
+  assert.doesNotMatch(motor, /if \(!message\.isAuthor && !game\.user\.isGM\) continue;/);
+
+  // Quem não clicou também precisa reagir: a contagem muda na ficha e o hook
+  // roda em todos os clientes.
+  assert.match(hooks, /s\.corrigirRetroativasDoAtor\(ator\)/);
 });

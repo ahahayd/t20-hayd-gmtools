@@ -112,17 +112,63 @@ test('a contagem de criatura do Mestre não vaza para jogador restrito', async (
 
 /**
  * Para quem só assiste, `alvosMirados()` seria o alvo DELE, não o de quem
- * rolou — as linhas precisam sair do que está registrado na ficha.
+ * rolou. Mesmo para quem controla, reler a mira num repinte faria cartões
+ * antigos mudarem enquanto o usuário navega entre inimigos.
  */
-test('espectador vê as contagens da ficha, não os próprios alvos', () => {
-  assert.match(motor, /function oponentesComContagem\(/);
-  assert.match(motor, /function oponentesComEstudo\(/);
+test('o alvo exibido fica congelado na mensagem até a troca explícita', () => {
+  const corpoAlvos = trecho('function alvosDaBarra(', '/** Autor do cartão');
+  assert.match(corpoAlvos, /return alvosDaMensagem\(message\)/);
+  assert.doesNotMatch(corpoAlvos, /alvosMirados\(\)/,
+    'repintar o cartão não pode reler a mira atual');
 
   for (const nome of ['montarBarraCombinacoes(ator', 'montarBarraEstudo(item']) {
     const corpo = trecho(`function ${nome}`, 'const barra = document.createElement');
-    assert.match(corpo, /controla\s*\?\s*alvosMirados\(\)/,
-      `${nome} deve usar alvosMirados só para quem controla`);
+    assert.match(corpo, /alvosDaBarra\(message\)/,
+      `${nome} deve montar a lista de alvos por alvosDaBarra`);
+    assert.doesNotMatch(corpo, /alvosMirados\(\)/,
+      `${nome} não pode ler a mira de quem olha direto`);
     assert.match(corpo, /if \(!controla && !alvos\.length\) return null;/,
       `${nome} deve omitir a barra do espectador quando não há nada registrado`);
   }
+});
+
+test('autor e Mestre podem trocar o alvo persistido por exatamente um mirado', () => {
+  const permissao = trecho('function podeTrocarAlvoDaMensagem(', '/** Substitui o alvo');
+  assert.match(permissao, /podeControlar\(ator\)/);
+  assert.match(permissao, /game\.user\.isGM \|\| message\?\.isAuthor/);
+
+  const troca = trecho('async function trocarAlvoDaMensagem(', '/** Maior contagem');
+  assert.match(troca, /if \(!podeTrocarAlvoDaMensagem\(message, ator\)\) return false/,
+    'a permissão deve ser validada também no handler, não apenas no DOM');
+  assert.match(troca, /if \(alvos\.length !== 1\)/);
+  assert.match(troca, /message\.setFlag\(MODULE_ID, FLAG_ALVOS/,
+    'a troca precisa ser persistida para todos os clientes');
+  assert.match(troca, /tokens: \[alvos\[0\]\.id\]/,
+    'a troca deve substituir, não acrescentar, o alvo');
+
+  const barra = trecho('function montarBarraCombinacoes(ator', 'return barra;');
+  assert.match(barra, /podeTrocarAlvoDaMensagem\(message, ator\)/);
+  assert.match(barra, /dataset\.acaoComb = 'trocar-alvo'/);
+});
+
+/**
+ * O alvo mostrado no cartão é o de QUEM ROLOU: sem isso o Mestre abrindo o
+ * ataque de um jogador via a própria seleção (quase sempre vazia) em vez do
+ * oponente que o jogador mirou.
+ */
+test('o cartão guarda os alvos de quem rolou, não os de quem lê', () => {
+  // Gravado no preCreate: nasce junto com a mensagem, sem escrita extra e
+  // sem depender de quem estava conectado na hora.
+  assert.match(hooks, /Hooks\.on\('preCreateChatMessage'/);
+  assert.match(hooks, /s\.marcarAlvosDaRolagem\(message\)/);
+
+  const corpo = trecho('export function marcarAlvosDaRolagem(', 'function alvosDaMensagem');
+  assert.match(corpo, /message\.updateSource\(/,
+    'os alvos precisam entrar na própria mensagem, antes dela ser gravada');
+  // Só os IDs: o nome sai de nomeDoToken na hora de desenhar, para o metagame
+  // continuar mandando em quem lê o quê.
+  assert.match(corpo, /tokens = alvosMirados\(\)\.map\(\(t\) => t\.id\)/);
+  assert.match(motor,
+    /function alvosDaMensagem\(message\) \{[\s\S]*nomeDoToken\(id, marca\?\.cena\)/,
+    'o nome deve ser resolvido na cena persistida junto com o alvo');
 });

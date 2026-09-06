@@ -193,6 +193,19 @@ export function registrarHooksAutomacoes(s) {
     );
   });
 
+  /**
+   * Guarda na mensagem quem estava na mira de quem rolou.
+   *
+   * `preCreate` roda só no cliente que está criando a mensagem — é o único
+   * lugar em que a mira certa (a de quem rolou, não a de quem lê) está
+   * disponível, e o dado entra na mensagem antes dela ser gravada.
+   */
+  Hooks.on('preCreateChatMessage', (message) => {
+    if (!automacoesAtivas()) return;
+    try { s.marcarAlvosDaRolagem(message); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao marcar alvos da rolagem`, err); }
+  });
+
   Hooks.on('createChatMessage', (message, options, userId) => {
     if (!automacoesAtivas()) return;
 
@@ -256,6 +269,11 @@ export function registrarHooksAutomacoes(s) {
     if (!mexeuNaContagem) return;
     s.atualizarBarrasCombinacao(ator);
     s.atualizarBarrasEstudo(ator);
+    // O dano retroativo (Boca do Estômago) vive numa mensagem que só o autor
+    // dela pode editar — e quem clicou no "+" pode ser outra pessoa. Roda em
+    // todos os clientes; lá dentro um só assume cada mensagem.
+    s.corrigirRetroativasDoAtor(ator).catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao corrigir dano retroativo`, err));
   });
 
   Hooks.on('deleteCombat', (combate) => {

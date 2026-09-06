@@ -20,8 +20,8 @@ automações sem quebrar itens e mundos existentes.
 - O escopo das flags continua sendo `t20-hayd-gmtools`.
 - As flags `automacao`, `contador`, `combinacoes`, `automacaoOrigem`,
   `combDebuff`, `condicoesDeCombinacao`, `msgRetroativa`, `golpe`,
-  `estudarAdversario`, `auras`, `auraEfeito`, `auraCura` e `engenhoca` não devem ser
-  renomeadas sem uma migração de mundo.
+  `estudarAdversario`, `auras`, `auraEfeito`, `auraCura`, `alvosDaRolagem` e
+  `engenhoca` não devem ser renomeadas sem uma migração de mundo.
 - `t20-hayd-automacoes.mjs` é a fachada pública e deve manter os exports já
   publicados.
 - A API `module.api.automacoes` deve continuar compatível entre versões.
@@ -34,6 +34,27 @@ jogador proprietário ativo; depois o GM ativo; por fim um único GM ativo.
 
 Alvos são estado local do usuário. Por isso o jogador proprietário tem
 prioridade sobre o GM ao sincronizar efeitos dependentes de alvo.
+
+E por isso mesmo o alvo de uma rolagem é gravado NA MENSAGEM
+(`marcarAlvosDaRolagem`, no `preCreateChatMessage`): `game.user.targets` é a
+mira de quem LÊ o cartão, não a de quem rolou — sem a marca, o Mestre abrindo
+o ataque de um jogador via a própria seleção (quase sempre vazia) e a barra de
+Combinações/Estudo saía "sem alvo" justamente para quem mais precisa dela.
+Só os IDs são guardados; o nome é resolvido ao desenhar, para o metagame
+continuar decidindo quem lê o quê. `alvosDaBarra` lê exclusivamente esse
+retrato persistido: mudar a mira não altera cartões antigos. O autor da
+rolagem e o Mestre recebem um botão para substituir o retrato pelo único token
+mirado naquele momento, o que também permite definir o alvo que faltou.
+
+Corrigir uma mensagem já postada (o dano retroativo do Boca do Estômago) exige
+permissão NELA, não na ficha: quem clica no "+" pode ser outro dono do
+personagem, sem poder editar o cartão alheio. `podeCorrigirMensagem` elege um
+único responsável — o autor enquanto estiver conectado, o Mestre ativo quando
+não estiver — e o hook de `updateActor` chama `corrigirRetroativasDoAtor` em
+todos os clientes, para que a correção não dependa de quem clicou. Dentro das
+ações de contagem, essa correção vem ANTES de sincronizar efeitos e debuffs:
+é o número que a mesa está olhando, e as escritas de efeito não mudam nada na
+tela.
 
 ## Desempenho
 

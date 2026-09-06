@@ -417,25 +417,43 @@ function classificarRolagens(message) {
 
 /**
  * Injeta o indicador num bloco `.dice-roll`: um símbolo e os totais anteriores
- * riscados/apagados, logo ao lado do novo total. `anteriores` vem do mais
+ * riscados/apagados, logo abaixo do novo total. `anteriores` vem do mais
  * recente para o mais antigo; `icone`/`dica` definem o símbolo (rerolagem vs
  * inserção manual usam ícones diferentes).
+ *
+ * O histórico é IRMÃO de `.dice-total`, nunca filho: o sistema aplica dano
+ * lendo `Number(dice-total.innerText)` no botão "Aplicar dano" do cartão
+ * nativo, e um total anterior riscado DENTRO de `.dice-total` virava dígitos
+ * somados ao total de verdade (dano 15 com um "2" riscado ao lado virava 152
+ * aplicado, acoplando mais a cada rerolagem).
+ *
+ * A altura desta linha é FIXA (ver `.t20g-reroll-historico` no CSS) de
+ * propósito: os botões nativos de aplicar dano/cura (`.dice-btn.result`) são
+ * `position: absolute; bottom: 1px` relativos ao `.roll` de fora — a linha
+ * empurra essa borda pra baixo por uma altura conhecida, e o CSS sobe os
+ * botões de volta pelo mesmo tanto (ver a regra de `.dice-btn.result` logo
+ * depois de `.t20g-reroll-historico`). Mudar a altura de um lado sem mexer
+ * no outro descola os botões de novo.
  */
 function injetarIndicador(diceRoll, anteriores, { icone, dica }) {
   const total = diceRoll?.querySelector('.dice-total');
   if (!total) return;
   total.classList.add('t20g-rerolled');
-  total.querySelectorAll('.t20g-reroll-prev, .t20g-reroll-icon').forEach(e => e.remove());
+  total.parentElement?.querySelector(':scope > .t20g-reroll-historico')?.remove();
+
+  const historico = document.createElement('span');
+  historico.className = 't20g-reroll-historico';
   for (const t of anteriores) {
     const span = document.createElement('span');
     span.className = 't20g-reroll-prev';
     span.innerHTML = `<del>${t}</del>`;
-    total.appendChild(span);
+    historico.appendChild(span);
   }
   const icon = document.createElement('i');
   icon.className = `fas ${icone} t20g-reroll-icon`;
   icon.setAttribute('data-tooltip', dica);
-  total.appendChild(icon);
+  historico.appendChild(icon);
+  total.insertAdjacentElement('afterend', historico);
 }
 
 /**
@@ -1343,7 +1361,12 @@ Hooks.on('renderChatMessageHTML', (message, html) => {
  * "ready" chegaria tarde demais (a lista já teria sido capturada).
  */
 Hooks.on('getChatMessageContextOptions', (...args) => {
-  if (!game.user.isGM) return;
+  // NUNCA travar aqui com `if (!game.user.isGM) return`: rerolar e inserir
+  // resultado são para o autor da rolagem também (jogador comum), controlado
+  // por `jogadoresReroll`/`jogadoresManual` — cada opção já se autoprotege na
+  // própria `condition` (podeRerolar/podeInserir para essas, game.user.isGM
+  // embutido nas de metagame). Um gate geral de GM aqui escondia as opções de
+  // jogador inteiras, não só as de Mestre.
   const options = args.find(a => Array.isArray(a));
   if (options) addContextMenuOptions(options);
 });
