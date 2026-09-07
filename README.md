@@ -1,5 +1,7 @@
 # T20 Hayd GMTools
 
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/haydgi)
+
 Ferramentas de Mestre para o sistema **Tormenta20**: O módulo tem como objetivo entregar diversas ferramentas e automações para auxiliar na hora de jogo, algumas de suas funções incluem: ocultar dos jogadores os detalhes das rolagens e habilidades das criaturas do Mestre, permite rerolar ou inserir resultados manualmente pelo chat, gera e distribui tesouros pelas tabelas dos livros, reúne o grupo numa ficha compartilhada com estoque e dinheiro em comum, oferece uma régua opcional para efeitos que ignora diagonais e adiciona um assistente completo de definição de atributos iniciais dos personagens.
 
 ## Requisitos
@@ -164,6 +166,42 @@ Em *Configurar → Configurações → T20 Hayd GMTools*, as opções ficam agru
 | Ficha do Grupo | Liga a ficha, visibilidade de vida/mana, confirmação de transferências e avisos no chat |
 | Atributos iniciais | Método padrão da campanha, pontos sugeridos e as tabelas de custo/conversão personalizadas |
 | Ferramentas de mesa | A **régua para efeitos** |
+
+---
+
+## ❤️ Apoio e Comissões
+
+Este módulo é totalmente gratuito. Se você gosta de usá-lo e quiser apoiar seu desenvolvimento, qualquer contribuição é muito bem-vinda!
+
+### ☕ Ko-fi
+
+Você pode apoiar meu trabalho pelo Ko-fi:
+
+[![Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/haydgi)
+
+Ao apoiar pelo Ko-fi, você também pode deixar uma mensagem com um pedido ou sugestão de automação para Foundry VTT que gostaria de ver. Esses pedidos podem servir de inspiração para futuras funcionalidades, automações ou módulos.
+
+### 🇧🇷 Pix
+
+Se preferir, você também pode apoiar diretamente via Pix.
+
+**Chave Pix aleatória:**
+
+`a8baae96-f4d1-48a5-af25-45bf419fb0fb`
+
+<p align="center">
+  <img src="assets/qrcode.png" alt="QR Code Pix" width="220">
+</p>
+
+### 🛠️ Comissões para Foundry VTT
+
+Também aceito comissões para desenvolvimento no Foundry VTT, incluindo a implementação de **módulos completos de aventuras**, respeitando os direitos e licenças dos materiais utilizados, com cenas, atores, itens, diários, automações e outros conteúdos necessários para deixar a aventura pronta para uso no Foundry, além de módulos específicos para Tormenta20 e outros sistemas.
+
+Se tiver interesse em contratar uma comissão, você pode entrar em contato comigo pelo Discord `xddyahaha` para conversarmos sobre o projeto e seu escopo.
+
+<p align="center">
+  <sub>Todo apoio é opcional e ajuda a continuar desenvolvendo e mantendo meus módulos para Foundry VTT. ❤️</sub>
+</p>
 
 ## Aviso
 
