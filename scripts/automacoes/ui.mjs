@@ -18,7 +18,9 @@ export function criarBotao(item, acao, icone, dica, { largo = false, dataset = {
   b.className = largo ? 't20g-auto-btn t20g-auto-btn-largo' : 't20g-auto-btn';
   b.dataset.acao = acao;
   if (item?.id) b.dataset.itemId = item.id;
-  b.dataset.tooltip = dica;
+  // Alguns controles já dizem tudo no próprio rótulo e não precisam abrir
+  // uma tooltip. Nesses casos o chamador passa `null` e o atributo nem existe.
+  if (dica) b.dataset.tooltip = dica;
   for (const [chave, valor] of Object.entries(dataset)) {
     if (valor !== undefined && valor !== null) b.dataset[chave] = String(valor);
   }

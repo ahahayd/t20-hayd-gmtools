@@ -1,3 +1,10 @@
+/*
+ * `apagarEfeitos: true` — a automação substitui por completo a mecânica do
+ * poder, então os Efeitos Ativos que vêm no próprio item (passivos e de uso do
+ * compêndio) só duplicam ou conflitam com o bônus. Ao ligar a automação, o
+ * módulo oferece apagar esses efeitos originais (opt-in, nunca automático).
+ * Ao criar uma automação nova, decida se ela merece essa marca.
+ */
 export const AUTOMACOES = {
   'sangue-dos-inimigos': {
     categoria: 'barbaro',
@@ -5,6 +12,7 @@ export const AUTOMACOES = {
     fonte: 'Livro Básico',
     icone: 'fa-solid fa-droplet',
     tipos: ['poder'],
+    apagarEfeitos: true,
     resumo:
       'Enquanto está em fúria, ao fazer um acerto crítico ou reduzir um inimigo a 0 PV, '
       + 'você recebe um bônus cumulativo de +1 em testes de ataque e rolagens de dano, '
@@ -35,6 +43,7 @@ export const AUTOMACOES = {
     fonte: 'Heróis de Arton',
     icone: 'fa-solid fa-khanda',
     tipos: ['poder'],
+    apagarEfeitos: true,
     resumo:
       'Sempre que você causar 10 ou mais pontos de dano em um ou mais inimigos, recebe um '
       + 'bônus cumulativo de +1 em rolagens de dano até o fim da cena (limitado pela sua Força).',
@@ -57,6 +66,7 @@ export const AUTOMACOES = {
     fonte: 'Heróis de Arton',
     icone: 'fa-solid fa-hand-fist',
     tipos: ['poder'],
+    apagarEfeitos: true,
     resumo:
       'Você desfere uma tempestade de golpes, usando a força de um movimento para impulsionar '
       + 'o outro, sem dar chance para sua vítima reagir. Quando você acerta um ataque corpo a '
@@ -87,6 +97,7 @@ export const AUTOMACOES = {
     fonte: 'Heróis de Arton',
     icone: 'fa-solid fa-magnifying-glass',
     tipos: ['poder'],
+    apagarEfeitos: true,
     resumo:
       'Na primeira vez na rodada em que erra um ataque, você recebe um bônus cumulativo de +2 '
       + 'em testes de ataque contra o mesmo alvo até o fim da cena. Pré-requisito: Int 1.',
@@ -123,6 +134,7 @@ export const AUTOMACOES = {
     fonte: 'Livro Básico',
     icone: 'fa-solid fa-sun',
     tipos: ['poder'],
+    apagarEfeitos: true,
     comoUsar:
       'Role o poder e use <b>Ativar aura</b> no cartão. Os aliados dentro do raio recebem o '
       + 'bônus sozinhos, e ele sai quando eles se afastam ou uma parede entra no caminho.',
@@ -257,7 +269,10 @@ function montarCombinacoes() {
     categoria: 'lutador',
     fonte: 'Heróis de Arton',
     icone: 'fa-solid fa-hand-fist',
-    tipos: ['poder']
+    tipos: ['poder'],
+    // Vale para todos os poderes de Combinação (e Mestre das Combinações):
+    // a automação recria o efeito de uso com o custo e a contagem certos.
+    apagarEfeitos: true
   };
 
 

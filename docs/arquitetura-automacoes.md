@@ -20,8 +20,9 @@ automações sem quebrar itens e mundos existentes.
 - O escopo das flags continua sendo `t20-hayd-gmtools`.
 - As flags `automacao`, `contador`, `combinacoes`, `automacaoOrigem`,
   `combDebuff`, `condicoesDeCombinacao`, `msgRetroativa`, `golpe`,
-  `estudarAdversario`, `auras`, `auraEfeito`, `auraCura`, `alvosDaRolagem` e
-  `engenhoca` não devem ser renomeadas sem uma migração de mundo.
+  `estudarAdversario`, `auras`, `auraEfeito`, `auraCura`, `alvosDaRolagem`,
+  `resistenciaResultado` e `engenhoca` não devem ser renomeadas sem uma
+  migração de mundo.
 - `t20-hayd-automacoes.mjs` é a fachada pública e deve manter os exports já
   publicados.
 - A API `module.api.automacoes` deve continuar compatível entre versões.
@@ -44,7 +45,17 @@ Só os IDs são guardados; o nome é resolvido ao desenhar, para o metagame
 continuar decidindo quem lê o quê. `alvosDaBarra` lê exclusivamente esse
 retrato persistido: mudar a mira não altera cartões antigos. O autor da
 rolagem e o Mestre recebem um botão para substituir o retrato pelo único token
-mirado naquele momento, o que também permite definir o alvo que faltou.
+mirado naquele momento, o que também permite definir o alvo que faltou. O botão
+segue o mesmo contrato tanto na barra de Combinações quanto na de Estudar o
+Adversário. Essa troca migra os registros `msgRetroativa` pertencentes ao
+cartão e recalcula o dano com a contagem do novo oponente imediatamente; os
+cliques seguintes de Combinação, portanto, continuam atualizando o cartão
+contra esse novo alvo.
+Uma rolagem sem alvo também guarda explicitamente `tokens: []`: nesse estado
+Combinações, Estudar o Adversário e registros retroativos usam bônus zero, sem
+procurar a maior contagem existente. Antes de qualquer `Item.roll`, uma
+sincronização curta fecha a corrida entre desmarcar o último token e o sistema
+copiar os efeitos para a rolagem, inclusive quando o diálogo de uso é pulado.
 
 Corrigir uma mensagem já postada (o dano retroativo do Boca do Estômago) exige
 permissão NELA, não na ficha: quem clica no "+" pode ser outro dono do
@@ -55,6 +66,22 @@ todos os clientes, para que a correção não dependa de quem clicou. Dentro das
 ações de contagem, essa correção vem ANTES de sincronizar efeitos e debuffs:
 é o número que a mesa está olhando, e as escritas de efeito não mudam nada na
 tela.
+
+## Painel de contadores
+
+`injetarPainelContadores` adiciona **Gerenciar contadores** antes da lista
+nativa da aba Efeitos, somente para proprietários da ficha e Mestres. O painel
+deriva suas linhas das automações que o ator realmente possui e cobre quatro
+armazenamentos sem criar flags novas: `contador` nos itens comuns, `contador`
+no Golpe Pessoal com Sequencial, `combinacoes` no ator por token e
+`estudarAdversario` no ator por token. Alvos atualmente mirados também entram
+na lista com valor zero, para permitir criar uma contagem ainda não registrada.
+
+Edições são valores absolutos e passam pelos mesmos sincronizadores das ações
+do chat. Campos intocados não são escritos. Em particular,
+`definirCombinacao` chama `atualizarMensagensRetroativas` antes dos efeitos,
+para que uma correção manual também reescreva o dano do Boca do Estômago;
+contadores comuns, Estudo e Sequencial repintam suas respectivas barras.
 
 ## Desempenho
 
@@ -68,6 +95,15 @@ ator.
 Uma automação nova deve declarar seus tipos de item, efeitos e duração no
 catálogo. Lógica especial deve ficar em um arquivo de domínio e ser chamada
 pelo motor, sem criar hooks globais adicionais para cada poder.
+
+Ao adicionar uma automação, decida se ela leva `apagarEfeitos: true`: essa
+marca vale para automações que **substituem por completo** a mecânica do poder,
+tornando os Efeitos Ativos do próprio item (passivos e de uso do compêndio)
+redundantes ou conflitantes. Ao ligar a automação, o motor
+(`sugerirApagarEfeitosOriginais`) mostra a lista desses efeitos e oferece
+apagá-los — sempre opt-in, nunca automático. Não confundir com os efeitos que o
+módulo cria na ficha do ator (`sincronizarEfeito`): esses vivem no ator, não no
+item, e não entram nessa limpeza.
 
 Os testes em `tests/automacoes` cobrem os serviços puros. Casos ligados a
 rolagens do Tormenta20 devem usar dados serializados de mensagens e efeitos,
@@ -119,6 +155,67 @@ O Supressor de Segurança não trava sozinho por já ter sido usado na cena —
 só desmarcado por padrão quando `supressorUsado` já é verdadeiro: "uma vez
 por cena" é sugestão da UI, não trava imposta pela regra pura — o Mestre
 pode marcar de novo de propósito e o Supressor age de novo.
+
+## Teste de Resistência automático
+
+`scripts/automacoes/resistencia.mjs` guarda só a parte pura: reconhecer
+Reflexos/Fortitude/Vontade no texto livre de `system.resistencia.txt`
+(`testesCitados`) e comparar total contra CD (`passouNoTeste`). A integração
+mora em `motor.mjs` porque é pequena (no molde de `estudar-adversario.mjs`,
+que também não tem arquivo de integração próprio).
+
+Não é uma automação configurável — não usa a flag `automacao`, não aparece no
+seletor. É inferida direto do texto, igual ao Engenhoqueiro ser inferido de
+`system.tipo === "eng"`: qualquer magia ou poder com uma das três palavras no
+texto de resistência ganha o botão sozinho. Por isso `injetarBotaoResistencia`
+é uma função própria, chamada direto em `hooks.mjs` — se ela dependesse do
+early-return de `injetarControlesAutomacao` (que corta cedo quando o item não
+tem contador/combinação/estudo configurado), uma Bola de Fogo comum nunca
+ganharia o botão.
+
+Ao localizar a habilidade que originou o cartão, `atorDoCard` dá prioridade ao
+ator do token registrado em `message.speaker` e só usa o `actorId` do cartão
+como fallback. A ordem é essencial para ameaças em tokens não vinculados: o
+ator-base pode existir em `game.actors`, mas a habilidade usada ou suas
+alterações podem viver somente no ator sintético daquele token.
+
+O botão rola nos tokens **selecionados no canvas** (`canvas.tokens.controlled`),
+não nos **mirados** (`game.user.targets`) — é outro conceito, já usado por
+Combinações/Estudo. O fluxo pensado é o Mestre selecionar os inimigos
+atingidos por uma área e clicar uma vez para todos. Sem nada selecionado, cai
+para `game.user.character` (o personagem vinculado do próprio usuário) — é o
+caminho comum do jogador, que raramente seleciona o próprio token só para
+reagir a um teste. Pedir para selecionar um token é o ÚLTIMO recurso, só
+quando nem isso existe.
+
+O botão entra logo depois do **último elemento nativo** do cartão
+(`ultimoElementoNativo`: o último filho que NÃO é um `.t20g-auto-barra`) —
+tipicamente o footer do "Colocar Área de Efeito" ou o de aplicar efeito — e
+NUNCA no fim do cartão, junto das automações específicas de item (Aparatos,
+contadores…), que não têm nenhuma relação com isto. Pela mesma razão, ele usa
+`font: inherit` em vez do `0.85em` fixo dos outros botões largos do módulo: o
+botão nativo ao lado não define fonte própria nenhuma, e um tamanho diferente
+destoaria bem ali.
+
+Cada token ganha a própria rolagem via `actor.rollPericia(chave, { event })`,
+repassando o EVENTO DE CLIQUE de verdade — é o `shiftKey` dele que decide,
+dentro do próprio sistema, se abre a janela de uso ou rola direto, a mesma
+regra que qualquer perícia do jogador já segue. Reimplementar essa checagem
+aqui divergiria da rolagem normal assim que o mundo mudasse a configuração
+`UsageConfig`. As chamadas não são `await`adas em sequência — saem juntas via
+`Promise.all`, para as janelas de vários alvos aparecerem ao mesmo tempo, não
+uma depois da outra fechar.
+
+`rollPericia` devolve a própria `ChatMessage` criada (quando não é cancelada),
+então não precisa nenhum registro de "pendências" para saber qual rolagem
+pertence a qual teste: o resultado chega direto no retorno da própria chamada,
+sem precisar casar mensagens por hook depois.
+
+O veredito (bateu ou não a CD) é escrito no cartão da rolagem com
+`data-gm-only="1"` e escondido do DOM de quem não é Mestre no mesmo
+`renderChatMessageHTML` que já injeta os botões — mesmo mecanismo que o
+metagame usa para esconder segredo de rolagem, aplicado aqui incondicionalmente
+(não depende de nenhuma configuração de metagame estar ligada).
 
 ## Auras
 

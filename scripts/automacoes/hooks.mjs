@@ -90,6 +90,8 @@ export function registrarHooksAutomacoes(s) {
 
   Hooks.on('renderActorSheet', (app, html) => {
     if (!automacoesAtivas()) return;
+    try { s.injetarPainelContadores(app, html); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao montar o painel de contadores`, err); }
     try { s.engenhocas.injetarPainel(app, html); }
     catch (err) { console.error(`${MODULE_ID} | Falha ao montar o painel de engenhocas`, err); }
   });
@@ -102,6 +104,13 @@ export function registrarHooksAutomacoes(s) {
       s.engenhocas.injetarBarra(message, container);
       s.engenhocas.ligarBotoesChat(message, container);
       if (container) s.aura.ligarBotoes(message, container);
+      s.injetarBotaoResistencia(message, container);
+      // O veredito do teste de resistência é só para o Mestre — a marca some
+      // do DOM de quem não é Mestre antes de aparecer na tela, mesmo que o
+      // conteúdo já tenha chegado no cliente (mesmo mecanismo do metagame).
+      if (container && !game.user.isGM) {
+        container.querySelectorAll('[data-gm-only]').forEach((el) => el.remove());
+      }
       const zerar = container?.querySelector?.('.t20g-auto-zerar-tudo');
       if (zerar && game.user.isGM) {
         zerar.addEventListener('click', async (ev) => {

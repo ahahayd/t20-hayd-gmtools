@@ -123,6 +123,8 @@ Os grupos são definidos em *Gerenciar grupos*, apontando uma pasta de atores pa
 
 O botão **Automação** nas fichas de item liga contadores e efeitos automáticos para habilidades que precisam de controle a cada rodada ou a cada uso (Sangue dos Inimigos, Combinações Desarmadas e afins). Desligar a configuração não apaga nada — religar volta tudo a funcionar.
 
+Na aba **Efeitos** da ficha do personagem, o botão **Gerenciar contadores** reúne os valores de todas essas automações. Ali o proprietário da ficha ou o Mestre pode corrigir diretamente contadores comuns, o Sequencial do Golpe Pessoal e valores separados por inimigo de Combinações e Estudar o Adversário. A correção também sincroniza os efeitos e os cartões relacionados no chat.
+
 ![Cabeçalho da ficha de item com o botão "Automação" destacado ao lado de "Sheet", e a janela "Automação do item" aberta mostrando um dropdown com a lista de automações disponíveis](docs/Localizacao%20do%20botao%20automacao.png)
 
 *O botão fica ao lado do "Sheet" no cabeçalho da ficha de item.*

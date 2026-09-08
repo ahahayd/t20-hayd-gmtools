@@ -145,10 +145,47 @@ test('autor e Mestre podem trocar o alvo persistido por exatamente um mirado', (
     'a troca precisa ser persistida para todos os clientes');
   assert.match(troca, /tokens: \[alvos\[0\]\.id\]/,
     'a troca deve substituir, não acrescentar, o alvo');
+  assert.match(troca, /migrarRetroativasParaAlvoDaMensagem\(message, ator, alvos\[0\]\.id\)/,
+    'a troca visual também precisa migrar o alvo do dano retroativo');
+
+  const linha = trecho('function montarLinhaTrocaAlvo(', '/** Substitui o alvo');
+  assert.match(linha, /podeTrocarAlvoDaMensagem\(message, ator\)/);
+  assert.match(linha, /dataset\[campoAcao\] = 'trocar-alvo'/);
 
   const barra = trecho('function montarBarraCombinacoes(ator', 'return barra;');
-  assert.match(barra, /podeTrocarAlvoDaMensagem\(message, ator\)/);
-  assert.match(barra, /dataset\.acaoComb = 'trocar-alvo'/);
+  assert.match(barra, /montarLinhaTrocaAlvo\(message, ator, alvos, 'acaoComb'\)/);
+});
+
+test('Estudar o Adversário também permite definir ou trocar o alvo do cartão', () => {
+  const barra = trecho('function montarBarraEstudo(item', 'return barra;');
+  assert.doesNotMatch(barra, /barra\.appendChild\(linha\);\s*return barra;\s*}/,
+    'a barra sem alvo não pode retornar antes de montar o botão para defini-lo');
+  assert.match(barra, /montarLinhaTrocaAlvo\(message, ator, alvos, 'acaoEstudo'\)/,
+    'Estudar deve compartilhar a mesma ação de alvo das Combinações');
+
+  const handler = trecho("card.addEventListener('click'", 'const item = ator.items.get');
+  assert.match(handler, /botao\.dataset\.acaoEstudo === 'trocar-alvo'/);
+  assert.match(handler, /await trocarAlvoDaMensagem\(message, ator\)/,
+    'o botão de Estudo deve persistir o alvo para toda a mesa');
+});
+
+test('trocar ou definir alvo recalcula o dano e migra seu registro retroativo', () => {
+  const migracao = trecho(
+    'async function migrarRetroativasParaAlvoDaMensagem(',
+    '/** É um termo numérico');
+
+  assert.match(migracao, /reg\.mensagem === message\.id/,
+    'somente registros pertencentes ao cartão trocado devem ser migrados');
+  assert.match(migracao, /contagemAtual\(ator, chaveAlvo\)/,
+    'o dano deve usar a contagem do novo alvo, inclusive quando o antigo era nulo');
+  assert.match(migracao, /reescreverBonusNaMensagem\(message, reg, valorAtual\)/,
+    'a troca precisa corrigir imediatamente o dano que já aparece no cartão');
+  assert.match(migracao, /alvo: chaveAlvo/,
+    'os próximos cliques devem acompanhar o novo alvo');
+  assert.match(migracao, /valor: valorAtual/,
+    'o registro deve partir do valor que foi aplicado ao cartão');
+  assert.match(migracao, /ator\.setFlag\(MODULE_ID, FLAG_RETRO, registros\)/,
+    'a migração precisa chegar aos demais clientes');
 });
 
 /**
@@ -165,10 +202,21 @@ test('o cartão guarda os alvos de quem rolou, não os de quem lê', () => {
   const corpo = trecho('export function marcarAlvosDaRolagem(', 'function alvosDaMensagem');
   assert.match(corpo, /message\.updateSource\(/,
     'os alvos precisam entrar na própria mensagem, antes dela ser gravada');
+  assert.doesNotMatch(corpo, /if \(!tokens\.length\) return/,
+    'nenhum alvo também deve ser persistido explicitamente como uma lista vazia');
   // Só os IDs: o nome sai de nomeDoToken na hora de desenhar, para o metagame
   // continuar mandando em quem lê o quê.
   assert.match(corpo, /tokens = alvosMirados\(\)\.map\(\(t\) => t\.id\)/);
   assert.match(motor,
     /function alvosDaMensagem\(message\) \{[\s\S]*nomeDoToken\(id, marca\?\.cena\)/,
     'o nome deve ser resolvido na cena persistida junto com o alvo');
+});
+
+test('mensagem sem alvo registra bônus retroativo zero e alvo nulo', () => {
+  const registro = trecho('async function registrarMensagemRetroativa(', '/* --- Efeitos');
+  assert.match(registro, /maiorContagemEntre\(ator, doCartao\)/,
+    'o valor retroativo deve considerar somente os alvos persistidos no cartão');
+  assert.doesNotMatch(registro, /maiorContagemMirada\(ator\)/,
+    'a mira consultada depois da criação não pode preencher um cartão que nasceu sem alvo');
+  assert.match(registro, /alvo: alvo\?\.id \?\? null/);
 });

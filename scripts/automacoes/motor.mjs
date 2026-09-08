@@ -34,6 +34,7 @@ import { engenhocas } from './engenhocas/index.mjs';
 import { ocultarContagemDe } from './segredos.mjs';
 import { sugerirAutomacoes, normalizarNome } from './sugestao.mjs';
 import { abrirDistribuicao } from './seta-infalivel.mjs';
+import { testesCitados, passouNoTeste } from './resistencia.mjs';
 import {
   GP_CARREGADO,
   GP_SEQUENCIAL,
@@ -166,6 +167,22 @@ async function ajustarContador(item, delta) {
 
   await item.setFlag(MODULE_ID, FLAG_CONTADOR, novo);
   await sincronizarEfeito(item);
+}
+
+/** Define diretamente um contador comum e mantém efeito/chat sincronizados. */
+async function definirContador(item, valor) {
+  const def = definicaoDe(item);
+  if (!def?.contador) return false;
+
+  const limite = def.contador.limite?.(item.actor);
+  const teto = Number.isFinite(limite) ? Math.max(0, Math.trunc(limite)) : Infinity;
+  const novo = Math.min(Math.max(Math.trunc(Number(valor) || 0), 0), teto);
+  if (novo === valorContador(item)) return false;
+
+  await item.setFlag(MODULE_ID, FLAG_CONTADOR, novo);
+  await sincronizarEfeito(item);
+  atualizarRotulos(item);
+  return true;
 }
 
 /* ─── Botão e diálogo na ficha do item ───────────────────────────────────── */
@@ -339,8 +356,74 @@ async function abrirDialogoAutomacao(item) {
     game.i18n.format('T20HaydGMTools.AutoAplicada', { nome: AUTOMACOES[escolha].nome })
   );
 
+  // Automações que substituem a mecânica do poder oferecem apagar os efeitos
+  // que vieram no próprio item (passivos e de uso do compêndio).
+  await sugerirApagarEfeitosOriginais(item, AUTOMACOES[escolha]);
+
   // O Golpe Pessoal não faz nada até ser montado — já abre o construtor
   if (AUTOMACOES[escolha].golpe && !golpeDoItem(item)) await abrirConstrutorGolpe(item);
+}
+
+/**
+ * Oferece apagar os Efeitos Ativos do próprio item (os que vieram do compêndio:
+ * passivos e "de uso") quando a automação ligada já cuida dessa mecânica —
+ * mantê-los junto costuma duplicar ou conflitar o bônus.
+ *
+ * Sempre opt-in: mostra a lista e só apaga se o usuário confirmar. Não toca nos
+ * efeitos que o módulo cria na ficha do ator (esses são geridos por
+ * sincronizarEfeito e vivem no ator, não no item).
+ */
+async function sugerirApagarEfeitosOriginais(item, def) {
+  if (!def?.apagarEfeitos) return;
+  const efeitos = [...(item.effects ?? [])];
+  if (!efeitos.length) return;
+
+  const nomeSeguro = (t) => foundry.utils.escapeHTML?.(String(t ?? '')) ?? String(t ?? '');
+  const lista = efeitos
+    .map((ef) => {
+      const onuse = ef.getFlag?.('tormenta20', 'onuse');
+      const tag = onuse
+        ? game.i18n.localize('T20HaydGMTools.AutoApagarTagUso')
+        : game.i18n.localize('T20HaydGMTools.AutoApagarTagPassivo');
+      return `<li><i class="fa-solid fa-bolt"></i> ${nomeSeguro(ef.name)} <span class="notes">(${tag})</span></li>`;
+    })
+    .join('');
+
+  const resposta = await DialogV2.wait({
+    window: {
+      title: game.i18n.localize('T20HaydGMTools.AutoApagarTitulo'),
+      icon: 'fa-solid fa-broom'
+    },
+    position: { width: 460 },
+    content: `
+      <div class="t20g-auto-dialogo">
+        <p>${game.i18n.format('T20HaydGMTools.AutoApagarIntro', { nome: def.nome })}</p>
+        <ul class="t20g-auto-efeitos">${lista}</ul>
+        <p class="notes">${game.i18n.localize('T20HaydGMTools.AutoApagarDica')}</p>
+      </div>`,
+    buttons: [
+      {
+        action: 'apagar',
+        label: game.i18n.localize('T20HaydGMTools.AutoApagarConfirmar'),
+        icon: 'fa-solid fa-trash',
+        default: true,
+        callback: () => 'apagar'
+      },
+      {
+        action: 'manter',
+        label: game.i18n.localize('T20HaydGMTools.AutoApagarManter'),
+        icon: 'fa-solid fa-xmark'
+      }
+    ],
+    rejectClose: false
+  });
+
+  if (resposta !== 'apagar') return;
+
+  await item.deleteEmbeddedDocuments('ActiveEffect', efeitos.map((ef) => ef.id));
+  ui.notifications.info(
+    game.i18n.format('T20HaydGMTools.AutoApagados', { n: efeitos.length })
+  );
 }
 
 /* ─── Automações de ação (recuperação de recursos) ───────────────────────── */
@@ -476,7 +559,6 @@ export function marcarAlvosDaRolagem(message) {
   if (!temRolagem && !temCartao) return;
 
   const tokens = alvosMirados().map((t) => t.id);
-  if (!tokens.length) return;
   message.updateSource({
     [`flags.${MODULE_ID}.${FLAG_ALVOS}`]: { cena: canvas?.scene?.id ?? null, tokens }
   });
@@ -511,6 +593,26 @@ function podeTrocarAlvoDaMensagem(message, ator) {
   return podeControlar(ator) && (game.user.isGM || message?.isAuthor);
 }
 
+/** Linha compartilhada por Combinações e Estudo para definir/trocar o alvo. */
+function montarLinhaTrocaAlvo(message, ator, alvos, campoAcao) {
+  if (!podeTrocarAlvoDaMensagem(message, ator)) return null;
+
+  const linha = document.createElement('div');
+  linha.className = 't20g-auto-linha';
+  const botao = document.createElement('button');
+  botao.type = 'button';
+  botao.className = 't20g-auto-btn t20g-auto-btn-largo';
+  botao.dataset[campoAcao] = 'trocar-alvo';
+  botao.dataset.actorId = ator.id;
+  botao.dataset.tooltip = game.i18n.localize('T20HaydGMTools.CombTrocarAlvoDica');
+  const icone = document.createElement('i');
+  icone.className = 'fa-solid fa-crosshairs';
+  const chave = alvos.length ? 'T20HaydGMTools.CombTrocarAlvo' : 'T20HaydGMTools.CombDefinirAlvo';
+  botao.append(icone, ` ${game.i18n.localize(chave)}`);
+  linha.appendChild(botao);
+  return linha;
+}
+
 /** Substitui o alvo do cartão pela única criatura atualmente mirada. */
 async function trocarAlvoDaMensagem(message, ator) {
   // O DOM não é fronteira de permissão: cobre botão antigo ou forjado.
@@ -522,6 +624,11 @@ async function trocarAlvoDaMensagem(message, ator) {
     return false;
   }
 
+  // O alvo do cartão e o alvo do dano retroativo são dois estados
+  // persistentes diferentes. Migre o segundo antes de redesenhar a barra;
+  // assim Boca do Estômago passa a acompanhar o novo oponente e o bônus já
+  // exibido é recalculado mesmo se a rolagem nasceu sem alvo.
+  await migrarRetroativasParaAlvoDaMensagem(message, ator, alvos[0].id);
   await message.setFlag(MODULE_ID, FLAG_ALVOS, {
     cena: canvas?.scene?.id ?? null,
     tokens: [alvos[0].id]
@@ -675,6 +782,27 @@ async function zerarCombinacao(ator, chaveAlvo) {
   await sincronizarCombinacoes(ator);
   await removerEfeitosDaCombinacao(ator, chaveAlvo);
   await removerEfeitosProprios(ator);
+}
+
+/** Define uma contagem por inimigo e atualiza efeitos, barras e dano retroativo. */
+async function definirCombinacao(ator, chaveAlvo, valor) {
+  const novo = Math.max(0, Math.trunc(Number(valor) || 0));
+  if (!chaveAlvo || novo === contagemAtual(ator, chaveAlvo)) return false;
+
+  if (novo === 0) {
+    await zerarCombinacao(ator, chaveAlvo);
+  } else {
+    const historico = [
+      ...historicoDoCombate(historicoCombinacao(ator, chaveAlvo)),
+      criarEntradaValor(rodadaAtual(), novo)
+    ];
+    await gravarHistorico(ator, chaveAlvo, historico);
+    await atualizarMensagensRetroativas(ator, chaveAlvo);
+    await sincronizarCombinacoes(ator);
+    await atualizarDebuffsAplicados(ator, chaveAlvo);
+  }
+  atualizarBarrasCombinacao(ator);
+  return true;
 }
 
 /**
@@ -941,6 +1069,36 @@ function registrosRetroativos(ator) {
   return ator?.getFlag?.(MODULE_ID, FLAG_RETRO) ?? {};
 }
 
+/**
+ * Transfere para outro oponente os bônus retroativos que vivem neste cartão.
+ *
+ * A troca explícita de alvo é executada pelo autor da mensagem ou pelo GM,
+ * portanto este caminho pode corrigir a mensagem imediatamente sem esperar a
+ * eleição usada pelos hooks. O registro do ator também é migrado para que os
+ * próximos cliques de contagem continuem atualizando o mesmo cartão.
+ */
+async function migrarRetroativasParaAlvoDaMensagem(message, ator, chaveAlvo) {
+  const registros = foundry.utils.deepClone(registrosRetroativos(ator));
+  const relacionados = Object.entries(registros)
+    .filter(([, reg]) => reg.mensagem === message.id);
+  if (!relacionados.length) return;
+
+  const valorAtual = contagemAtual(ator, chaveAlvo);
+  for (const [itemId, reg] of relacionados) {
+    // Mesmo quando os dois alvos têm a mesma contagem, reencontrar o termo
+    // deixa indiceRoll/indiceTermo prontos para a próxima alteração. Em dados,
+    // trocar pela mesma quantidade preserva todos os resultados existentes.
+    const posicao = await reescreverBonusNaMensagem(message, reg, valorAtual);
+    registros[itemId] = {
+      ...reg,
+      alvo: chaveAlvo,
+      ...(posicao ? { valor: valorAtual, ...posicao } : {})
+    };
+  }
+
+  await ator.setFlag(MODULE_ID, FLAG_RETRO, registros);
+}
+
 /** É um termo numérico avaliado com este valor? */
 function ehNumerico(termo, valor) {
   return !!termo && termo.class !== 'OperatorTerm' && termo.operator === undefined
@@ -1180,12 +1338,10 @@ async function registrarMensagemRetroativa(message) {
 
   // Registra contra o mesmo oponente que o efeito usou (a maior contagem
   // entre os alvos), senão a correção nunca casaria com vários alvos mirados.
-  // A lista sai da própria mensagem (é a mesma que o cartão mostra para a
-  // mesa); a mira de agora é só reserva para mensagens sem a marca.
+  // A lista sai exclusivamente da mensagem: vazio significa zero e alvo nulo,
+  // nunca "escolha agora algum oponente que tenha uma contagem".
   const doCartao = alvosDaMensagem(message);
-  const { valor, token: alvo } = doCartao.length
-    ? maiorContagemEntre(ator, doCartao)
-    : maiorContagemMirada(ator);
+  const { valor, token: alvo } = maiorContagemEntre(ator, doCartao);
   const registros = foundry.utils.deepClone(registrosRetroativos(ator));
   for (const item of usadas) {
     // `retroativo` pode ser true (bônus numérico) ou { dados: N } (Nd6)
@@ -1602,6 +1758,164 @@ function montarBarraEfeitoAlvo(item) {
   return barra;
 }
 
+/* ─── Teste de Resistência automático ────────────────────────────────────── */
+
+/** Flag na MENSAGEM do teste: CD e resultado, só para o Mestre ver. */
+const FLAG_RESIST = 'resistenciaResultado';
+
+/**
+ * Rola o teste de resistência nos tokens selecionados no momento do clique.
+ *
+ * Cada um ganha a PRÓPRIA janela de uso da perícia — ou rola direto, com
+ * shift, exatamente como qualquer perícia do sistema decide isso (o `event`
+ * do clique é repassado direto para `rollPericia`, sem reinventar a regra).
+ * As janelas não esperam uma pela outra: saem juntas, para o Mestre
+ * preencher os 4 goblins de uma vez, em vez de fechar um diálogo pra abrir
+ * o próximo.
+ */
+async function rolarTesteResistencia(item, chave, ev) {
+  const selecionados = (canvas?.tokens?.controlled ?? [])
+    .map((t) => t.actor)
+    .filter((a) => a?.isOwner);
+  // Sem nada selecionado no canvas, cai pro personagem vinculado do próprio
+  // usuário (game.user.character) — é o caminho comum do jogador, que quase
+  // nunca seleciona o próprio token pra reagir a um teste de resistência.
+  // Pedir seleção é o ÚLTIMO recurso, só quando nem isso existe.
+  const atores = selecionados.length ? selecionados : [game.user?.character].filter(Boolean);
+  if (!atores.length) {
+    return ui.notifications.warn(game.i18n.localize('T20HaydGMTools.ResistSemAlvo'));
+  }
+
+  const cd = Number(item?.system?.resistencia?.cd) || 0;
+  const txt = String(item?.system?.resistencia?.txt ?? '');
+
+  await Promise.all(atores.map(async (ator) => {
+    let mensagem;
+    try {
+      mensagem = await ator.rollPericia(chave, { event: ev });
+    } catch (err) {
+      // Erro aqui é a causa mais provável de "não aparece nada no chat":
+      // sem isto, uma falha no rollPericia nativo (ex.: um campo que só
+      // existe na ficha completa, ausente numa Ameaça/Personagem do Mestre)
+      // desaparecia em silêncio, sem aviso nenhum pro Mestre.
+      console.error(`${MODULE_ID} | Falha ao rolar resistência de ${ator.name}`, err);
+      ui.notifications.error(
+        game.i18n.format('T20HaydGMTools.ResistFalhaRolar', { nome: ator.name })
+      );
+      return;
+    }
+    // `rollPericia` devolve undefined se o jogador cancelar o diálogo — e a
+    // CD só existe quando a resistência tem atributo configurado.
+    if (!mensagem || !cd) return;
+    try {
+      await anotarResultadoResistencia(mensagem, { cd, txt });
+    } catch (err) {
+      // A rolagem já está no chat; só a nota de veredito falhou — não
+      // esconde o que já funcionou atrás de um aviso.
+      console.error(`${MODULE_ID} | Falha ao anotar o resultado da resistência de ${ator.name}`, err);
+    }
+  }));
+}
+
+/**
+ * Acrescenta ao cartão do teste (já criado por `rollPericia`) se bateu a CD
+ * da habilidade — visível só para o Mestre (a marca `data-gm-only` some para
+ * quem não é Mestre, ver `renderChatMessageHTML` em hooks.mjs). O total
+ * rolado continua público para todo mundo; isto só anota o veredito ao lado.
+ */
+async function anotarResultadoResistencia(message, { cd, txt }) {
+  const total = Number(message.rolls?.[0]?.total);
+  if (!Number.isFinite(total)) return;
+  const passou = passouNoTeste(total, cd);
+  const esc = foundry.utils.escapeHTML;
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = message.content;
+  const alvo = wrapper.querySelector('.tormenta20.chat-card') ?? wrapper;
+  alvo.insertAdjacentHTML('beforeend', `
+    <p class="t20g-resist-veredito" data-gm-only="1">
+      <i class="fa-solid ${passou ? 'fa-shield-halved' : 'fa-skull'}"></i>
+      <b>${passou
+    ? game.i18n.localize('T20HaydGMTools.ResistSucesso')
+    : game.i18n.localize('T20HaydGMTools.ResistFracasso')}</b>
+      — CD: ${cd}${txt ? ` <span class="t20g-resist-texto">(${esc(txt)})</span>` : ''}
+    </p>`);
+
+  await message.update({
+    content: wrapper.innerHTML,
+    [`flags.${MODULE_ID}.${FLAG_RESIST}`]: { total, cd, passou }
+  });
+}
+
+/**
+ * Botão(ões) de rolar o teste de resistência, largo e no rodapé como o
+ * "Colocar Área de Efeito" nativo — no cartão da PRÓPRIA magia/poder que cita
+ * Reflexos, Fortitude ou Vontade em `system.resistencia.txt`.
+ *
+ * Não é uma automação configurável: é inferida do próprio texto, igual ao
+ * Engenhoqueiro ser inferido de `system.tipo === "eng"`. Por isso fica FORA
+ * de `injetarControlesAutomacao`, que corta cedo quando o item não tem
+ * nenhuma automação configurada — uma Bola de Fogo comum nunca teria uma.
+ */
+/**
+ * Último elemento NATIVO do cartão (não injetado por nós) — é depois dele que
+ * o botão de resistência entra, nunca no fim do cartão. Na prática costuma
+ * ser o footer do "Colocar Área de Efeito" ou o de aplicar efeitos, mas
+ * funciona igual sem os dois (toque, alvo único...): cai no último elemento
+ * antes de qualquer `.t20g-auto-barra`, que é a marca de tudo que os domínios
+ * deste módulo acrescentam.
+ */
+function ultimoElementoNativo(card) {
+  const filhos = [...card.children];
+  for (let i = filhos.length - 1; i >= 0; i--) {
+    if (!filhos[i].classList.contains('t20g-auto-barra')) return filhos[i];
+  }
+  return null;
+}
+
+export function injetarBotaoResistencia(message, html) {
+  if (!automacoesAtivas()) return;
+  const container = html?.querySelector ? html : (html?.[0] ?? null);
+  const card = container?.querySelector?.('.chat-card.item-card');
+  if (!card || card.querySelector('.t20g-resist-barra')) return;
+
+  const ator = atorDoCard(card, message);
+  const item = ator?.items?.get(card.dataset.itemId);
+  const testes = testesCitados(item?.system?.resistencia?.txt);
+  if (!testes.length) return;
+
+  // Fica junto do "Colocar Área de Efeito" nativo, não junto das automações
+  // específicas de item (Aparatos, contadores…) — não tem nada a ver com
+  // elas. `ancora` avança a cada teste, pra dois testes citados no mesmo
+  // texto ficarem em ordem, um embaixo do outro.
+  let ancora = ultimoElementoNativo(card);
+
+  for (const { chave, rotulo } of testes) {
+    const barra = document.createElement('footer');
+    barra.className = 't20g-auto-barra t20g-resist-barra';
+    const linha = document.createElement('div');
+    linha.className = 't20g-auto-linha';
+
+    const botao = criarBotao(item, 'resistencia', 'fa-dice-d20', null,
+      { largo: true, dataset: { chave } });
+    botao.append(` ${game.i18n.format('T20HaydGMTools.ResistBotao', { teste: rotulo })}`);
+
+    botao.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      botao.disabled = true;
+      try { await rolarTesteResistencia(item, chave, ev); }
+      catch (err) { console.error(`${MODULE_ID} | Falha ao rolar teste de resistência`, err); }
+      finally { botao.disabled = false; }
+    });
+
+    linha.appendChild(botao);
+    barra.appendChild(linha);
+    if (ancora) ancora.insertAdjacentElement('afterend', barra);
+    else card.appendChild(barra);
+    ancora = barra;
+  }
+}
+
 /**
  * Barra de contagem das Combinações: UMA linha por oponente mirado.
  *
@@ -1687,22 +2001,8 @@ function montarBarraCombinacoes(ator, { completo, message }) {
   // O autor da rolagem e o Mestre podem corrigir/definir o alvo do cartão.
   // A mudança é gravada na mensagem, portanto todos os clientes veem o mesmo
   // oponente; apenas mudar a mira local não altera nada.
-  if (podeTrocarAlvoDaMensagem(message, ator)) {
-    const linhaAlvo = document.createElement('div');
-    linhaAlvo.className = 't20g-auto-linha';
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 't20g-auto-btn t20g-auto-btn-largo';
-    b.dataset.acaoComb = 'trocar-alvo';
-    b.dataset.actorId = ator.id;
-    b.dataset.tooltip = game.i18n.localize('T20HaydGMTools.CombTrocarAlvoDica');
-    const i = document.createElement('i');
-    i.className = 'fa-solid fa-crosshairs';
-    const chave = alvos.length ? 'T20HaydGMTools.CombTrocarAlvo' : 'T20HaydGMTools.CombDefinirAlvo';
-    b.append(i, ` ${game.i18n.localize(chave)}`);
-    linhaAlvo.appendChild(b);
-    barra.appendChild(linhaAlvo);
-  }
+  const linhaAlvo = montarLinhaTrocaAlvo(message, ator, alvos, 'acaoComb');
+  if (linhaAlvo) barra.appendChild(linhaAlvo);
 
   // Botão de segurança: refaz os efeitos já aplicados nas criaturas com a
   // contagem atual de cada uma.
@@ -1796,6 +2096,17 @@ async function subtrairEstudo(ator, chaveAlvo) {
 async function zerarEstudo(ator, chaveAlvo) {
   await gravarEstudo(ator, chaveAlvo, null);
   await sincronizarEstudo(ator);
+}
+
+/** Define diretamente os pontos de Estudo de um inimigo e repinta seus cartões. */
+async function definirEstudo(ator, chaveAlvo, valor) {
+  const novo = Math.max(0, Math.trunc(Number(valor) || 0));
+  if (!chaveAlvo || novo === contagemEstudo(ator, chaveAlvo)) return false;
+
+  await gravarEstudo(ator, chaveAlvo, novo > 0 ? { n: novo } : null);
+  await sincronizarEstudo(ator);
+  atualizarBarrasEstudo(ator);
+  return true;
 }
 
 /**
@@ -1900,7 +2211,7 @@ function estudosRegistrados() {
 }
 
 /**
- * Barra da contagem de estudo: uma linha por oponente mirado.
+ * Barra da contagem de estudo: uma linha por alvo persistido no cartão.
  *
  * O rótulo usa o nome e o ícone do próprio poder, como nas automações de
  * contador (Sangue dos Inimigos e afins) — é assim que o jogador reconhece
@@ -1941,10 +2252,7 @@ function montarBarraEstudo(item, { completo, message }) {
     dica.textContent = game.i18n.localize('T20HaydGMTools.CombSemAlvo');
     rotulo.appendChild(dica);
     barra.appendChild(linha);
-    return barra;
-  }
-
-  for (const alvo of alvos) {
+  } else for (const alvo of alvos) {
     const valor = contagemEstudo(ator, alvo.id);
 
     const linha = document.createElement('div');
@@ -1986,6 +2294,9 @@ function montarBarraEstudo(item, { completo, message }) {
     }
     barra.appendChild(linha);
   }
+
+  const linhaAlvo = montarLinhaTrocaAlvo(message, ator, alvos, 'acaoEstudo');
+  if (linhaAlvo) barra.appendChild(linhaAlvo);
 
   return barra;
 }
@@ -2206,6 +2517,19 @@ async function ajustarSequencial(item, delta) {
   await sincronizarGolpe(item);
 }
 
+/** Define diretamente o passo do Sequencial e atualiza os cartões do golpe. */
+async function definirSequencial(item, valor) {
+  if (!temSequencial(item)) return false;
+  const teto = GP_SEQUENCIAL.length - 1;
+  const novo = Math.min(Math.max(Math.trunc(Number(valor) || 0), 0), teto);
+  if (novo === valorContador(item)) return false;
+
+  await item.setFlag(MODULE_ID, FLAG_CONTADOR, novo);
+  await sincronizarGolpe(item);
+  atualizarBarrasGolpe(item);
+  return true;
+}
+
 /* --- Conjurador: a magia sai antes do ataque ----------------------------- */
 
 /** Evita que a janela da própria magia dispare a checagem de novo. */
@@ -2282,6 +2606,41 @@ async function conjurarMagiasDoGolpe(item, configuracao) {
       _conjurandoGolpe = false;
     }
   }
+}
+
+/**
+ * Garante que efeitos cujo valor depende da mira reflitam o estado atual
+ * imediatamente antes de o sistema copiar o item e montar a rolagem.
+ *
+ * O hook `targetToken` continua cuidando da interface normalmente; esta é a
+ * barreira contra a corrida entre desmarcar o último alvo e rolar logo em
+ * seguida. Sem alvo, ambas as sincronizações produzem bônus zero.
+ */
+async function sincronizarMiraAntesDaRolagem(item) {
+  const ator = item?.actor;
+  if (!ator?.isOwner) return;
+
+  const tarefas = [];
+  if (poderesDeCombinacao(ator).length) tarefas.push(sincronizarCombinacoes(ator));
+  if (poderesDeEstudo(ator).length) tarefas.push(sincronizarEstudo(ator));
+  await Promise.all(tarefas);
+}
+
+/** Instala a barreira também para rolagens que pulam o diálogo de uso. */
+function ligarSincronizacaoDaMira() {
+  const ClasseItem = CONFIG.Item?.documentClass;
+  if (!ClasseItem?.prototype?.roll || ClasseItem._t20gSincronizacaoDaMira) return;
+
+  const original = ClasseItem.prototype.roll;
+  ClasseItem.prototype.roll = async function (...args) {
+    if (automacoesAtivas()) {
+      await sincronizarMiraAntesDaRolagem(this).catch((err) =>
+        console.error(`${MODULE_ID} | Falha ao preparar efeitos dependentes do alvo`, err)
+      );
+    }
+    return original.apply(this, args);
+  };
+  ClasseItem._t20gSincronizacaoDaMira = true;
 }
 
 /**
@@ -2727,17 +3086,240 @@ function atualizarBarrasGolpe(item) {
   }
 }
 
+/* ─── Painel de contadores na ficha ─────────────────────────────────────── */
+
+/** Alvos já registrados ou atualmente mirados, sem duplicatas. */
+function alvosEditaveisDoAtor(ator, flag) {
+  const registros = ator?.getFlag?.(MODULE_ID, flag) ?? {};
+  const ids = new Set([...Object.keys(registros), ...alvosMirados().map((token) => token.id)]);
+  return [...ids].map((id) => ({
+    id,
+    nome: nomeDoToken(id) ?? game.i18n.format('T20HaydGMTools.ContadoresAlvoDesconhecido', { id })
+  })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+}
+
+/** Descrição canônica de tudo que o usuário pode consultar/editar no painel. */
+function gruposDoPainelContadores(ator) {
+  const grupos = [];
+  const comuns = (ator?.items ?? [])
+    .filter((item) => definicaoDe(item)?.contador)
+    .map((item) => {
+      const def = definicaoDe(item);
+      const limite = def.contador.limite?.(ator);
+      const max = Number.isFinite(limite) ? Math.max(0, Math.trunc(limite)) : null;
+      const detalhe = [
+        def.contador.rotulo ?? '',
+        max === null ? '' : game.i18n.format('T20HaydGMTools.ContadoresLimite', { valor: max })
+      ].filter(Boolean).join(' — ');
+      return {
+        tipo: 'item', chave: item.id, nome: item.name,
+        icone: def.icone, valor: valorContador(item),
+        max, detalhe
+      };
+    });
+  if (comuns.length) grupos.push({
+    titulo: game.i18n.localize('T20HaydGMTools.ContadoresComuns'), linhas: comuns
+  });
+
+  const sequenciais = (ator?.items ?? [])
+    .filter((item) => definicaoDe(item)?.golpe && temSequencial(item))
+    .map((item) => ({
+      tipo: 'sequencial', chave: item.id,
+      nome: `${item.name} — ${game.i18n.localize('T20HaydGMTools.ContadoresSequencial')}`,
+      icone: 'fa-solid fa-arrow-trend-up', valor: valorContador(item),
+      opcoes: GP_SEQUENCIAL
+    }));
+  if (sequenciais.length) grupos.push({
+    titulo: game.i18n.localize('T20HaydGMTools.ContadoresGolpePessoal'), linhas: sequenciais
+  });
+
+  if (poderesDeCombinacao(ator).length) {
+    const alvos = alvosEditaveisDoAtor(ator, FLAG_COMBINACOES);
+    grupos.push({
+      titulo: game.i18n.localize('T20HaydGMTools.ContadoresCombinacoes'),
+      vazio: game.i18n.localize('T20HaydGMTools.ContadoresSemAlvos'),
+      linhas: alvos.map((alvo) => ({
+        tipo: 'combinacao', chave: alvo.id, nome: alvo.nome,
+        icone: 'fa-solid fa-hand-fist', valor: contagemAtual(ator, alvo.id), max: null,
+        detalhe: game.i18n.localize('T20HaydGMTools.ContadoresPorInimigo')
+      }))
+    });
+  }
+
+  if (poderesDeEstudo(ator).length) {
+    const alvos = alvosEditaveisDoAtor(ator, FLAG_ESTUDO);
+    grupos.push({
+      titulo: game.i18n.localize('T20HaydGMTools.ContadoresEstudo'),
+      vazio: game.i18n.localize('T20HaydGMTools.ContadoresSemAlvos'),
+      linhas: alvos.map((alvo) => {
+        const valor = contagemEstudo(ator, alvo.id);
+        return {
+          tipo: 'estudo', chave: alvo.id, nome: alvo.nome,
+          icone: 'fa-solid fa-magnifying-glass', valor, max: null,
+          detalhe: game.i18n.format('T20HaydGMTools.ContadoresBonusEstudo', {
+            valor: bonusDoEstudo(valor)
+          })
+        };
+      })
+    });
+  }
+
+  return grupos;
+}
+
+function htmlLinhaPainelContadores(linha) {
+  const esc = foundry.utils.escapeHTML;
+  const atributos = `data-contador-tipo="${esc(linha.tipo)}" data-contador-chave="${esc(linha.chave)}"`
+    + ` data-contador-original="${linha.valor}"`;
+  const controle = linha.opcoes
+    ? `<select ${atributos}>${linha.opcoes.map((dado, indice) =>
+      `<option value="${indice}" ${indice === linha.valor ? 'selected' : ''}>${indice} — ${dado}</option>`
+    ).join('')}</select>`
+    : `<input type="number" min="0" step="1" value="${linha.valor}" ${atributos}`
+      + `${linha.max === null ? '' : ` max="${linha.max}"`}>`;
+  const detalhe = linha.detalhe
+    ? `<small>${esc(linha.detalhe)}</small>`
+    : '';
+  return `<label class="t20g-contadores-linha">
+      <i class="${esc(linha.icone ?? 'fa-solid fa-hashtag')}"></i>
+      <span><b>${esc(linha.nome)}</b>${detalhe}</span>
+      ${controle}
+    </label>`;
+}
+
+function htmlPainelContadores(ator) {
+  const grupos = gruposDoPainelContadores(ator);
+  return `<div class="t20g-contadores-dialogo">
+    <p class="notes">${game.i18n.localize('T20HaydGMTools.ContadoresAjuda')}</p>
+    ${grupos.map((grupo) => `<section>
+      <h3>${foundry.utils.escapeHTML(grupo.titulo)}</h3>
+      ${grupo.linhas.length
+        ? grupo.linhas.map(htmlLinhaPainelContadores).join('')
+        : `<p class="notes t20g-contadores-vazio">${grupo.vazio ?? ''}</p>`}
+    </section>`).join('')}
+  </div>`;
+}
+
+function lerEdicoesPainelContadores(form) {
+  return [...form.querySelectorAll('[data-contador-tipo]')]
+    .map((campo) => ({
+      tipo: campo.dataset.contadorTipo,
+      chave: campo.dataset.contadorChave,
+      original: Number(campo.dataset.contadorOriginal) || 0,
+      valor: Math.max(0, Math.trunc(Number(campo.value) || 0))
+    }))
+    .filter((edicao) => edicao.valor !== edicao.original);
+}
+
+/** Aplica apenas campos alterados, sem sobrescrever contadores intocados. */
+async function aplicarEdicoesPainelContadores(ator, edicoes) {
+  let total = 0;
+  for (const edicao of edicoes) {
+    let mudou = false;
+    if (edicao.tipo === 'item') {
+      const item = ator.items.get(edicao.chave);
+      if (item) mudou = await definirContador(item, edicao.valor);
+    } else if (edicao.tipo === 'sequencial') {
+      const item = ator.items.get(edicao.chave);
+      if (item) mudou = await definirSequencial(item, edicao.valor);
+    } else if (edicao.tipo === 'combinacao') {
+      mudou = await definirCombinacao(ator, edicao.chave, edicao.valor);
+    } else if (edicao.tipo === 'estudo') {
+      mudou = await definirEstudo(ator, edicao.chave, edicao.valor);
+    }
+    if (mudou) total++;
+  }
+  return total;
+}
+
+async function abrirPainelContadores(ator) {
+  if (!podeControlar(ator) || !gruposDoPainelContadores(ator).length) return;
+
+  const edicoes = await DialogV2.wait({
+    window: {
+      title: game.i18n.format('T20HaydGMTools.ContadoresTitulo', { ator: ator.name }),
+      icon: 'fa-solid fa-hashtag'
+    },
+    position: { width: 520 },
+    classes: ['t20g-contadores-janela'],
+    content: htmlPainelContadores(ator),
+    rejectClose: false,
+    buttons: [
+      {
+        action: 'salvar',
+        label: game.i18n.localize('T20HaydGMTools.AutoSalvar'),
+        icon: 'fa-solid fa-check',
+        default: true,
+        callback: (_ev, botao) => lerEdicoesPainelContadores(botao.form)
+      },
+      {
+        action: 'cancelar',
+        label: game.i18n.localize('T20HaydGMTools.AutoCancelar'),
+        icon: 'fa-solid fa-xmark'
+      }
+    ]
+  });
+  if (!Array.isArray(edicoes) || !edicoes.length) return;
+
+  const total = await aplicarEdicoesPainelContadores(ator, edicoes);
+  if (total) ui.notifications.info(
+    game.i18n.format('T20HaydGMTools.ContadoresAtualizados', { total })
+  );
+}
+
+function montarBotaoPainelContadores(ator) {
+  const painel = document.createElement('section');
+  painel.className = 't20g-contadores-ficha';
+  const botao = document.createElement('button');
+  botao.type = 'button';
+  botao.innerHTML = `<i class="fa-solid fa-hashtag"></i> ${game.i18n.localize('T20HaydGMTools.ContadoresBotao')}`;
+  botao.dataset.tooltip = game.i18n.localize('T20HaydGMTools.ContadoresDica');
+  botao.addEventListener('click', (evento) => {
+    evento.preventDefault();
+    abrirPainelContadores(ator).catch((err) => {
+      console.error(`${MODULE_ID} | Falha ao abrir painel de contadores`, err);
+      ui.notifications.error(game.i18n.localize('T20HaydGMTools.ContadoresErro'));
+    });
+  });
+  painel.appendChild(botao);
+  return painel;
+}
+
+/** Insere o acesso antes da lista nativa da aba Efeitos. */
+function injetarPainelContadores(app, html) {
+  const ator = app?.actor ?? app?.document ?? app?.object;
+  if (ator?.documentName !== 'Actor' || !podeControlar(ator)) return;
+  if (!gruposDoPainelContadores(ator).length) return;
+
+  const root = html?.querySelector ? html : html?.[0];
+  if (!root) return;
+  for (const aba of root.querySelectorAll('.tab.effects[data-tab="effects"]')) {
+    if (aba.querySelector(':scope > .t20g-contadores-ficha')) continue;
+    const lista = aba.querySelector(':scope > ol.effects-list');
+    const painel = montarBotaoPainelContadores(ator);
+    if (lista) lista.before(painel);
+    else aba.prepend(painel);
+  }
+}
+
 /* ─── Botões no cartão de chat ───────────────────────────────────────────── */
 
 /** Resolve o ator de um cartão de chat (suporta tokens sintéticos). */
 function atorDoCard(card, message) {
+  // O speaker identifica o ator EXATO que criou a mensagem. Isso importa para
+  // ameaças em tokens não vinculados: o id gravado no cartão também encontra
+  // o ator-base em game.actors, mas a habilidade usada pode existir (ou estar
+  // modificada) somente no ator sintético daquele token. Se aceitarmos o
+  // ator-base primeiro, `ator.items.get(data-item-id)` falha silenciosamente e
+  // controles inferidos do item — como "Rolar Reflexos" — não são montados.
+  const { token: tokenId, scene: sceneId } = message?.speaker ?? {};
+  const atorDoToken = tokenId && sceneId
+    ? game.scenes.get(sceneId)?.tokens.get(tokenId)?.actor
+    : null;
+  if (atorDoToken) return atorDoToken;
+
   const { actorId } = card.dataset;
-  let ator = actorId ? game.actors.get(actorId) : null;
-  if (!ator) {
-    const { token: tokenId, scene: sceneId } = message.speaker ?? {};
-    if (tokenId && sceneId) ator = game.scenes.get(sceneId)?.tokens.get(tokenId)?.actor;
-  }
-  return ator ?? null;
+  return (actorId ? game.actors.get(actorId) : null) ?? null;
 }
 
 /** Cria um botão de ação da barra. */
@@ -2934,6 +3516,20 @@ export function injetarControlesAutomacao(message, html) {
     // botão antigo sobreviver a um re-render depois de perder a permissão.
     if (!podeControlar(ator)) return;
 
+    // Combinações e Estudar o Adversário compartilham o mesmo alvo persistido
+    // no cartão e, portanto, exatamente a mesma ação para defini-lo ou trocá-lo.
+    if (botao.dataset.acaoComb === 'trocar-alvo'
+        || botao.dataset.acaoEstudo === 'trocar-alvo') {
+      botao.disabled = true;
+      try { await trocarAlvoDaMensagem(message, ator); }
+      catch (err) {
+        console.error(`${MODULE_ID} | Falha ao trocar alvo da mensagem`, err);
+      } finally {
+        botao.disabled = false;
+      }
+      return;
+    }
+
     // Botão de aplicar o efeito de uma combinação (condições / penalidades)
     if (botao.dataset.acaoEfeito) {
       const poder = ator.items.get(botao.dataset.acaoEfeito);
@@ -2947,17 +3543,6 @@ export function injetarControlesAutomacao(message, html) {
 
     // Botões da barra de Combinações (cada linha age no seu oponente)
     if (botao.dataset.acaoComb) {
-      if (botao.dataset.acaoComb === 'trocar-alvo') {
-        botao.disabled = true;
-        try { await trocarAlvoDaMensagem(message, ator); }
-        catch (err) {
-          console.error(`${MODULE_ID} | Falha ao trocar alvo da mensagem`, err);
-        } finally {
-          botao.disabled = false;
-        }
-        return;
-      }
-
       // Reaplicar não depende de alvo mirado: refaz o que já está nas criaturas
       if (botao.dataset.acaoComb === 'reaplicar') {
         botao.disabled = true;
@@ -3299,6 +3884,12 @@ function paginaIntroducao() {
     </ol>
     <p>O seletor só mostra as automações que servem para aquele tipo de item. Escolher
     <b>Nenhuma</b> desliga e limpa o que ela tiver criado.</p>
+
+    <h2>Conferindo e corrigindo contadores</h2>
+    <p>Na aba <b>Efeitos</b> da ficha do personagem, use <b>Gerenciar contadores</b> para
+    consultar ou definir diretamente os valores de cada automação. Combinações e Estudar o
+    Adversário aparecem separados por inimigo. Ao salvar, efeitos e cartões relacionados no
+    chat também são atualizados.</p>
 
     <p class="notes">Diário gerado pelo módulo — anotações feitas aqui podem ser
     substituídas.</p>`;
@@ -3646,6 +4237,7 @@ registrarHooksAutomacoes({
   indiceEstudo,
   sincronizarEstudo,
   atualizarBarrasEstudo,
+  injetarPainelContadores,
   atualizarRotulos,
   atualizarBarrasAura,
   aura: auras,
@@ -3664,7 +4256,8 @@ registrarHooksAutomacoes({
   golpeDoItem,
   sincronizarEfeito,
   efeitosDoItem,
-  engenhocas
+  engenhocas,
+  injetarBotaoResistencia
 });
 
 /** Registro do diário: id do documento criado no mundo + botão nas configurações. */
@@ -3707,6 +4300,8 @@ Hooks.once('init', () => {
 
 /** Cria/atualiza o diário de instruções no mundo (uma vez por sessão, pelo GM ativo). */
 Hooks.once('ready', () => {
+  // Fecha a corrida entre mudar a mira e rolar, inclusive sem abrir diálogo.
+  ligarSincronizacaoDaMira();
   // Conjurador: a magia do Golpe Pessoal precisa sair antes do ataque
   ligarConjurador();
   engenhocas.ligarFluxo();

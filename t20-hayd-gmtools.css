@@ -483,6 +483,116 @@ a.header-button.t20g-atr-header {
   margin-top: 6px;
 }
 
+/* Diálogo de "apagar os efeitos originais do poder" */
+.t20g-auto-dialogo .t20g-auto-efeitos {
+  margin: 6px 0;
+  padding-left: 4px;
+  list-style: none;
+}
+
+.t20g-auto-dialogo .t20g-auto-efeitos li {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--color-border-light-tertiary, rgba(0, 0, 0, 0.1));
+}
+
+.t20g-auto-dialogo .t20g-auto-efeitos li:last-child {
+  border-bottom: none;
+}
+
+.t20g-auto-dialogo .t20g-auto-efeitos i {
+  color: var(--t20a-chat-cor, #782e22);
+  font-size: 0.85em;
+}
+
+/* Acesso ao painel dentro da aba Efeitos da ficha. */
+.tormenta20.actor .tab.effects > .t20g-contadores-ficha {
+  display: flex;
+  margin: 0 0 8px;
+}
+
+.tormenta20.actor .t20g-contadores-ficha > button {
+  flex: 1 1 auto;
+  margin: 0;
+  min-height: 32px;
+  border: 1px solid rgba(120, 46, 34, 0.45);
+  background: rgba(120, 46, 34, 0.08);
+  cursor: pointer;
+}
+
+.tormenta20.actor .t20g-contadores-ficha > button:hover {
+  background: rgba(120, 46, 34, 0.16);
+}
+
+.t20g-contadores-dialogo {
+  max-height: 62vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.t20g-contadores-dialogo > section {
+  margin-top: 10px;
+  border: 1px solid rgba(120, 46, 34, 0.22);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.t20g-contadores-dialogo > section > h3 {
+  margin: 0;
+  padding: 5px 8px;
+  font-family: inherit;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.45px;
+  background: rgba(120, 46, 34, 0.1);
+}
+
+.t20g-contadores-linha {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 92px;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 4px 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.t20g-contadores-linha > i {
+  color: #782e22;
+  text-align: center;
+}
+
+.t20g-contadores-linha > span {
+  min-width: 0;
+}
+
+.t20g-contadores-linha b,
+.t20g-contadores-linha small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.t20g-contadores-linha small {
+  margin-top: 2px;
+  opacity: 0.7;
+}
+
+.t20g-contadores-linha input,
+.t20g-contadores-linha select {
+  width: 92px;
+  margin: 0;
+  text-align: center;
+}
+
+.t20g-contadores-vazio {
+  margin: 0;
+  padding: 8px;
+}
+
 /* Diálogo de distribuição de projéteis */
 .t20g-dist .t20g-dist-tabela {
   width: 100%;
@@ -1718,3 +1828,28 @@ a.header-button.t20g-atr-header {
   flex-basis: 100%;
   white-space: normal;
 }
+
+/* --- Teste de Resistência automático ------------------------------------ */
+
+/* Fica logo abaixo do "Colocar Área de Efeito" nativo (ver ultimoElementoNativo
+   em motor.mjs) — por isso usa a fonte AMBIENTE do cartão, sem override
+   nenhum, igual ao botão nativo (que também não define fonte própria). Os
+   outros botões largos do módulo (Aparatos, Reaplicar…) têm 0.85em fixo, que
+   aqui destoaria bem ao lado de um botão nativo sem esse ajuste. Precisa da
+   especificidade toda pra vencer a regra genérica de .t20g-auto-btn-largo. */
+.tormenta20.chat-card .t20g-resist-barra button.t20g-auto-btn.t20g-auto-btn-largo {
+  font: inherit;
+}
+
+/* Só o Mestre chega a ver isto (a marca [data-gm-only] some do DOM de quem
+   não é Mestre antes de renderizar, em hooks.mjs). */
+.t20g-resist-veredito {
+  margin: 6px 0 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(120, 46, 34, 0.06);
+  font-size: 0.9em;
+}
+.t20g-resist-veredito .fa-shield-halved { color: #2e7d32; }
+.t20g-resist-veredito .fa-skull { color: #782e22; }
+.t20g-resist-texto { opacity: 0.75; font-style: italic; }
