@@ -76,7 +76,7 @@ async function dadosBaseDoNode(node) {
     system: {
       description: { value: descricaoFonte(node.livro, node.pagina) },
       preco: node.preco ?? 0,
-      peso: node.espacos ?? 0,
+      espacos: node.espacos ?? 0,
       qtd: 1
     }
   };
