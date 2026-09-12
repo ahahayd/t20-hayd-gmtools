@@ -34,14 +34,14 @@ export async function anunciarAtivacao(fonte, item, { raio, valor, total }) {
   });
 }
 
-/** "Aura encerrada — o bônus saiu de todo mundo." */
-export async function anunciarFim(fonte, item, total) {
+/** Publica no chat que a aura foi encerrada. */
+export async function anunciarFim(fonte, item) {
   await ChatMessage.create({
     speaker: ChatMessage.getSpeaker({ actor: fonte }),
     whisper: paraQuem(fonte),
     content: `<div class="t20g-aura-card">
       <p><b><i class="fa-solid fa-ban"></i> ${L('AuraEncerradaTitulo', { nome: item.name })}</b></p>
-      <p>${L('AuraEncerradaTexto', { total })}</p>
+      <p>${L('AuraEncerradaTexto')}</p>
     </div>`
   });
 }

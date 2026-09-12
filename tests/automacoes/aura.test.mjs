@@ -13,6 +13,11 @@ import {
   precisaAvisar,
   pedidoPendente
 } from '../../scripts/automacoes/aura/regras.mjs';
+import {
+  distanciaEntre,
+  paredeBloqueia,
+  tokenDentroDaAura
+} from '../../scripts/automacoes/aura/alcance.mjs';
 
 /* ─── Raio ───────────────────────────────────────────────────────────────── */
 
@@ -33,6 +38,70 @@ test('o limite do raio é inclusivo e tolera erro de ponto flutuante', () => {
   assert.equal(dentroDoRaio(0, 9), true);
   assert.equal(dentroDoRaio(NaN, 9), false);
   assert.equal(dentroDoRaio(5, undefined), false);
+});
+
+test('um único quadrado alcançado inclui uma criatura Grande mesmo com o centro bloqueado', () => {
+  const canvasAnterior = globalThis.canvas;
+  const configAnterior = globalThis.CONFIG;
+
+  const documento = ({ x, y, width, height, offsets }) => ({
+    _source: { x, y, width, height, elevation: 0 },
+    getCenterPoint: (p) => ({
+      x: p.x + (p.width * 100) / 2,
+      y: p.y + (p.height * 100) / 2
+    }),
+    getOccupiedGridSpaceOffsets: () => offsets
+  });
+
+  const fonte = {
+    document: documento({ x: 0, y: 0, width: 1, height: 1, offsets: [{ i: 0, j: 0 }] })
+  };
+  const grande = {
+    document: documento({
+      x: 500,
+      y: 100,
+      width: 2,
+      height: 2,
+      offsets: [
+        { i: 1, j: 5 }, { i: 1, j: 6 },
+        { i: 2, j: 5 }, { i: 2, j: 6 }
+      ]
+    })
+  };
+
+  try {
+    globalThis.canvas = {
+      grid: {
+        getCenterPoint: ({ i, j }) => ({ x: (j * 100) + 50, y: (i * 100) + 50 }),
+        measurePath: ([a, b]) => ({
+          // 1,5 m por quadrado, contando as duas direções: só {i:1,j:5}
+          // fica nos 9 m da aura.
+          distance: ((Math.abs(a.x - b.x) + Math.abs(a.y - b.y)) / 100) * 1.5
+        })
+      }
+    };
+    globalThis.CONFIG = {
+      Canvas: {
+        polygonBackends: {
+          sight: {
+            // O quadrado alcançado (x=550) está livre, mas o centro 2x2
+            // (x=600) fica atrás da parede.
+            testCollision: (_de, para) => para.x >= 600
+          }
+        }
+      }
+    };
+
+    assert.equal(distanciaEntre(fonte, grande), 9, 'o canto mais próximo está no limite');
+    assert.equal(paredeBloqueia(fonte, grande), true, 'o teste antigo até o centro bloquearia');
+    assert.equal(tokenDentroDaAura(fonte, grande, { bloqueavel: true }, 9), true,
+      'o quadrado alcançado e livre deve incluir a criatura inteira');
+  } finally {
+    if (canvasAnterior === undefined) delete globalThis.canvas;
+    else globalThis.canvas = canvasAnterior;
+    if (configAnterior === undefined) delete globalThis.CONFIG;
+    else globalThis.CONFIG = configAnterior;
+  }
 });
 
 /* ─── Elegibilidade ──────────────────────────────────────────────────────── */
@@ -281,6 +350,21 @@ test('ligar ou cancelar repinta o cartão do chat na hora', async () => {
   assert.match(hooks, /s\.atualizarBarrasAura\(ator\)/);
 });
 
+test('cancelar a aura publica uma nova mensagem de encerramento no chat', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const raiz = new URL('../../scripts/automacoes/', import.meta.url);
+  const index = await readFile(new URL('aura/index.mjs', raiz), 'utf8');
+  const chat = await readFile(new URL('aura/chat.mjs', raiz), 'utf8');
+  const lang = JSON.parse(await readFile(
+    new URL('../../lang/pt-BR.json', import.meta.url), 'utf8'));
+
+  assert.match(index, /if \(estavaAtiva && item\) await chat\.anunciarFim\(fonte, item\)/);
+  assert.doesNotMatch(index, /AuraCancelada|ui\.notifications\.info/);
+  assert.match(chat, /export async function anunciarFim\(fonte, item\)[\s\S]*ChatMessage\.create/);
+  const chaves = lang['T20HaydGMTools'] ?? lang;
+  assert.equal(chaves.AuraEncerradaTexto, 'A aura foi encerrada.');
+});
+
 test('manter a aura desconta o PM de quem sustenta', async () => {
   const { readFile } = await import('node:fs/promises');
   const raiz = new URL('../../scripts/automacoes/', import.meta.url);
@@ -390,4 +474,3 @@ test('duas rodadas de recalcular() nunca correm ao mesmo tempo', async () => {
   assert.match(dispararRecalculo, /_executando = recalcular\(\)/);
   assert.match(index, /_agendado \?\?= foundry\.utils\.debounce\(dispararRecalculo, 100\);/);
 });
-

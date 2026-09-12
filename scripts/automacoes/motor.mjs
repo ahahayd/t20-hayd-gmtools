@@ -3098,6 +3098,23 @@ function alvosEditaveisDoAtor(ator, flag) {
   })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
 }
 
+/** Estados persistentes que este painel sabe encerrar sem apagar efeitos avulsos. */
+function automacoesAtivasCancelaveis(ator) {
+  return [...(ator?.items ?? [])].flatMap((item) => {
+    const def = definicaoDe(item);
+    if (!def?.aura) return [];
+
+    const resumo = auras.resumoDaAura(item);
+    if (!resumo?.ativa) return [];
+    return [{
+      tipo: 'aura', chave: item.id, nome: item.name, icone: def.icone,
+      detalhe: game.i18n.format('T20HaydGMTools.AuraAtiva', {
+        raio: resumo.raio, valor: resumo.valor
+      })
+    }];
+  });
+}
+
 /** Descrição canônica de tudo que o usuário pode consultar/editar no painel. */
 function gruposDoPainelContadores(ator) {
   const grupos = [];
@@ -3167,6 +3184,11 @@ function gruposDoPainelContadores(ator) {
   return grupos;
 }
 
+function temConteudoPainelContadores(ator) {
+  return gruposDoPainelContadores(ator).length > 0
+    || automacoesAtivasCancelaveis(ator).length > 0;
+}
+
 function htmlLinhaPainelContadores(linha) {
   const esc = foundry.utils.escapeHTML;
   const atributos = `data-contador-tipo="${esc(linha.tipo)}" data-contador-chave="${esc(linha.chave)}"`
@@ -3187,10 +3209,29 @@ function htmlLinhaPainelContadores(linha) {
     </label>`;
 }
 
+function htmlAutomacaoAtivaPainelContadores(linha) {
+  const esc = foundry.utils.escapeHTML;
+  return `<div class="t20g-contadores-linha t20g-contadores-ativa">
+      <i class="${esc(linha.icone ?? 'fa-solid fa-wand-magic-sparkles')}"></i>
+      <span><b>${esc(linha.nome)}</b><small>${esc(linha.detalhe ?? '')}</small></span>
+      <label class="t20g-contadores-cancelar">
+        <input type="checkbox" data-automacao-cancelar-tipo="${esc(linha.tipo)}"
+          data-automacao-cancelar-chave="${esc(linha.chave)}">
+        <span>${game.i18n.localize('T20HaydGMTools.ContadoresCancelarAtivo')}</span>
+      </label>
+    </div>`;
+}
+
 function htmlPainelContadores(ator) {
   const grupos = gruposDoPainelContadores(ator);
+  const ativas = automacoesAtivasCancelaveis(ator);
   return `<div class="t20g-contadores-dialogo">
     <p class="notes">${game.i18n.localize('T20HaydGMTools.ContadoresAjuda')}</p>
+    ${ativas.length ? `<section>
+      <h3>${game.i18n.localize('T20HaydGMTools.ContadoresEfeitosAtivos')}</h3>
+      <p class="notes t20g-contadores-efeitos-ajuda">${game.i18n.localize('T20HaydGMTools.ContadoresEfeitosAtivosAjuda')}</p>
+      ${ativas.map(htmlAutomacaoAtivaPainelContadores).join('')}
+    </section>` : ''}
     ${grupos.map((grupo) => `<section>
       <h3>${foundry.utils.escapeHTML(grupo.titulo)}</h3>
       ${grupo.linhas.length
@@ -3209,6 +3250,14 @@ function lerEdicoesPainelContadores(form) {
       valor: Math.max(0, Math.trunc(Number(campo.value) || 0))
     }))
     .filter((edicao) => edicao.valor !== edicao.original);
+}
+
+function lerCancelamentosPainelContadores(form) {
+  return [...form.querySelectorAll('[data-automacao-cancelar-tipo]:checked')]
+    .map((campo) => ({
+      tipo: campo.dataset.automacaoCancelarTipo,
+      chave: campo.dataset.automacaoCancelarChave
+    }));
 }
 
 /** Aplica apenas campos alterados, sem sobrescrever contadores intocados. */
@@ -3232,13 +3281,26 @@ async function aplicarEdicoesPainelContadores(ator, edicoes) {
   return total;
 }
 
-async function abrirPainelContadores(ator) {
-  if (!podeControlar(ator) || !gruposDoPainelContadores(ator).length) return;
+/** Encerra somente estados que possuem um fluxo explicito de cancelamento. */
+async function aplicarCancelamentosPainelContadores(ator, cancelamentos) {
+  let total = 0;
+  for (const cancelamento of cancelamentos) {
+    if (cancelamento.tipo !== 'aura') continue;
+    const item = ator.items.get(cancelamento.chave);
+    if (!item || !definicaoDe(item)?.aura || !auras.resumoDaAura(item)?.ativa) continue;
+    await auras.cancelar(ator, item.id);
+    total++;
+  }
+  return total;
+}
 
-  const edicoes = await DialogV2.wait({
+async function abrirPainelContadores(ator) {
+  if (!podeControlar(ator) || !temConteudoPainelContadores(ator)) return;
+
+  const alteracoes = await DialogV2.wait({
     window: {
       title: game.i18n.format('T20HaydGMTools.ContadoresTitulo', { ator: ator.name }),
-      icon: 'fa-solid fa-hashtag'
+      icon: 'fa-solid fa-wand-magic-sparkles'
     },
     position: { width: 520 },
     classes: ['t20g-contadores-janela'],
@@ -3250,7 +3312,10 @@ async function abrirPainelContadores(ator) {
         label: game.i18n.localize('T20HaydGMTools.AutoSalvar'),
         icon: 'fa-solid fa-check',
         default: true,
-        callback: (_ev, botao) => lerEdicoesPainelContadores(botao.form)
+        callback: (_ev, botao) => ({
+          edicoes: lerEdicoesPainelContadores(botao.form),
+          cancelamentos: lerCancelamentosPainelContadores(botao.form)
+        })
       },
       {
         action: 'cancelar',
@@ -3259,9 +3324,12 @@ async function abrirPainelContadores(ator) {
       }
     ]
   });
-  if (!Array.isArray(edicoes) || !edicoes.length) return;
+  if (!alteracoes || typeof alteracoes !== 'object') return;
+  const { edicoes = [], cancelamentos = [] } = alteracoes;
+  if (!edicoes.length && !cancelamentos.length) return;
 
   const total = await aplicarEdicoesPainelContadores(ator, edicoes);
+  await aplicarCancelamentosPainelContadores(ator, cancelamentos);
   if (total) ui.notifications.info(
     game.i18n.format('T20HaydGMTools.ContadoresAtualizados', { total })
   );
@@ -3272,7 +3340,7 @@ function montarBotaoPainelContadores(ator) {
   painel.className = 't20g-contadores-ficha';
   const botao = document.createElement('button');
   botao.type = 'button';
-  botao.innerHTML = `<i class="fa-solid fa-hashtag"></i> ${game.i18n.localize('T20HaydGMTools.ContadoresBotao')}`;
+  botao.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> ${game.i18n.localize('T20HaydGMTools.ContadoresBotao')}`;
   botao.dataset.tooltip = game.i18n.localize('T20HaydGMTools.ContadoresDica');
   botao.addEventListener('click', (evento) => {
     evento.preventDefault();
@@ -3289,7 +3357,7 @@ function montarBotaoPainelContadores(ator) {
 function injetarPainelContadores(app, html) {
   const ator = app?.actor ?? app?.document ?? app?.object;
   if (ator?.documentName !== 'Actor' || !podeControlar(ator)) return;
-  if (!gruposDoPainelContadores(ator).length) return;
+  if (!temConteudoPainelContadores(ator)) return;
 
   const root = html?.querySelector ? html : html?.[0];
   if (!root) return;

@@ -588,6 +588,29 @@ a.header-button.t20g-atr-header {
   text-align: center;
 }
 
+.t20g-contadores-efeitos-ajuda {
+  margin: 0;
+  padding: 7px 8px;
+}
+
+.t20g-contadores-cancelar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.t20g-contadores-cancelar input {
+  width: auto;
+  margin: 0;
+}
+
+.t20g-contadores-cancelar span {
+  font-size: 0.85em;
+}
+
 .t20g-contadores-vazio {
   margin: 0;
   padding: 8px;

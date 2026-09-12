@@ -20,6 +20,8 @@ test('o botão de contadores é injetado somente na aba Efeitos de fichas contro
   const injecao = trecho('function injetarPainelContadores(', '/* ─── Botões no cartão');
   assert.match(injecao, /ator\?\.documentName !== 'Actor'/);
   assert.match(injecao, /!podeControlar\(ator\)/);
+  assert.match(injecao, /temConteudoPainelContadores\(ator\)/,
+    'uma automação cancelável ativa também deve tornar o painel visível');
   assert.match(injecao, /\.tab\.effects\[data-tab="effects"\]/);
   assert.match(injecao, /:scope > ol\.effects-list/);
   assert.match(hooks, /Hooks\.on\('renderActorSheet',[\s\S]*s\.injetarPainelContadores\(app, html\)/);
@@ -72,13 +74,44 @@ test('edições manuais atualizam efeitos e cartões do chat quando aplicável',
   assert.match(sequencial, /atualizarBarrasGolpe\(item\)/);
 });
 
+test('o painel permite cancelar com segurança automações persistentes ativas', () => {
+  const ativas = trecho('function automacoesAtivasCancelaveis(', 'function gruposDoPainelContadores(');
+  assert.match(ativas, /\[\.\.\.\(ator\?\.items \?\? \[\]\)\]\.flatMap/,
+    'actor.items é uma Collection do Foundry e precisa virar array antes de flatMap');
+  assert.match(ativas, /def\?\.aura/);
+  assert.match(ativas, /auras\.resumoDaAura\(item\)/);
+  assert.match(ativas, /resumo\?\.ativa/,
+    'auras inativas não devem aparecer como canceláveis');
+
+  const html = trecho('function htmlAutomacaoAtivaPainelContadores(', 'function htmlPainelContadores(');
+  assert.match(html, /data-automacao-cancelar-tipo/);
+  assert.match(html, /type="checkbox"/);
+
+  const leitura = trecho('function lerCancelamentosPainelContadores(', '/** Aplica apenas campos');
+  assert.match(leitura, /data-automacao-cancelar-tipo\]:checked/,
+    'somente efeitos marcados devem ser encerrados');
+
+  const aplicacao = trecho('async function aplicarCancelamentosPainelContadores(', 'async function abrirPainelContadores(');
+  assert.match(aplicacao, /definicaoDe\(item\)\?\.aura/,
+    'o painel não deve apagar efeitos arbitrários do ator');
+  assert.match(aplicacao, /auras\.cancelar\(ator, item\.id\)/,
+    'a aura precisa usar seu fluxo completo de cancelamento');
+
+  const abertura = trecho('async function abrirPainelContadores(', 'function montarBotaoPainelContadores(');
+  assert.match(abertura, /edicoes: lerEdicoesPainelContadores/);
+  assert.match(abertura, /cancelamentos: lerCancelamentosPainelContadores/);
+  assert.match(abertura, /aplicarCancelamentosPainelContadores\(ator, cancelamentos\)/);
+});
+
 test('o painel tem estilos próprios e todas as traduções usadas', () => {
   assert.match(css, /\.t20g-contadores-ficha/);
   assert.match(css, /\.t20g-contadores-dialogo/);
   assert.match(css, /\.t20g-contadores-linha/);
+  assert.match(css, /\.t20g-contadores-cancelar/);
 
   for (const chave of [
     'ContadoresBotao', 'ContadoresDica', 'ContadoresTitulo', 'ContadoresAjuda',
+    'ContadoresEfeitosAtivos', 'ContadoresEfeitosAtivosAjuda', 'ContadoresCancelarAtivo',
     'ContadoresComuns', 'ContadoresGolpePessoal', 'ContadoresSequencial',
     'ContadoresCombinacoes', 'ContadoresEstudo', 'ContadoresPorInimigo',
     'ContadoresLimite', 'ContadoresBonusEstudo', 'ContadoresSemAlvos',

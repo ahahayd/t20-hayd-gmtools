@@ -95,6 +95,21 @@ const esc = (value) =>
     (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
   );
 
+/**
+ * Repinta tudo que depende da configuração de grupos neste cliente.
+ *
+ * `parties` é uma setting mundial: quando o Mestre a altera, o `onChange`
+ * também roda nos jogadores conectados. Sem este refresh, só o diretório do
+ * Mestre era repintado pelo submit do gerenciador e alguns jogadores ficavam
+ * sem o botão até outro evento ou um recarregamento completo da página.
+ */
+function atualizarUiDasParties() {
+  refreshPartyApps();
+  // ActorDirectory#render também encaminha o render ao pop-out, se estiver
+  // aberto; o hook renderActorDirectory reinsere os botões nos dois lugares.
+  ui.actors?.render();
+}
+
 /* ============================================================
    CONFIGURAÇÕES
 ============================================================ */
@@ -119,7 +134,8 @@ function registerSettings() {
     scope: "world",
     config: false,
     type: Object,
-    default: {}
+    default: {},
+    onChange: atualizarUiDasParties
   });
 
   game.settings.register(SETTINGS_NS, "visibility", {
@@ -2496,8 +2512,6 @@ class PartyManagerApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     await game.settings.set(SETTINGS_NS, "parties", next);
     ui.notifications.info(loc("THM.PartiesSaved"));
-    refreshPartyApps();
-    ui.actors?.render(); // atualiza os botões de party nas pastas
   }
 
   /** Cria uma nova pasta de atores e já a marca como party. */
@@ -2798,6 +2812,11 @@ Hooks.once("ready", () => {
   // (migração de estoques, limpeza e fluxo de primeiro uso).
   const antigo = game.modules.get(MODULE_ID);
   if (antigo) antigo.api = api;
+
+  // Rede de segurança para a primeira carga: garante que o diretório seja
+  // repintado depois que usuário, atores, pastas e settings já estão prontos.
+  // Isso cobre o caso em que a aba de Atores renderizou cedo durante o login.
+  if (lerConfig("partySheetEnabled")) atualizarUiDasParties();
 
   // Migra estoques criados como ator pela versão anterior (só um GM executa)
   if (game.user.isGM && game.user === game.users.activeGM) {

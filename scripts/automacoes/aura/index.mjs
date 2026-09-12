@@ -90,8 +90,11 @@ async function ativar(item) {
 }
 
 async function cancelar(fonte, itemId) {
+  const estavaAtiva = !!estadoDaAura(fonte, itemId);
+  const item = fonte?.items?.get(itemId);
   await desativarAura(fonte, itemId);
   agendarRecalculo();
+  if (estavaAtiva && item) await chat.anunciarFim(fonte, item);
 }
 
 /**

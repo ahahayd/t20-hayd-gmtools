@@ -103,6 +103,33 @@ export function distanciaEntre(origem, alvo) {
 }
 
 /**
+ * Algum quadrado do alvo está realmente coberto pela aura?
+ *
+ * Alcance e parede precisam ser conferidos no MESMO quadrado. Antes, a menor
+ * distância podia vir do canto de uma criatura Grande, mas a parede era
+ * testada até o centro do token; quando só aquele canto estava na área, o
+ * centro bloqueado descartava a criatura inteira mesmo com o quadrado pintado.
+ */
+export function tokenDentroDaAura(fonte, alvo, spec, raio) {
+  const origem = pontosDoToken(fonte);
+  const deOnde = centroGravado(fonte);
+
+  for (const ponto of pontosDoToken(alvo)) {
+    let menor = Infinity;
+    for (const a of origem) {
+      const d = distanciaReal(a, ponto);
+      if (d !== null && d < menor) menor = d;
+    }
+
+    if (!dentroDoRaio(menor, raio)) continue;
+    if (spec?.bloqueavel
+      && pontoBloqueado(deOnde, { ...ponto, elevation: deOnde.elevation })) continue;
+    return true;
+  }
+  return false;
+}
+
+/**
  * Existe parede entre dois pontos?
  *
  * Usa o mesmo teste de linha de visão do Foundry — é o que faz o efeito sair
@@ -188,9 +215,7 @@ export function tokensNaAura(fonte, spec, raio) {
 
     // A fonte não precisa de medição nem de linha de visão consigo mesma.
     if (!ehFonte) {
-      const distancia = distanciaEntre(fonte, token);
-      if (distancia === null || !dentroDoRaio(distancia, raio)) continue;
-      if (spec.bloqueavel && paredeBloqueia(fonte, token)) continue;
+      if (!tokenDentroDaAura(fonte, token, spec, raio)) continue;
     }
 
     saida.push(token);
