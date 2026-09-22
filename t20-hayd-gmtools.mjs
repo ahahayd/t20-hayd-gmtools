@@ -11,6 +11,13 @@ import './t20-hayd-automacoes.mjs';
 import './t20-hayd-regua.mjs';
 // Correção opcional do "Custo de Mana Total" do sistema. Mesmo motivo acima.
 import './t20-hayd-custo-pm.mjs';
+// Mensagens de dano/cura/mana com visual próprio e Desfazer. Mesmo motivo acima.
+import './t20-hayd-mensagens-dano.mjs';
+// Janela de presets na primeira abertura do mundo. Mesmo motivo acima.
+import './t20-hayd-presets.mjs';
+import { IMPACTO_CHAVES, nivelDaConfiguracao } from './scripts/impacto.mjs';
+// Preview de dano na janela de uso, com maximizar/minimizar. Mesmo motivo acima.
+import './t20-hayd-preview-dano.mjs';
 // Gerador de Tesouros (Tabela 8-1 e associadas). Mesmo motivo do import acima.
 import './t20-hayd-tesouros.mjs';
 // Ficha do Grupo, estoque compartilhado e transferências (ex-t20-hayd-management).
@@ -1389,7 +1396,7 @@ const CATEGORIAS_CONFIG = [
   { rotulo: 'CatTesouros',    icone: 'fa-sack-dollar',    chaves: ['tesourosVinculosMenu', 'tesourosLivrosMenu', 'tesourosHomebrewMenu'] },
   { rotulo: 'CatParty',       icone: 'fa-users',          chaves: ['partySheetEnabled', 'visibility', 'requireConfirmation', 'chatMode', 'lojaCompat'] },
   { rotulo: 'CatAtributos',   icone: 'fa-dice-d6',        chaves: ['atributosMetodoPadrao', 'atributosPontos', 'atributosMultiNegativos', 'atributosCustosMenu', 'atributosConversaoMenu'] },
-  { rotulo: 'CatFerramentas', icone: 'fa-ruler-combined', chaves: ['reguaEfeitos'] },
+  { rotulo: 'CatFerramentas', icone: 'fa-ruler-combined', chaves: ['reguaEfeitos', 'mensagensDano', 'previewDano'] },
   { rotulo: 'CatCorrecoes',   icone: 'fa-screwdriver-wrench', chaves: ['custoPmTotal'] }
 ];
 
@@ -1404,6 +1411,18 @@ function grupoDaConfiguracao(root, chave) {
   return alvo?.closest('.form-group') ?? null;
 }
 
+/** Etiqueta de impacto ao lado do nome da configuração. */
+function marcarImpacto(grupo, chave) {
+  if (grupo.querySelector('.t20g-impacto')) return;
+  const nivel = nivelDaConfiguracao(chave);
+  const base = IMPACTO_CHAVES[nivel];
+  const marca = document.createElement('span');
+  marca.className = `t20g-impacto t20g-impacto-${nivel}`;
+  marca.textContent = game.i18n.localize(`T20HaydGMTools.${base}`);
+  marca.dataset.tooltip = game.i18n.localize(`T20HaydGMTools.${base}Dica`);
+  (grupo.querySelector('label') ?? grupo).appendChild(marca);
+}
+
 /** Move as configurações do módulo para baixo de títulos de categoria. */
 function organizarConfiguracoes(root) {
   // Já organizado neste render (o Foundry re-renderiza ao trocar de aba).
@@ -1412,9 +1431,11 @@ function organizarConfiguracoes(root) {
   let container = null;
   const grupos = [];
   for (const cat of CATEGORIAS_CONFIG) {
-    const itens = cat.chaves.map(c => grupoDaConfiguracao(root, c)).filter(Boolean);
+    const itens = cat.chaves
+      .map(chave => ({ chave, grupo: grupoDaConfiguracao(root, chave) }))
+      .filter(par => par.grupo);
     if (!itens.length) continue;
-    container ??= itens[0].parentElement;
+    container ??= itens[0].grupo.parentElement;
     grupos.push({ cat, itens });
   }
   if (!container) return;
@@ -1425,7 +1446,10 @@ function organizarConfiguracoes(root) {
     titulo.innerHTML = `<i class="fa-solid ${cat.icone}"></i> ${foundry.utils.escapeHTML(game.i18n.localize(`T20HaydGMTools.${cat.rotulo}`))}`;
     container.appendChild(titulo);
     // appendChild MOVE o nó existente: agrupa e reordena numa passada só.
-    for (const item of itens) container.appendChild(item);
+    for (const { chave, grupo } of itens) {
+      marcarImpacto(grupo, chave);
+      container.appendChild(grupo);
+    }
   }
 }
 

@@ -1876,3 +1876,229 @@ a.header-button.t20g-atr-header {
 .t20g-resist-veredito .fa-shield-halved { color: #2e7d32; }
 .t20g-resist-veredito .fa-skull { color: #782e22; }
 .t20g-resist-texto { opacity: 0.75; font-style: italic; }
+
+/* --- Mensagens de dano, cura e mana ------------------------------------- */
+
+/* O sistema pinta o conteúdo inteiro de vermelho/verde/ciano saturado. Aqui a
+   cor fica no ícone e no número; o texto herda o da mensagem, que pode estar
+   em fundo claro (jogador) ou escuro (Mestre/NPC). */
+.chat-message .message-content.damage-card.t20g-dano-conteudo {
+  background: none !important;
+}
+
+.t20g-dano {
+  --t20g-dano-cor: #9a9a9a;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.t20g-dano[data-tipo="dano"],
+.t20g-dano [data-tipo="dano"]      { --t20g-dano-cor: #d9483b; }
+.t20g-dano[data-tipo="cura"],
+.t20g-dano [data-tipo="cura"]      { --t20g-dano-cor: #3fae68; }
+.t20g-dano[data-tipo="pvTemp"],
+.t20g-dano [data-tipo="pvTemp"]    { --t20g-dano-cor: #d4a72c; }
+.t20g-dano[data-tipo="mana"],
+.t20g-dano [data-tipo="mana"],
+.t20g-dano[data-tipo="manaGanha"],
+.t20g-dano [data-tipo="manaGanha"] { --t20g-dano-cor: #3f8fe0; }
+.t20g-dano[data-tipo="pmTemp"],
+.t20g-dano [data-tipo="pmTemp"]    { --t20g-dano-cor: #9272e0; }
+.t20g-dano[data-tipo="anulado"],
+.t20g-dano [data-tipo="anulado"]   { --t20g-dano-cor: #8a94a6; }
+
+.t20g-dano-log {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-left: 3px solid var(--t20g-dano-cor);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--t20g-dano-cor) 12%, transparent);
+}
+/* Mesmo tratamento do retrato do chat no t20-hayd-ui: sem contorno, porque
+   em arte com fundo transparente a borda corta a figura. A sombra vem de
+   drop-shadow, que segue o canal alfa da imagem, ao contrário de box-shadow.
+   object-fit: contain para retrato vertical não perder topo e base. */
+.chat-message .message-content.damage-card .t20g-dano-retrato {
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  object-position: center;
+  border: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6));
+}
+.t20g-dano-linhas {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.chat-message .message-content.damage-card .t20g-dano-linha {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+  font-size: 14px;
+}
+.t20g-dano-linha i { color: var(--t20g-dano-cor); }
+/* Mistura com a cor do texto: clareia no fundo escuro, escurece no claro */
+.chat-message .message-content.damage-card .t20g-dano-valor {
+  color: color-mix(in srgb, var(--t20g-dano-cor) 75%, currentColor);
+  font-variant-numeric: tabular-nums;
+}
+
+.t20g-dano-desfeito .t20g-dano-log { opacity: 0.55; }
+.t20g-dano-desfeito .t20g-dano-valor { text-decoration: line-through; }
+.chat-message .message-content.damage-card .t20g-dano-aviso {
+  margin: 0;
+  font-size: 12px;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.chat-message .message-content.damage-card button.t20g-dano-acao {
+  width: 100%;
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+/* --- Preview de dano na janela de uso ------------------------------------ */
+
+/* Bloco recolhível, no tom da própria janela: fechado mostra só o resumo,
+   aberto quebra a fórmula em várias linhas em vez de cortá-la. */
+.t20g-preview {
+  margin: 0 0 8px;
+  padding: 3px 6px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 4px;
+}
+.t20g-preview > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+.t20g-preview-titulo { font-weight: 600; }
+.t20g-preview-resumo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  opacity: 0.75;
+}
+.t20g-preview[open] .t20g-preview-resumo { visibility: hidden; }
+
+.t20g-preview-linha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 3px 0;
+  border-top: 1px solid rgba(127, 127, 127, 0.2);
+}
+.t20g-preview-rotulo {
+  flex: 0 0 64px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.t20g-preview-formula {
+  flex: 1 1 180px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.t20g-preview-extra {
+  opacity: 0.75;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+.t20g-preview-modos {
+  display: flex;
+  gap: 8px;
+  font-size: 0.85em;
+  opacity: 0.85;
+}
+.t20g-preview-modos label { display: flex; align-items: center; gap: 3px; }
+.t20g-preview-modos input { margin: 0; }
+.t20g-oculto { display: none !important; }
+
+/* Cartão de quem usou dano maximizado/minimizado. A cor entra só no aviso e
+   na borda: o texto continua herdando o da mensagem, que pode estar em fundo
+   claro (jogador) ou escuro (Mestre/NPC). */
+.tormenta20.chat-card.t20g-minmax {
+  border: 1px solid var(--t20g-minmax-cor) !important;
+  border-radius: 5px;
+  padding: 4px;
+}
+.t20g-minmax-max { --t20g-minmax-cor: rgba(46, 125, 50, 0.65); }
+.t20g-minmax-min { --t20g-minmax-cor: rgba(74, 111, 165, 0.65); }
+
+.t20g-minmax-aviso {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0;
+  padding: 3px 8px;
+  border-left: 4px solid var(--t20g-minmax-cor);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--t20g-minmax-cor) 20%, transparent);
+  font-size: 0.85em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.t20g-minmax-aviso i { color: color-mix(in srgb, var(--t20g-minmax-cor) 80%, currentColor); }
+
+/* --- Etiqueta de impacto nas configurações ------------------------------- */
+
+.t20g-impacto {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border: 1px solid var(--t20g-impacto-cor);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--t20g-impacto-cor) 12%, transparent);
+  color: var(--t20g-impacto-cor);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+  white-space: nowrap;
+  cursor: help;
+}
+.t20g-impacto-baixo { --t20g-impacto-cor: #2e7d32; }
+.t20g-impacto-medio { --t20g-impacto-cor: #b7791f; }
+.t20g-impacto-alto  { --t20g-impacto-cor: #b3261e; }
+
+/* --- Janela de presets da primeira abertura ------------------------------ */
+
+.t20g-preset-lista {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.t20g-preset-lista li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 6px 8px;
+  border-left: 3px solid rgba(120, 46, 34, 0.35);
+  background: rgba(120, 46, 34, 0.05);
+  border-radius: 4px;
+}
+.t20g-preset-lista li .t20g-impacto { margin-left: 0; }
+.t20g-preset-lista li small {
+  grid-column: 2;
+  opacity: 0.75;
+}

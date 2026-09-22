@@ -899,7 +899,11 @@ export function ligarFluxo() {
     const original = Dialogo.create;
     Dialogo.create = async function (item, ...resto) {
       const configuracao = await original.call(this, item, ...resto);
-      if (!automacoesAtivas() || !configuracao || !ehEngenhoca(item)) return configuracao;
+      // O clone do preview de dano (ver t20-hayd-preview-dano.mjs) só quer a
+      // configuração pronta. Ativar a engenhoca aqui gravaria estado e subiria
+      // a CD a cada tecla digitada na janela de uso.
+      if (!automacoesAtivas() || !configuracao || item?._t20gPreview
+        || !ehEngenhoca(item)) return configuracao;
       return prepararAtivacao(item, configuracao).catch((err) => {
         console.error(`${MODULE_ID} | Falha na ativação da engenhoca`, err);
         ui.notifications.error('Não foi possível processar a ativação da engenhoca.');
@@ -1293,6 +1297,7 @@ export const engenhocas = {
   agendarSincronizacao,
   aoMudarItem,
   abrirAparatos,
+  aplicarAparatos: aplicarEfeitosDosAparatos,
   abrirPainel,
   resetarEngenhocas,
   ligarFluxo,

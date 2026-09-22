@@ -147,6 +147,18 @@ A régua padrão do Foundry **continua existindo e funcionando exatamente como a
 
 A ferramenta só aparece em cenas com grade quadrada — em grade hexagonal ou sem grade não existe diagonal a descontar, e ela seria idêntica à régua padrão.
 
+### Prévia da rolagem
+
+Ao usar uma arma, magia, poder ou perícia, a janela de uso mostra logo abaixo do custo de mana o que vai ser rolado: o teste de acerto (com a margem e o multiplicador de crítico), o dano e o dano crítico. A prévia já considera os aprimoramentos marcados na hora e os bônus do personagem, e usa o mesmo cálculo do sistema, então o que aparece é o que vai para o chat. Também há caixas para **maximizar** ou **minimizar** o dano.
+
+### Mensagens de dano, cura e mana com Desfazer
+
+O cartão que o sistema envia ao aplicar dano, cura, PV/PM temporários ou gastar mana vira uma linha simples, com o retrato do personagem e o valor. Um botão **Desfazer** (e depois **Refazer**) corrige um clique errado na hora. O botão aparece para o Mestre e para quem aplicou a mudança, se for dono da ficha.
+
+### Primeira configuração e impacto de cada função
+
+Na primeira vez que o módulo roda em um mundo, o Mestre escolhe por onde começar: ligar tudo, ligar só até o impacto médio, só as funções leves, ou decidir depois. Nas configurações, cada opção tem uma etiqueta de impacto (baixo, médio ou alto) que explica o quanto ela pesa na mesa. Se a mesa engasgar, comece desligando as de impacto alto.
+
 ### Definição de atributos
 
 Um botão nas configurações do personagem abre o assistente de atributos iniciais, com todos os métodos: **compra por pontos** (com pontos variados), **rolagens do Livro Básico** e as variantes do **Heróis de Arton** (Clássica, Épica, Valkaria e Nimb) além do arranjo de Khalmyr. O assistente escreve apenas os valores base; o bônus racial continua por sua conta.

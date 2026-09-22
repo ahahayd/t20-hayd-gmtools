@@ -2659,7 +2659,9 @@ function ligarConjurador() {
     const configuracao = await original.call(this, item, ...resto);
     // O wrapper permanece instalado para a configuração poder mudar sem
     // reiniciar o servidor, mas desligado devolve exatamente o fluxo original.
-    if (automacoesAtivas() && configuracao) {
+    // O clone do preview de dano (ver t20-hayd-preview-dano.mjs) passa direto:
+    // conjurar a magia do golpe a cada tecla gastaria PM e encheria o chat.
+    if (automacoesAtivas() && configuracao && !item?._t20gPreview) {
       await conjurarMagiasDoGolpe(item, configuracao).catch((err) =>
         console.error(`${MODULE_ID} | Falha ao preparar a magia do Golpe Pessoal`, err)
       );
@@ -3539,6 +3541,8 @@ export function injetarControlesAutomacao(message, html) {
     if (def.aura && !ehOProprioItem) continue;
     // Distribuição só faz sentido no cartão da própria magia (precisa da rolagem)
     if (def.distribuicao && !ehOProprioItem) continue;
+    // Engenhoqueiro só resume as engenhocas — nada a ver com o ataque
+    if (def.engenhoqueiro && !ehOProprioItem) continue;
     if (!ehAtaque && !ehOProprioItem) continue;
     card.appendChild(montarBarra(item, { completo: ehOProprioItem }));
   }
