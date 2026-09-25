@@ -346,6 +346,9 @@ export class TesourosGeradorApp extends HandlebarsApplicationMixin(ApplicationV2
   #modoRolagem = 'auto';
   #estoqueFolderId = null;
   #tesouro = null;
+  /** Colunas já roladas desde o último Limpar: uma coluna rolada e vazia
+   *  saiu "nada" na tabela, o que é diferente de nunca ter sido rolada. */
+  #colunasRoladas = new Set();
   #ocupado = false;
 
   /* Distribuição — vive aqui, na metade de baixo da janela. */
@@ -945,13 +948,16 @@ export class TesourosGeradorApp extends HandlebarsApplicationMixin(ApplicationV2
         moedas: moedasEmUso.map(m => ({ chave: m, rotulo: rotuloMoeda(m), valor: this.#moedas.get(d.id)?.[m] ?? 0 }))
       })),
       totalMoedas: this.#tesouro ? formatarMoedas(totais) : [],
+      totalItens: this.#tesouro ? itensGerados(this.#tesouro).length + this.#extras.length : 0,
       colDinheiroCtx: {
         chave: 'dinheiro', rotulo: loc('T20HaydGMTools.TesourosColunaDinheiro'), icone: 'fa-solid fa-coins',
-        lista: this.#tesouro ? visaoColuna(this.#tesouro.dinheiro) : []
+        lista: this.#tesouro ? visaoColuna(this.#tesouro.dinheiro) : [],
+        rolada: this.#colunasRoladas.has('dinheiro')
       },
       colItensCtx: {
         chave: 'itens', rotulo: loc('T20HaydGMTools.TesourosColunaItens'), icone: 'fa-solid fa-gem',
-        lista: this.#tesouro ? visaoColuna(this.#tesouro.itens) : []
+        lista: this.#tesouro ? visaoColuna(this.#tesouro.itens) : [],
+        rolada: this.#colunasRoladas.has('itens')
       },
     };
   }
@@ -978,6 +984,7 @@ export class TesourosGeradorApp extends HandlebarsApplicationMixin(ApplicationV2
     } else {
       this.#tesouro = novoTesouro;
     }
+    this.#colunasRoladas.add('dinheiro').add('itens');
     this.render();
 
     if (this.#modoRolagem === 'auto') {
@@ -990,6 +997,7 @@ export class TesourosGeradorApp extends HandlebarsApplicationMixin(ApplicationV2
   static #onLimpar() {
     this.#sincronizarFormulario();
     this.#tesouro = null;
+    this.#colunasRoladas.clear();
     this.render();
   }
 
@@ -1009,6 +1017,7 @@ export class TesourosGeradorApp extends HandlebarsApplicationMixin(ApplicationV2
       this.#ocupado = false;
     }
 
+    this.#colunasRoladas.add(coluna);
     if (entrada) {
       this.#tesouro[coluna].push(entrada);
     } else {

@@ -52,11 +52,21 @@
 
   <section class="t20g-tesouro-sidebar-grupo t20g-tesouro-sidebar-distribuicao">
     <h3><i class="fa-solid fa-gift"></i> {{localize "T20HaydGMTools.TesourosDistribuicao"}}</h3>
+    {{!-- Resumo do que foi gerado: dinheiro e itens. Antes só o dinheiro
+          contava, e um tesouro só de itens aparecia como "nada gerado". --}}
     {{#if totalMoedas.length}}
       <p class="t20g-tesouro-total"><i class="fa-solid fa-coins"></i> {{#each totalMoedas}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}</p>
-    {{else}}
-      <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosSemTotal"}}</p>
     {{/if}}
+    {{#if totalItens}}
+      <p class="t20g-tesouro-total"><i class="fa-solid fa-gem"></i> {{localize "T20HaydGMTools.TesourosTotalItens" n=totalItens}}</p>
+    {{/if}}
+    {{#unless temTesouro}}
+      <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosSemTotal"}}</p>
+    {{else}}
+      {{#unless (or totalMoedas.length totalItens)}}
+        <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosNadaGerado"}}</p>
+      {{/unless}}
+    {{/unless}}
 
     {{!-- Com grupos configurados, o tesouro é do grupo; sem nenhum, os
           destinos são os personagens de jogador. Nos dois casos o Mestre pode
@@ -189,7 +199,11 @@
           {{#if entrada.no}}{{> no-card entrada.no}}{{/if}}
         </div>
       {{else}}
-        <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosColunaVazia"}}</p>
+        {{#if this.rolada}}
+          <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosColunaNada"}}</p>
+        {{else}}
+          <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosColunaVazia"}}</p>
+        {{/if}}
       {{/each}}
     </div>
   </section>

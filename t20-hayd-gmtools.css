@@ -1006,9 +1006,25 @@ a.header-button.t20g-atr-header {
 }
 .t20g-tesouro-sidebar-acoes { display: flex; flex-direction: column; gap: 6px; }
 .t20g-tesouro-sidebar-distribuicao { display: flex; flex-direction: column; gap: 6px; }
+/* Botão principal das janelas do GMTools: a ação que o Mestre veio fazer.
+   Usa o tom quente de destaque do próprio Foundry (vale nos temas claro e
+   escuro) para se separar das ações secundárias ao lado. */
 .t20g-botao-principal {
   font-weight: 600;
   padding: 8px;
+  border-color: var(--color-warm-2, #c9593f);
+  background: color-mix(in srgb, var(--color-warm-2, #c9593f) 22%, transparent);
+}
+.t20g-botao-principal:hover,
+.t20g-botao-principal:focus-visible {
+  background: color-mix(in srgb, var(--color-warm-2, #c9593f) 40%, transparent);
+}
+/* Ação secundária que apaga o resultado: presente, mas sem competir. */
+.t20g-tesouros [data-action="limpar"] {
+  opacity: 0.8;
+}
+.t20g-tesouros [data-action="limpar"]:hover {
+  opacity: 1;
 }
 .t20g-tesouro-total {
   display: flex;
