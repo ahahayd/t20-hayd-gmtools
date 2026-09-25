@@ -1094,7 +1094,7 @@ a.header-button.t20g-atr-header {
   gap: 6px;
   margin-top: 3px;
 }
-.t20g-tesouro-item img { border: none; border-radius: 4px; flex: 0 0 auto; }
+.t20g-tesouro-item img { border: none; border-radius: 4px; flex: 0 0 auto; object-fit: cover; }
 .t20g-tesouro-item-info { flex: 1 1 auto; min-width: 0; }
 .t20g-tesouro-item-nome { font-weight: 600; }
 .t20g-tesouro-item-meta { display: flex; gap: 8px; font-size: 0.82em; flex-wrap: wrap; }
@@ -1330,7 +1330,10 @@ a.header-button.t20g-atr-header {
 .t20g-dist2-coluna.t20g-dist2-sobre,
 .t20g-dist2-coluna.t20g-dist-sobre { border-color: var(--t20a-chat-cor, #c0392b); box-shadow: 0 0 6px rgba(192,57,43,0.4); }
 .t20g-dist2-coluna-topo { display: flex; align-items: center; gap: 6px; }
-.t20g-dist2-coluna-topo img { border: none; border-radius: 4px; flex: 0 0 auto; }
+/* Retratos e ícones não são quadrados (arte vertical de personagem): a tag
+   força 24x24, então recorta em vez de achatar. Retrato ancora no topo,
+   onde costuma estar o rosto. */
+.t20g-dist2-coluna-topo img { border: none; border-radius: 4px; flex: 0 0 auto; object-fit: cover; object-position: top; }
 .t20g-dist2-nome { font-weight: 600; font-size: 0.9em; }
 
 .t20g-dist2-moedas-campos { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -1361,7 +1364,7 @@ a.header-button.t20g-atr-header {
   background: rgba(0,0,0,0.05);
   cursor: grab;
 }
-.t20g-dist2-item img { border: none; border-radius: 3px; flex: 0 0 auto; }
+.t20g-dist2-item img { border: none; border-radius: 3px; flex: 0 0 auto; object-fit: cover; }
 .t20g-dist2-item-nome { flex: 1 1 auto; font-size: 0.85em; min-width: 0; }
 .t20g-dist2-item button { flex: 0 0 auto; width: 20px; height: 20px; padding: 0; line-height: 1; }
 .t20g-dist2-vazio { text-align: center; padding: 8px 0; font-style: italic; }
