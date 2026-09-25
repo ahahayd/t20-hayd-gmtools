@@ -333,6 +333,8 @@
     "TesourosSemVinculo": "Sem vínculo",
     "TesourosSemVinculoForcado": "Sem vínculo (forçado)",
     "TesourosVinculosTitulo": "Vínculos de Itens do Tesouro",
+    "TesourosGeradorMenuBotao": "Abrir gerador",
+    "TesourosGeradorMenuDica": "Rola o tesouro pela Tabela 8-1 e distribui entre o grupo. Também fica na barra de ferramentas de tokens (ícone do saco de moedas).",
     "TesourosVinculosMenuBotao": "Gerenciar Vínculos",
     "TesourosVinculosMenuDica": "Veja quais resultados das tabelas de tesouro estão vinculados a um item do mundo, quais são ambíguos (escolha manual) e quais não têm vínculo nenhum — e corrija arrastando um item para a linha.",
     "TesourosTabela": "Tabela",

@@ -32,6 +32,17 @@ Hooks.once('init', () => {
   registrarVinculoSettings();
   registrarLivrosSettings();
 
+  // Atalho para o próprio gerador nas configurações: o botão principal fica
+  // na barra de tokens, e quem não sabe disso não o encontrava.
+  game.settings.registerMenu(MODULE_ID, 'tesourosGeradorMenu', {
+    name: 'T20HaydGMTools.TesourosGeradorTitulo',
+    label: 'T20HaydGMTools.TesourosGeradorMenuBotao',
+    hint: 'T20HaydGMTools.TesourosGeradorMenuDica',
+    icon: 'fa-solid fa-sack-dollar',
+    restricted: true,
+    type: atalhoDeMenu(() => abrirGeradorTesouros())
+  });
+
   game.settings.registerMenu(MODULE_ID, 'tesourosVinculosMenu', {
     name: 'T20HaydGMTools.TesourosVinculosTitulo',
     label: 'T20HaydGMTools.TesourosVinculosMenuBotao',
