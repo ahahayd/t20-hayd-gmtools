@@ -273,7 +273,7 @@
     "TesourosModoRolagem": "Modo de rolagem",
     "TesourosMetadeDica": "Cortar este valor pela metade (clique de novo para desfazer)",
     "TesourosMetadeMarcadorDica": "Valor cortado pela metade",
-    "TesourosModoAutomaticoDica": "Um clique gera o tesouro inteiro: cada dado da cadeia é rolado de uma vez.",
+    "TesourosModoAutomaticoDica": "Rola tudo de uma vez, mas cada d100 (qual item, melhoria ou encanto) espera a rolagem de um jogador no chat. Você pode rolar ou digitar o valor.",
     "TesourosModoPassoAPassoDica": "Cada dado da cadeia (tipo de item, qual item, cada melhoria...) é decidido um de cada vez, e você pode pedir a rolagem a um jogador.",
     "TesourosModoAutomatico": "Automático",
     "TesourosModoPassoAPasso": "Passo a passo",

@@ -400,6 +400,13 @@ export class TesourosGeradorApp extends HandlebarsApplicationMixin(ApplicationV2
     super._onRender?.(context, options);
     const el = this.element;
 
+    // A dica embaixo do modo de rolagem é do modo selecionado: redesenha ao
+    // trocar, senão ela continuava descrevendo o modo anterior.
+    el.querySelector('[name="modoRolagem"]')?.addEventListener('change', () => {
+      this.#sincronizarFormulario();
+      this.render();
+    });
+
     el.querySelector('[name="escopo"]')?.addEventListener('change', () => {
       this.#sincronizarFormulario();
       this.#prepararDistribuicao({ redividir: true });
