@@ -2058,6 +2058,18 @@ a.header-button.t20g-atr-header {
 
 /* --- Etiqueta de impacto nas configurações ------------------------------- */
 
+/* O Foundry dá ao rótulo a altura do campo (32px) como altura de linha: um
+   nome que quebrava em duas linhas ficava com um vão enorme entre elas. Com
+   a etiqueta, o rótulo usa altura de linha normal e a etiqueta vai para a
+   linha de baixo, sempre alinhada — em vez de partir o nome ao meio. */
+.form-group > label:has(> .t20g-impacto) {
+  align-self: center;
+  line-height: 1.3;
+}
+.form-group > label > .t20g-impacto {
+  display: table;
+  margin: 4px 0 0;
+}
 .t20g-impacto {
   margin-left: 6px;
   padding: 1px 7px;
