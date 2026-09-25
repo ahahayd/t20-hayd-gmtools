@@ -95,11 +95,17 @@ O botão do saco de moedas na barra de ferramentas de tokens (só para o Mestre)
 
 *O gerador fica na barra de tokens, ao lado da régua de efeitos.*
 
+Há três modos de rolagem:
+
+- **Automático** — um clique gera o tesouro inteiro, mas cada d100 (qual item, melhoria ou encanto) espera um jogador rolar no chat; você pode rolar ou digitar o valor.
+- **Passo a passo** — cada dado da cadeia (tipo de item, qual item, cada melhoria…) é decidido um de cada vez, e você pode pedir a rolagem a um jogador.
+- **Rápido** — rola tudo de uma vez, sem esperar jogador nem pedir escolha entre os dois dados da regra 2D.
+
 A metade de baixo da janela é a **distribuição**: arraste atores individualmente (ou uma pasta inteira) para montar a lista de quem vai receber, arraste cada item para um personagem e reparta o dinheiro. No fim, um resumo vai para o chat.
 
 Três janelas de configuração ajustam as tabelas, em *Configurar → Configurações → T20 Hayd GMTools → Gerador de tesouros*:
 
-- **Escolher livros** — desligue os livros que a sua mesa não usa (*Tormenta20*, *Heróis de Arton*, *Deuses de Arton*, *Ameaças de Arton*) e as entradas deles saem das rolagens. O espaço das entradas desligadas é **redividido entre as que ficam**, proporcionalmente à raridade original.
+- **Escolher livros** — desligue os livros que a sua mesa não usa (*Tormenta20*, *Heróis de Arton*, *Deuses de Arton*, *Ameaças de Arton*) e as entradas deles saem das rolagens. O espaço das entradas desligadas é **redividido entre as que ficam**, proporcionalmente à raridade original; o dado continua o mesmo.
 - **Gerenciar homebrew** — adiciona resultados personalizados a qualquer tabela, estendendo o dado (d100 → d101…) quando precisa, e permite renomear ou tirar do sorteio qualquer entrada oficial. A lista das entradas do livro mostra as faixas **como elas realmente vão rolar** com os livros que você tem ligados, e marca quem está fora e por quê.
 - **Gerenciar vínculos** — mostra quais resultados das tabelas apontam para um item do mundo, quais estão ambíguos e quais não têm vínculo nenhum. Dá para corrigir arrastando um item para a linha, clicar no nome para abrir o item, e refazer tudo do zero em *Resetar vínculos*.
 
@@ -107,7 +113,7 @@ As tabelas de tesouro do gerador foram construídas a partir da [planilha criada
 
 ### Ficha do Grupo
 
-Uma ficha compartilhada por todos os personagens de uma pasta de atores, com um **estoque e um dinheiro em comum**. A tecla **B** abre a ficha do grupo a que você pertence (com mais de um, ela pergunta qual).
+Uma ficha compartilhada por todos os personagens de uma pasta de atores, com um **estoque e um dinheiro em comum**. A tecla **B** abre a ficha do grupo a que você pertence (com mais de um, ela pergunta qual, já com o último aberto marcado).
 
 ![Diretório de Atores com a pasta "Exemplo de Grupo" e os ícones de usuários ao lado direito destacados](docs/Botao%20de%20ficha%20de%20grupo.png)
 
@@ -117,13 +123,15 @@ Uma ficha compartilhada por todos os personagens de uma pasta de atores, com um 
 - **Inventário do grupo** — o estoque comum. Os jogadores podem **pegar** e **depositar** itens e dinheiro por conta própria, e apagar itens do estoque; transferências entre personagens podem exigir confirmação de quem recebe.
 - **Ferramentas do Mestre** — descanso do grupo (com qualidade da hospedagem e PV/PM extras), pedido de rolagem de perícia para os personagens escolhidos (pública, para o Mestre, às cegas ou secreta) e distribuição do dinheiro do estoque.
 
-Os grupos são definidos em *Gerenciar grupos*, apontando uma pasta de atores para cada um.
+Os grupos são definidos em *Gerenciar grupos*, apontando uma pasta de atores para cada um. Sem nenhuma pasta configurada, a Ficha do Grupo não aparece. A transferência de itens e dinheiro entre personagens funciona mesmo com a Ficha do Grupo desligada.
+
+> A Ficha do Grupo veio do antigo módulo **t20-hayd-management**, que agora faz parte do GMTools. As configurações e os dados dele são mantidos; pode desativá-lo.
 
 ### Automações de itens
 
 O botão **Automação** nas fichas de item liga contadores e efeitos automáticos para habilidades que precisam de controle a cada rodada ou a cada uso (Sangue dos Inimigos, Combinações Desarmadas e afins). Desligar a configuração não apaga nada — religar volta tudo a funcionar.
 
-Na aba **Efeitos** da ficha do personagem, o botão **Gerenciar contadores** reúne os valores de todas essas automações. Ali o proprietário da ficha ou o Mestre pode corrigir diretamente contadores comuns, o Sequencial do Golpe Pessoal e valores separados por inimigo de Combinações e Estudar o Adversário. A correção também sincroniza os efeitos e os cartões relacionados no chat.
+Na aba **Efeitos** da ficha do personagem, o botão **Gerenciar automações** reúne os valores de todas essas automações e permite encerrar efeitos que ainda estejam ativos. Ali o proprietário da ficha ou o Mestre pode corrigir diretamente contadores comuns, o Sequencial do Golpe Pessoal e valores separados por inimigo de Combinações e Estudar o Adversário. A correção também sincroniza os efeitos e os cartões relacionados no chat.
 
 ![Cabeçalho da ficha de item com o botão "Automação" destacado ao lado de "Sheet", e a janela "Automação do item" aberta mostrando um dropdown com a lista de automações disponíveis](docs/Localizacao%20do%20botao%20automacao.png)
 
@@ -149,7 +157,11 @@ A ferramenta só aparece em cenas com grade quadrada — em grade hexagonal ou s
 
 ### Prévia da rolagem
 
-Ao usar uma arma, magia, poder ou perícia, a janela de uso mostra logo abaixo do custo de mana o que vai ser rolado: o teste de acerto (com a margem e o multiplicador de crítico), o dano e o dano crítico. A prévia já considera os aprimoramentos marcados na hora e os bônus do personagem, e usa o mesmo cálculo do sistema, então o que aparece é o que vai para o chat. Também há caixas para **maximizar** ou **minimizar** o dano.
+Ao usar uma arma, magia, poder ou perícia, a janela de uso mostra logo abaixo do custo de mana o que vai ser rolado: o teste de acerto (com a margem e o multiplicador de crítico), o dano e o dano crítico. Em testes de perícia, mostra a rolagem do teste. A prévia já considera os aprimoramentos marcados na hora e os bônus do personagem, e usa o mesmo cálculo do sistema, então o que aparece é o que vai para o chat. Também há caixas para **maximizar** ou **minimizar** o dano.
+
+### Correção do custo de mana
+
+Na janela de uso de qualquer item com custo em PM (magia, poder, arma, equipamento ou consumível), o sistema soma só o custo dos aprimoramentos e ignora o custo base do próprio item. Com esta opção ligada, o *Custo de Mana Total* passa a incluir o custo base, para todos os jogadores do mundo. Recomendado ligar, a menos que a sua versão do sistema já tenha corrigido isso.
 
 ### Mensagens de dano, cura e mana com Desfazer
 
@@ -157,7 +169,13 @@ O cartão que o sistema envia ao aplicar dano, cura, PV/PM temporários ou gasta
 
 ### Primeira configuração e impacto de cada função
 
-Na primeira vez que o módulo roda em um mundo, o Mestre escolhe por onde começar: ligar tudo, ligar só até o impacto médio, só as funções leves, ou decidir depois. Nas configurações, cada opção tem uma etiqueta de impacto (baixo, médio ou alto) que explica o quanto ela pesa na mesa. Se a mesa engasgar, comece desligando as de impacto alto.
+Na primeira vez que o módulo roda em um mundo, o Mestre escolhe por onde começar: ligar tudo, ligar só até o impacto médio, só as funções leves, ou decidir depois. Nada é apagado com essa escolha: todas as opções continuam nas configurações, cada uma com uma etiqueta de impacto.
+
+| Impacto | O que significa |
+| --- | --- |
+| Baixo | Só trabalha quando você abre ou usa a função. Manter ligado praticamente não custa nada. |
+| Médio | Participa de toda mensagem do chat ou de toda ficha aberta. Custo pequeno, mas constante. |
+| Alto | Acompanha o jogo o tempo todo (movimento de tokens, turnos e efeitos) ou refaz as contas a cada tecla. Se a mesa ficar lenta, comece desligando estas. |
 
 ### Definição de atributos
 
@@ -179,7 +197,8 @@ Em *Configurar → Configurações → T20 Hayd GMTools*, as opções ficam agru
 | Gerador de tesouros | Vínculos, livros e homebrew das tabelas |
 | Ficha do Grupo | Liga a ficha, visibilidade de vida/mana, confirmação de transferências e avisos no chat |
 | Atributos iniciais | Método padrão da campanha, pontos sugeridos e as tabelas de custo/conversão personalizadas |
-| Ferramentas de mesa | A **régua para efeitos** |
+| Ferramentas de mesa | A **régua para efeitos**, a **prévia da rolagem** e as **mensagens de dano com Desfazer** |
+| Correções do sistema | A **correção do custo de mana** |
 
 ---
 

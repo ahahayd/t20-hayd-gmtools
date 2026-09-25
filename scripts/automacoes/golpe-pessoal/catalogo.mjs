@@ -111,7 +111,7 @@ export const GP_EFEITOS = [
     texto: 'Aumenta o alcance em um passo (de corpo a corpo para curto, médio e longo). Outras '
       + 'características não mudam (um ataque corpo a corpo com alcance curto continua usando '
       + 'Luta e somando sua Força no dano).',
-    nota: 'Escolha o alcance que a arma passa a ter, é o que o efeito aparece na rolagem.',
+    nota: 'Escolha o alcance que a arma passa a ter; ele aparece no efeito, na janela de rolagem.',
     changes: (cfg) => (cfg.distante.alcance
       ? [{ key: 'alcance', mode: 5, value: rotuloAlcance(cfg.distante.alcance), priority: 20 }]
       : [])

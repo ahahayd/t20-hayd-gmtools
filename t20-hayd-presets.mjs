@@ -54,7 +54,6 @@ async function perguntar() {
     content: `<div class="t20g-preset">
       <p>${esc(t('PresetIntro'))}</p>
       <ul class="t20g-preset-lista">${listaDeFuncoes()}</ul>
-      <p class="notes">${esc(t('PresetNota'))}</p>
     </div>`,
     rejectClose: false,
     buttons: [

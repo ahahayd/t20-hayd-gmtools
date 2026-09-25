@@ -3959,10 +3959,10 @@ function paginaIntroducao() {
     <b>Nenhuma</b> desliga e limpa o que ela tiver criado.</p>
 
     <h2>Conferindo e corrigindo contadores</h2>
-    <p>Na aba <b>Efeitos</b> da ficha do personagem, use <b>Gerenciar contadores</b> para
-    consultar ou definir diretamente os valores de cada automação. Combinações e Estudar o
-    Adversário aparecem separados por inimigo. Ao salvar, efeitos e cartões relacionados no
-    chat também são atualizados.</p>
+    <p>Na aba <b>Efeitos</b> da ficha do personagem, use <b>Gerenciar automações</b> para
+    consultar ou corrigir os contadores de cada automação e encerrar efeitos que ainda estejam
+    ativos. Combinações e Estudar o Adversário aparecem separados por inimigo. Ao salvar, os
+    efeitos e os cartões relacionados no chat também são atualizados.</p>
 
     <p class="notes">Diário gerado pelo módulo — anotações feitas aqui podem ser
     substituídas.</p>`;
@@ -4073,11 +4073,11 @@ function paginaDaAutomacao(def) {
               : ' Paredes não bloqueiam.'}</li>
         <li>Aliados dentro recebem o bônus sozinhos; ele sai quando eles se afastam
             ou uma parede entra no caminho.</li>
-        <li>O valor acompanha a ficha ao vivo — uma magia que aumente o atributo
-            sobe o bônus de todo mundo.</li>
-        <li>No início do seu turno, uma mensagem no chat pergunta se quer manter.
-            O custo de ${def.aura.custo} PM é só avisado: o módulo não desconta.
-            Não clicar <b>não</b> encerra a aura.</li>
+        <li>O bônus acompanha o atributo atual: se ele subir durante a cena (por uma
+            magia, por exemplo), o bônus sobe para todos na área.</li>
+        <li>No início do seu turno, uma mensagem no chat pergunta se quer manter a aura.
+            <b>Manter aura</b> desconta os ${def.aura.custo} PM. Ignorar a mensagem
+            <b>não</b> encerra a aura; para encerrar, use <b>Cancelar aura</b> no cartão do poder.</li>
       </ul>`;
   } else if (def.auraModificador?.raio) {
     comoFunciona = `
@@ -4125,14 +4125,14 @@ function paginaGolpePessoal(def, tipos) {
     <ol>
       <li>Ligue a automação <b>Golpe Pessoal</b> no poder.</li>
       <li>Role o poder para o chat e clique em <b>Montar Golpe Pessoal</b>.</li>
-      <li>Dê um nome épico ao golpe e marque os efeitos.</li>
+      <li>Dê um nome ao golpe e marque os efeitos.</li>
       <li>Salvar cria <b>um único efeito de uso</b>, "Golpe Pessoal: nome do golpe", com o custo
           em PM já somado. Ele aparece desmarcado na janela de rolagem de qualquer arma —
           marque-o quando for desferir o golpe.</li>
     </ol>
-    <p>O módulo <b>não</b> amarra o golpe a uma arma: a regra diz que ele só vale com a arma que
-    você escolheu (ou qualquer uma, com <i>Qualquer Arma</i>), mas quem cuida disso é a mesa —
-    travar pelo nome do item na ficha só atrapalharia na hora de rolar.</p>
+    <p>O módulo não prende o golpe a uma arma. Pela regra, ele só vale com a arma escolhida
+    (ou com qualquer uma, se tiver <i>Qualquer Arma</i>); cabe à mesa respeitar isso na hora
+    de usar.</p>
     <p>Subiu de nível? Abra o construtor de novo e refaça o golpe. Para ter dois golpes
     diferentes, coloque o poder duas vezes na ficha e monte um em cada.</p>
 
