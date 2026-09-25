@@ -16,6 +16,7 @@ import './t20-hayd-mensagens-dano.mjs';
 // Janela de presets na primeira abertura do mundo. Mesmo motivo acima.
 import './t20-hayd-presets.mjs';
 import { IMPACTO_CHAVES, nivelDaConfiguracao } from './scripts/impacto.mjs';
+import { atalhoDeMenu } from './scripts/atalho-menu.mjs';
 // Preview de dano na janela de uso, com maximizar/minimizar. Mesmo motivo acima.
 import './t20-hayd-preview-dano.mjs';
 // Gerador de Tesouros (Tabela 8-1 e associadas). Mesmo motivo do import acima.
@@ -1170,11 +1171,7 @@ Hooks.once('init', () => {
     hint: 'T20HaydGMTools.MetaMenuDica',
     icon: 'fa-solid fa-mask',
     restricted: true,
-    // O Foundry faz `new type()` e chama render(): basta interceptar o render.
-    type: class extends foundry.appv1.api.FormApplication {
-      async render() { await abrirEditorMetagame(); return this; }
-      async _updateObject() {}
-    }
+    type: atalhoDeMenu(abrirEditorMetagame)
   });
 
   game.settings.register(MODULE_ID, 'jogadoresReroll', {

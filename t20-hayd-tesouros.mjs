@@ -7,6 +7,7 @@
  * mesmo padrão de t20-hayd-automacoes.mjs e t20-hayd-regua.mjs.
  */
 import { MODULE_ID } from './scripts/tesouros/constantes.mjs';
+import { atalhoDeMenu } from './scripts/atalho-menu.mjs';
 import { registrarHomebrewSettings } from './scripts/tesouros/homebrew.mjs';
 import { registrarVinculoSettings } from './scripts/tesouros/vinculo.mjs';
 import { registrarLivrosSettings } from './scripts/tesouros/livros.mjs';
@@ -37,10 +38,7 @@ Hooks.once('init', () => {
     hint: 'T20HaydGMTools.TesourosVinculosMenuDica',
     icon: 'fa-solid fa-link',
     restricted: true,
-    type: class extends foundry.appv1.api.FormApplication {
-      async render() { abrirVinculosTesouros(); return this; }
-      async _updateObject() {}
-    }
+    type: atalhoDeMenu(abrirVinculosTesouros)
   });
 
   game.settings.registerMenu(MODULE_ID, 'tesourosLivrosMenu', {
@@ -49,10 +47,7 @@ Hooks.once('init', () => {
     hint: 'T20HaydGMTools.TesourosLivrosMenuDica',
     icon: 'fa-solid fa-book',
     restricted: true,
-    type: class extends foundry.appv1.api.FormApplication {
-      async render() { abrirLivrosTesouros(); return this; }
-      async _updateObject() {}
-    }
+    type: atalhoDeMenu(abrirLivrosTesouros)
   });
 
   game.settings.registerMenu(MODULE_ID, 'tesourosHomebrewMenu', {
@@ -61,10 +56,7 @@ Hooks.once('init', () => {
     hint: 'T20HaydGMTools.TesourosHomebrewMenuDica',
     icon: 'fa-solid fa-wand-magic-sparkles',
     restricted: true,
-    type: class extends foundry.appv1.api.FormApplication {
-      async render() { abrirHomebrewTesouros(); return this; }
-      async _updateObject() {}
-    }
+    type: atalhoDeMenu(abrirHomebrewTesouros)
   });
 
   foundry.applications.handlebars.loadTemplates([

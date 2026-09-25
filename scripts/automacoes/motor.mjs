@@ -18,6 +18,7 @@ import {
   souGmAtivo
 } from './runtime.mjs';
 import { IndiceAtoresAutomacoes } from './indice-atores.mjs';
+import { atalhoDeMenu } from '../atalho-menu.mjs';
 import { AUTOMACOES } from './catalogo.mjs';
 import {
   idAutomacao,
@@ -4350,23 +4351,13 @@ Hooks.once('init', () => {
     default: ''
   });
 
-  // O menu não abre formulário nenhum: o Foundry faz `new type()` e chama
-  // render(), então basta interceptar o render para abrir o diário.
-  class MenuDiarioAutomacoes extends foundry.appv1.api.FormApplication {
-    async render() {
-      await abrirDiario();
-      return this;
-    }
-    async _updateObject() {}
-  }
-
   game.settings.registerMenu(MODULE_ID, 'abrirDiarioAutomacoes', {
     name: 'T20HaydGMTools.DiarioMenuNome',
     label: 'T20HaydGMTools.DiarioMenuBotao',
     hint: 'T20HaydGMTools.DiarioMenuDica',
     icon: 'fa-solid fa-book-open',
     restricted: true,
-    type: MenuDiarioAutomacoes
+    type: atalhoDeMenu(abrirDiario)
   });
 });
 

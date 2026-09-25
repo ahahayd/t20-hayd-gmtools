@@ -11,6 +11,8 @@
  * preenchimento opcional (o sistema já o preenche pela automação da raça).
  */
 
+import { atalhoDeMenu } from './scripts/atalho-menu.mjs';
+
 const MODULE_ID = 't20-hayd-gmtools';
 const { DialogV2 } = foundry.applications.api;
 
@@ -212,10 +214,7 @@ function registrarConfiguracoes() {
     label: 'Editar custos',
     hint: 'Modifique o custo de cada valor de atributo e habilite novas compras (ex.: valor 5 por 10 pontos).',
     icon: 'fa-solid fa-coins',
-    type: class extends FormApplication {
-      render() { abrirEditorCustos(); return this; }
-      async _updateObject() {}
-    },
+    type: atalhoDeMenu(abrirEditorCustos),
     restricted: true
   });
   game.settings.register(MODULE_ID, 'atributosConversao', {
@@ -227,10 +226,7 @@ function registrarConfiguracoes() {
     label: 'Editar conversão',
     hint: 'Personalize os intervalos de rolagem e quanto cada um vale de atributo (ex.: fazer 18 valer 5 em vez de 4). Vale para todos os métodos com rolagem.',
     icon: 'fa-solid fa-arrow-right-arrow-left',
-    type: class extends FormApplication {
-      render() { abrirEditorConversao(); return this; }
-      async _updateObject() {}
-    },
+    type: atalhoDeMenu(abrirEditorConversao),
     restricted: true
   });
 }
