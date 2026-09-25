@@ -1125,7 +1125,32 @@ a.header-button.t20g-atr-header {
   flex: 0 0 auto;
 }
 .t20g-tesouro-vinculos-topo button { width: auto; flex: 0 0 auto; }
+.t20g-tesouro-vinculos-topo .t20g-tesouro-vinculos-reset { margin-left: auto; }
 .t20g-tesouro-vinculos-resumo { display: flex; gap: 8px; margin: 8px 0; flex: 0 0 auto; }
+/* Contagens que também filtram: parecem etiquetas, mas respondem ao clique. */
+.t20g-tesouro-vinculos-resumo button.t20g-badge {
+  width: auto;
+  height: auto;
+  line-height: inherit;
+  cursor: pointer;
+  transition: filter 120ms ease, box-shadow 120ms ease;
+}
+.t20g-tesouro-vinculos-resumo button.t20g-badge:hover { filter: brightness(1.25); }
+.t20g-tesouro-vinculos-resumo button.t20g-badge.t20g-badge-ativo {
+  box-shadow: 0 0 0 1px currentColor;
+}
+
+/* Ação perigosa (apaga dados em massa): discreta em repouso, vermelha ao
+   apontar. A confirmação continua sendo do diálogo. */
+.t20g-botao-perigo {
+  color: var(--color-level-error, #c0392b);
+  border-color: color-mix(in srgb, var(--color-level-error, #c0392b) 45%, transparent);
+}
+.t20g-botao-perigo:hover,
+.t20g-botao-perigo:focus-visible {
+  background: color-mix(in srgb, var(--color-level-error, #c0392b) 18%, transparent);
+  border-color: var(--color-level-error, #c0392b);
+}
 .t20g-tesouro-vinculos-lista { display: flex; flex-direction: column; gap: 4px; }
 /* O corpo desta janela precisa ser coluna para a lista poder rolar. */
 .t20g-tesouros .t20g-tesouro-body:has(.t20g-tesouro-vinculos-lista) { display: flex; flex-direction: column; min-height: 0; }

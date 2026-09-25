@@ -44,7 +44,7 @@ export class TesourosVinculosApp extends HandlebarsApplicationMixin(ApplicationV
     window: { title: 'T20HaydGMTools.TesourosVinculosTitulo', icon: 'fa-solid fa-link', resizable: true },
     position: { width: 720, height: 800 },
     actions: {
-      filtrar: TesourosVinculosApp.#onFiltrar,
+      filtrarStatus: TesourosVinculosApp.#onFiltrarStatus,
       usarCandidato: TesourosVinculosApp.#onUsarCandidato,
       usarSemVinculo: TesourosVinculosApp.#onUsarSemVinculo,
       limparOverride: TesourosVinculosApp.#onLimparOverride,
@@ -115,6 +115,10 @@ export class TesourosVinculosApp extends HandlebarsApplicationMixin(ApplicationV
 
   _onRender(context, options) {
     super._onRender(context, options);
+    // Filtro vale ao trocar a seleção: o botão "Filtrar" era um passo a mais.
+    for (const select of this.element.querySelectorAll('[name="filtroTabela"], [name="filtroStatus"]')) {
+      select.addEventListener('change', () => { this.#sincronizarFiltros(); this.render(); });
+    }
     this.element.querySelectorAll('[data-drop]').forEach(drop => {
       drop.addEventListener('dragover', e => e.preventDefault());
       drop.addEventListener('drop', async e => {
@@ -130,8 +134,13 @@ export class TesourosVinculosApp extends HandlebarsApplicationMixin(ApplicationV
     });
   }
 
-  static #onFiltrar() {
+  /** Contagem clicada: filtra por aquele status (clicar de novo volta aos pendentes). */
+  static #onFiltrarStatus(event, target) {
     this.#sincronizarFiltros();
+    const status = target.dataset.status;
+    this.#statusFiltro = (this.#statusFiltro === status) ? 'pendentes' : status;
+    const select = this.element.querySelector('[name="filtroStatus"]');
+    if (select) select.value = this.#statusFiltro;
     this.render();
   }
 

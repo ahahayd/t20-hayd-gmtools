@@ -19,16 +19,18 @@
       <option value="sem-vinculo-forcado" {{#if (eq statusFiltro "sem-vinculo-forcado")}}selected{{/if}}>{{localize "T20HaydGMTools.TesourosSemVinculoForcado"}}</option>
     </select>
   </div>
-  <button type="button" data-action="filtrar"><i class="fa-solid fa-filter"></i> {{localize "T20HaydGMTools.TesourosFiltrar"}}</button>
-  <button type="button" data-action="resetarVinculos" title="{{localize 'T20HaydGMTools.TesourosResetarVinculosDica'}}">
+  {{!-- Os filtros valem ao trocar a seleção (sem botão "Filtrar"). Resetar
+        apaga todos os vínculos manuais: fica à parte, com cara de perigo. --}}
+  <button type="button" class="t20g-botao-perigo t20g-tesouro-vinculos-reset" data-action="resetarVinculos" title="{{localize 'T20HaydGMTools.TesourosResetarVinculosDica'}}">
     <i class="fa-solid fa-arrows-rotate"></i> {{localize "T20HaydGMTools.TesourosResetarVinculos"}}
   </button>
 </div>
 
+{{!-- As contagens também são atalhos: clicar filtra por aquele status. --}}
 <div class="t20g-tesouro-vinculos-resumo">
-  <span class="t20g-badge t20g-sem">{{totais.semVinculo}} {{localize "T20HaydGMTools.TesourosSemVinculo"}}</span>
-  <span class="t20g-badge t20g-ambiguo">{{totais.ambiguo}} {{localize "T20HaydGMTools.TesourosAmbiguo"}}</span>
-  <span class="t20g-badge t20g-ok">{{totais.vinculado}} {{localize "T20HaydGMTools.TesourosVinculado"}}</span>
+  <button type="button" class="t20g-badge t20g-sem {{#if (eq statusFiltro "sem-vinculo")}}t20g-badge-ativo{{/if}}" data-action="filtrarStatus" data-status="sem-vinculo" aria-pressed="{{eq statusFiltro "sem-vinculo"}}">{{totais.semVinculo}} {{localize "T20HaydGMTools.TesourosSemVinculo"}}</button>
+  <button type="button" class="t20g-badge t20g-ambiguo {{#if (eq statusFiltro "ambiguo")}}t20g-badge-ativo{{/if}}" data-action="filtrarStatus" data-status="ambiguo" aria-pressed="{{eq statusFiltro "ambiguo"}}">{{totais.ambiguo}} {{localize "T20HaydGMTools.TesourosAmbiguo"}}</button>
+  <button type="button" class="t20g-badge t20g-ok {{#if (eq statusFiltro "vinculado")}}t20g-badge-ativo{{/if}}" data-action="filtrarStatus" data-status="vinculado" aria-pressed="{{eq statusFiltro "vinculado"}}">{{totais.vinculado}} {{localize "T20HaydGMTools.TesourosVinculado"}}</button>
 </div>
 
 <div class="t20g-tesouro-vinculos-lista">
