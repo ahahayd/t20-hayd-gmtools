@@ -1194,10 +1194,11 @@ Hooks.on('getActorSheetHeaderButtons', (sheet, buttons) => {
 Hooks.on('renderActorSheet', (app) => {
   const actor = app.actor;
   if (actor?.type !== 'character') return;
-  const btn = app.element?.find?.('.header-button.t20g-atr-header');
-  if (!btn?.length) return;
+  const janela = app.element?.[0] ?? app.element;
+  const btn = janela?.querySelector?.('.header-button.t20g-atr-header');
+  if (!btn) return;
   const zerado = Object.values(actor.system?.atributos ?? {}).every(a => !a?.base);
-  btn.toggle(zerado);
+  btn.style.display = zerado ? '' : 'none';
 });
 
 /* Injeta o botão em "Configurações de Personagem" (ActorSettings, App V1). */
@@ -1205,21 +1206,22 @@ Hooks.on('renderActorSettings', (app, html) => {
   const actor = app.object;
   if (actor?.type !== 'character') return;
 
-  const $html = html instanceof jQuery ? html : $(html);
-  if ($html.find('.t20g-atr-abrir').length) return;
+  const root = html instanceof HTMLElement ? html : html?.[0];
+  if (!root || root.querySelector('.t20g-atr-abrir')) return;
 
-  const $secao = $(`
+  const secao = document.createElement('template');
+  secao.innerHTML = `
     <h2>Atributos Iniciais</h2>
     <div class="form-group">
       <label>Definir pontos de atributo</label>
       <button type="button" class="t20g-atr-abrir">
         <i class="fa-solid fa-dice-d20"></i> Definir…
       </button>
-    </div>`);
-  $secao.filter('.form-group').find('.t20g-atr-abrir').on('click', () => {
+    </div>`;
+  secao.content.querySelector('.t20g-atr-abrir').addEventListener('click', () => {
     app.close();
     abrirDefinicaoAtributos(actor);
   });
-  $html.find('button[type="submit"]').before($secao);
+  root.querySelector('button[type="submit"]')?.before(secao.content);
   app.setPosition({ height: 'auto' });
 });

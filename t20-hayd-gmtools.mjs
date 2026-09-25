@@ -1195,7 +1195,7 @@ Hooks.once('init', () => {
   game.settings.register(MODULE_ID, 'metagameMigrado', {
     scope: 'world', config: false, type: Boolean, default: false
   });
-  console.log('T20 Hayd GMTools | Inicializado');
+  console.log(`T20 Hayd GMTools | v${game.modules.get(MODULE_ID)?.version ?? '?'} inicializado`);
 });
 
 /**
@@ -1273,7 +1273,6 @@ Hooks.once('setup', () => {
     return original.call(this, html);
   };
 
-  console.log('T20 Hayd GMTools | Highlight de crítico/fumble interceptado');
 });
 
 /**
@@ -1301,7 +1300,6 @@ Hooks.once('setup', () => {
     this.description = '';
   };
 
-  console.log('T20 Hayd GMTools | Identificação de efeitos ativa');
 });
 
 /**
@@ -1586,5 +1584,4 @@ Hooks.once('diceSoNiceReady', () => {
     if (dados?.tipo === DSN_PRONTO) dsnResolver(dados.messageId);
   });
 
-  console.log('T20 Hayd GMTools | Integração Dice So Nice inicializada');
 });

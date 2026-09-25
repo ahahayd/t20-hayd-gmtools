@@ -44,7 +44,7 @@ export function capturarRolagemDeJogador({ n = 1, faces, timeoutMs = 600000 }) {
       resolve(valor);
     };
     const aoChegarMensagem = message => {
-      const autor = message.author ?? game.users.get(message.user);
+      const autor = message.author;
       if (!autor || autor.isGM) return; // só de jogador, nunca do Mestre
       const roll = message.rolls?.[0];
       if (!rollEhDadoPuro(roll, n, faces)) return;

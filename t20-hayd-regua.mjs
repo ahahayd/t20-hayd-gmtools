@@ -166,7 +166,6 @@ Hooks.once('init', () => {
 Hooks.once('setup', () => {
   instalarRegua();
   instalarSincronizacao();
-  console.log('T20 Hayd GMTools | Régua para efeitos instalada');
 });
 
 /**

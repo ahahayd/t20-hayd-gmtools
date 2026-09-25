@@ -2830,5 +2830,4 @@ Hooks.once("ready", () => {
     runFirstUseFlow();
   }
 
-  console.log(`${MODULE_ID} | pronto`);
 });

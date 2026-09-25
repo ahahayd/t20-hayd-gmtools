@@ -74,7 +74,6 @@ Hooks.once('init', () => {
     `modules/${MODULE_ID}/templates/tesouros/livros.hbs`
   ]);
 
-  console.log('T20 Hayd GMTools | Gerador de Tesouros inicializado');
 });
 
 Hooks.once('ready', () => {
@@ -127,9 +126,8 @@ Hooks.on('getSceneControlButtons', controls => {
     title: 'T20HaydGMTools.TesourosGeradorTitulo',
     icon: 'fa-solid fa-sack-dollar',
     button: true,
-    // Nomes diferentes de handler em versões/variações do v13 para o mesmo botão de ação —
-    // manter os dois é inofensivo (o que não existir na API instalada é apenas ignorado).
-    onClick: () => abrirGeradorTesouros(),
+    // Só onChange: o v13 chama onChange E o onClick depreciado quando os dois
+    // existem, e o gerador era renderizado duas vezes a cada clique.
     onChange: () => abrirGeradorTesouros()
   };
 });
