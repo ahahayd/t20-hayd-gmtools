@@ -681,6 +681,31 @@ ul.currency li.currency-item.thm-send {
 
 /* ===== Gerenciar Parties — linhas de pasta e toggle de subpasta ========== */
 
+/* Muitas pastas: a janela não passa da tela; só a lista rola e o texto de
+   ajuda e os botões (Criar pasta / Salvar) ficam sempre à vista. */
+#thm-party-manager {
+  max-height: calc(100vh - 32px);
+}
+.thm-party-manager .window-content {
+  overflow: hidden;
+  min-height: 0;
+}
+.thm-party-manager .thm-manager-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: 100%;
+}
+.thm-party-manager .thm-folder-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.thm-party-manager .thm-manager-root > .form-footer {
+  flex: 0 0 auto;
+}
+
 .thm-party-manager .thm-folder-row {
   display: flex;
   align-items: center;
