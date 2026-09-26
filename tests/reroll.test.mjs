@@ -55,3 +55,24 @@ test('jogador (não só o Mestre) enxerga as opções de rerolar/inserir no menu
   assert.doesNotMatch(hook, /if \(!game\.user\.isGM\) return;/);
   assert.match(hook, /addContextMenuOptions\(options\)/);
 });
+
+test('rolagem sem .dice-roll no content (ex.: /r no chat) também mostra o indicador', () => {
+  // Issue #1: `/r d20+13` rerolado ou com resultado inserido trocava o valor
+  // sem marcador nenhum. O Foundry monta o `.dice-roll` dessas mensagens a
+  // partir de `message.rolls` só na renderização, então o indicador gravado
+  // no `content` não tinha onde entrar. A correção guarda o indicador nos
+  // flags e o reinjeta no hook de render.
+  const aplicar = gmtools.slice(
+    gmtools.indexOf('async function aplicarNovasRolagens'), gmtools.indexOf('// ─── Recálculo automático'));
+  assert.match(aplicar, /rerollIndicadores`\]: indicadores/);
+  const reinjetar = gmtools.slice(
+    gmtools.indexOf('function reinjetarIndicadoresDeRerolagem'),
+    gmtools.indexOf('if (container) reinjetarIndicadoresDeRerolagem'));
+  assert.ok(reinjetar.length > 0, 'não achou reinjetarIndicadoresDeRerolagem');
+  assert.match(reinjetar, /getFlag\?\.\(MODULE_ID, 'rerolls'\)/);
+  assert.match(reinjetar, /\.t20g-reroll-historico/);
+  assert.match(reinjetar, /injetarIndicador\(bloco, anteriores, indicador\)/);
+  // O hook não pode depender de isRestrictedUser: o Mestre também precisa ver.
+  const hook = gmtools.slice(gmtools.indexOf('function reinjetarIndicadoresDeRerolagem'));
+  assert.match(hook, /Hooks\.on\('renderChatMessageHTML', \(message, html\) => \{\r?\n  const container[^\n]*\n  if \(container\) reinjetarIndicadoresDeRerolagem/);
+});

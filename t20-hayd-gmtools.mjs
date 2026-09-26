@@ -474,6 +474,7 @@ async function aplicarNovasRolagens(message, substituicoes) {
   if (!substituicoes?.length) return;
   const rolls = [...message.rolls];
   const historico = foundry.utils.deepClone(message.getFlag(MODULE_ID, 'rerolls') ?? {});
+  const indicadores = foundry.utils.deepClone(message.getFlag(MODULE_ID, 'rerollIndicadores') ?? {});
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = message.content;
@@ -482,6 +483,7 @@ async function aplicarNovasRolagens(message, substituicoes) {
   for (const sub of substituicoes) {
     const anteriores = [sub.totalAnterior, ...(historico[sub.index] ?? [])];
     historico[sub.index] = anteriores;
+    indicadores[sub.index] = sub.indicador;
     rolls[sub.index] = sub.nova;
 
     if (sub.animar !== false && game.dice3d) {
@@ -510,7 +512,8 @@ async function aplicarNovasRolagens(message, substituicoes) {
   const update = {
     rolls: rolls.map(r => JSON.stringify(r)),
     content: wrapper.innerHTML,
-    [`flags.${MODULE_ID}.rerolls`]: historico
+    [`flags.${MODULE_ID}.rerolls`]: historico,
+    [`flags.${MODULE_ID}.rerollIndicadores`]: indicadores
   };
   // Card de perícia/atributo guarda o total da rolagem 0 num flag; mantém-no coerente.
   const rol0 = substituicoes.find(s => s.index === 0);
@@ -1335,6 +1338,33 @@ Hooks.on('renderActiveEffectConfig', (app, html) => {
   if (!game.user.isGM) return;
   const el = html?.querySelector ? html : (html?.[0] ?? null);
   if (el) adicionarCampoIdentificado(app, el);
+});
+
+/**
+ * Rolagens sem `.dice-roll` salvo no `content` (ex.: `/r d20+13` digitado no
+ * chat) são montadas pelo Foundry a partir de `message.rolls` na hora de
+ * renderizar — `aplicarNovasRolagens` não tem onde gravar o indicador nelas.
+ * Aqui ele é reinjetado a partir dos flags em todo render, para que a
+ * alteração nunca passe despercebida. Blocos que já trazem o indicador (cartões
+ * do sistema, gravados no `content`) ficam como estão.
+ */
+function reinjetarIndicadoresDeRerolagem(message, container) {
+  const historico = message.getFlag?.(MODULE_ID, 'rerolls');
+  if (!historico) return;
+  const indicadores = message.getFlag(MODULE_ID, 'rerollIndicadores') ?? {};
+  const blocos = container.querySelectorAll('.dice-roll');
+  for (const [index, anteriores] of Object.entries(historico)) {
+    const bloco = blocos[Number(index)];
+    if (!bloco || bloco.querySelector('.t20g-reroll-historico')) continue;
+    const indicador = indicadores[index]
+      ?? { icone: 'fa-rotate', dica: game.i18n.localize('T20HaydGMTools.TipRerolled') };
+    injetarIndicador(bloco, anteriores, indicador);
+  }
+}
+
+Hooks.on('renderChatMessageHTML', (message, html) => {
+  const container = html?.querySelector ? html : (html?.[0] ?? null);
+  if (container) reinjetarIndicadoresDeRerolagem(message, container);
 });
 
 /**
