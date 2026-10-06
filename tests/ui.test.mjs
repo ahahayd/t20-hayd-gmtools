@@ -130,12 +130,133 @@ test('a base visual só alcança as janelas do próprio módulo', () => {
   // diretório de atores e a tela de configurações do core recebendo a base
   // visual do módulo, que não é nossa para redesenhar.
   assert.match(uiBase, /JANELAS_PROPRIAS/);
-  assert.match(uiBase, /app instanceof foundry\.applications\.api\.DialogV2/);
+  assert.match(uiBase, /function ehDialogo/);
   // Janela própria entra pelo nome da classe, não por conteúdo.
   for (const janela of ['PartySheetApp', 'PartyManagerApp', 'TesourosGeradorApp']) {
     assert.ok(uiBase.includes(janela), `${janela} fora da lista de janelas próprias`);
   }
   // E o conteúdo só decide dentro de um diálogo nosso.
   const fn = uiBase.slice(uiBase.indexOf('function ehNossa'), uiBase.indexOf('function marcar'));
-  assert.match(fn, /ehDialogo && \(raiz\.matches\(MARCADOR\)/);
+  assert.ok(fn.includes("ehDialogo(app) && (raiz.matches(MARCADOR)"), "o conteudo so decide dentro de um dialogo nosso");
 });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

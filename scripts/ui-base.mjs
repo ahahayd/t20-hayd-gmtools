@@ -10,12 +10,13 @@
  * visual na barra lateral, no chat, no diretório de atores e na tela de
  * configurações do core — que não são nossas para redesenhar.
  *
- * Então: só um diálogo criado por nós (DialogV2 com markup do módulo; os
- * diálogos do core nunca têm) ou uma das janelas da lista explícita abaixo.
+ * Então: só um diálogo criado por nós (os diálogos do core nunca têm markup
+ * com os prefixos deste módulo) ou uma das janelas da lista explícita.
  *
- * O elemento sai de `app.element`: há fichas que chegam ao hook com o
- * elemento de uma PARTE (já vi um <button> do cabeçalho), e marcar a parte
- * não leva os tokens a lugar nenhum.
+ * A raiz sai de `app.element`: há fichas que chegam ao hook com o elemento de
+ * uma PARTE (já vi um <button> de cabeçalho), e marcar a parte não leva os
+ * tokens a lugar nenhum. Em janela v1 esse `element` é um jQuery, daí o
+ * desembrulho.
  */
 
 const CLASSE = 't20g-ui';
@@ -24,14 +25,21 @@ const MARCADOR = '[class*="t20g-"], [class*="thm-"]';
 const JANELAS_PROPRIAS = new Set(['PartySheetApp', 'PartyManagerApp', 'TesourosGeradorApp',
   'TesourosHomebrewApp', 'TesourosLivrosApp', 'TesourosVinculosApp']);
 
+function ehDialogo(app) {
+  const V2 = foundry.applications?.api?.DialogV2;
+  if (V2 && app instanceof V2) return true;
+  // Janelas v1: Dialog clássico.
+  return typeof Dialog !== 'undefined' && app instanceof Dialog;
+}
+
 function ehNossa(app, raiz) {
   if (JANELAS_PROPRIAS.has(app?.constructor?.name)) return true;
-  const ehDialogo = app instanceof foundry.applications.api.DialogV2;
-  return ehDialogo && (raiz.matches(MARCADOR) || !!raiz.querySelector(MARCADOR));
+  return ehDialogo(app) && (raiz.matches(MARCADOR) || !!raiz.querySelector(MARCADOR));
 }
 
 function marcar(app, elemento) {
-  const raiz = app?.element ?? elemento?.[0] ?? elemento;
+  const bruto = app?.element ?? elemento;
+  const raiz = bruto?.[0] ?? bruto;
   if (!(raiz instanceof HTMLElement) || raiz.classList.contains(CLASSE)) return;
   if (!ehNossa(app, raiz)) return;
   raiz.classList.add(CLASSE);
@@ -39,3 +47,6 @@ function marcar(app, elemento) {
 
 Hooks.on('renderApplicationV2', marcar);
 Hooks.on('renderDialogV2', marcar);
+// Janelas v1 (Application/Dialog) ainda existem em módulos mais antigos.
+Hooks.on('renderApplication', marcar);
+Hooks.on('renderDialog', marcar);
