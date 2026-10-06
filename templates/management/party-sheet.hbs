@@ -121,11 +121,19 @@
 <section class="tab {{#if (eq tab "inventory")}}active{{/if}}" data-group="primary" data-tab="inventory">
   <div class="thm-money-row t20g-barra">
     {{#if showTl}}
-    <span class="thm-coin" data-tooltip="{{localize 'THM.CoinTL'}}"><i class="fa-solid fa-coins"></i> {{money.tl}} <small>TL</small></span>
+    <span class="thm-coin" data-tooltip="{{localize 'THM.CoinTL'}}">
+      <img src="modules/t20-hayd-gmtools/assets/moedas/moeda-tl.webp" alt="" />{{money.tl}} <small>TL</small>
+    </span>
     {{/if}}
-    <span class="thm-coin" data-tooltip="{{localize 'THM.CoinTO'}}"><i class="fa-solid fa-coins"></i> {{money.to}} <small>TO</small></span>
-    <span class="thm-coin" data-tooltip="{{localize 'THM.CoinTP'}}"><i class="fa-solid fa-coins"></i> {{money.tp}} <small>TP</small></span>
-    <span class="thm-coin" data-tooltip="{{localize 'THM.CoinTC'}}"><i class="fa-solid fa-coins"></i> {{money.tc}} <small>TC</small></span>
+    <span class="thm-coin" data-tooltip="{{localize 'THM.CoinTO'}}">
+      <img src="modules/t20-hayd-gmtools/assets/moedas/moeda-to.webp" alt="" />{{money.to}} <small>TO</small>
+    </span>
+    <span class="thm-coin" data-tooltip="{{localize 'THM.CoinTP'}}">
+      <img src="modules/t20-hayd-gmtools/assets/moedas/moeda-tp.webp" alt="" />{{money.tp}} <small>TP</small>
+    </span>
+    <span class="thm-coin" data-tooltip="{{localize 'THM.CoinTC'}}">
+      <img src="modules/t20-hayd-gmtools/assets/moedas/moeda-tc.webp" alt="" />{{money.tc}} <small>TC</small>
+    </span>
     <div class="thm-money-actions t20g-espaco">
       <button type="button" class="t20g-btn" data-action="depositMoney" data-tooltip="{{localize 'THM.DepositMoneyTitle'}}">
         <i class="fa-solid fa-arrow-down"></i> {{localize "THM.DepositMoney"}}

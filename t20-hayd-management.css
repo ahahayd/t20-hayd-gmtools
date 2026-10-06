@@ -269,7 +269,14 @@
   color: var(--t20g-ink);
 }
 
-.thm-coin > i { color: var(--t20g-accent); font-size: 0.75rem; opacity: 0.9; }
+/* Arte própria por moeda. A sombra é a mesma do resto da janela (luz vindo
+   de cima), para a pilha não parecer colada por cima da barra. */
+.thm-coin > img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 1px rgb(10 7 16 / 45%));
+}
 .thm-coin > small { font-size: 0.625rem; font-weight: 600; color: var(--t20g-ink-3); }
 
 .thm-money-actions {
