@@ -604,7 +604,7 @@
   "THM.PartyManagerMenuLabel": "Gerenciar Grupos",
   "THM.PartyManagerMenuHint": "Escolha quais pastas de atores são consideradas grupos. Todos os atores dentro da pasta são membros.",
   "THM.PartyManagerTitle": "Gerenciar Grupos",
-  "THM.PartyManagerHint": "Marque as pastas de atores que devem funcionar como grupos. Um ator de inventário compartilhado será criado automaticamente dentro de cada pasta marcada. Subpastas de um grupo registrado ganham o interruptor “no grupo” — desmarque-o para deixar os atores daquela subpasta (e das pastas dentro dela) fora do grupo.",
+  "THM.PartyManagerHint": "Marque as pastas de atores que devem funcionar como grupos. Para as subpastas de um grupo registrado use o interruptor “no grupo” — desmarque-o para deixar os atores daquela subpasta fora do grupo.",
   "THM.PartyManagerNoFolders": "Nenhuma pasta de atores encontrada. Use o botão “Criar pasta” abaixo ou crie uma pasta no diretório de atores.",
   "THM.SubfolderInclude": "no grupo",
   "THM.SubfolderIncludeTooltip": "Se marcado, os atores desta subpasta fazem parte do grupo. Desmarcar também exclui as pastas dentro dela.",

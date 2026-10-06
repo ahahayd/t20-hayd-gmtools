@@ -360,8 +360,13 @@ a.header-button.t20g-atr-header {
   margin-right: 3px;
 }
 
+/* O valor do contador NÃO usa --t20a-chat-cor: a cor de destaque do ator pode
+   cair em qualquer tom (verde-claro, amarelo…) e some no fundo do cartão.
+   Herdando a cor de texto do cartão, o número tem sempre o mesmo contraste que
+   o resto do rótulo; o destaque fica por conta do peso da fonte. */
 .tormenta20.chat-card .t20g-auto-rotulo b {
-  color: var(--t20a-chat-cor, #782e22);
+  color: inherit;
+  font-weight: 700;
 }
 
 /* Botões quadrados de verdade: o Foundry dá width/flex generosos aos
@@ -1198,7 +1203,7 @@ a.header-button.t20g-atr-header {
   gap: 6px;
   margin-top: 3px;
 }
-.t20g-tesouro-item img { border: none; border-radius: 4px; flex: 0 0 auto; object-fit: cover; }
+.t20g-tesouro-item img { border: none; border-radius: 4px; flex: 0 0 auto; object-fit: cover; object-position: top; }
 .t20g-tesouro-item-info { flex: 1 1 auto; min-width: 0; }
 .t20g-tesouro-item-nome { font-weight: 600; }
 .t20g-tesouro-item-meta { display: flex; gap: 8px; font-size: 0.82em; flex-wrap: wrap; }
@@ -1503,7 +1508,7 @@ a.header-button.t20g-atr-header {
   background: rgba(0,0,0,0.05);
   cursor: grab;
 }
-.t20g-dist2-item img { border: none; border-radius: 3px; flex: 0 0 auto; object-fit: cover; }
+.t20g-dist2-item img { border: none; border-radius: 3px; flex: 0 0 auto; object-fit: cover; object-position: top; }
 .t20g-dist2-item-nome { flex: 1 1 auto; font-size: 0.85em; min-width: 0; }
 .t20g-dist2-item button { flex: 0 0 auto; width: 20px; height: 20px; padding: 0; line-height: 1; }
 .t20g-dist2-vazio { text-align: center; padding: 8px 0; font-style: italic; }
@@ -1608,7 +1613,7 @@ a.header-button.t20g-atr-header {
 .t20g-part-linha > img {
   width: 32px;
   height: 32px;
-  object-fit: cover;
+  object-fit: cover; object-position: top;
   border-radius: 4px;
   border: none;
   flex: 0 0 auto;
@@ -1626,7 +1631,7 @@ a.header-button.t20g-atr-header {
 .t20g-part-itens img {
   width: 18px;
   height: 18px;
-  object-fit: cover;
+  object-fit: cover; object-position: top;
   border-radius: 3px;
   border: none;
   flex: 0 0 auto;
