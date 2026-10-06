@@ -475,6 +475,8 @@ async function aplicarNovasRolagens(message, substituicoes) {
   const rolls = [...message.rolls];
   const historico = foundry.utils.deepClone(message.getFlag(MODULE_ID, 'rerolls') ?? {});
   const indicadores = foundry.utils.deepClone(message.getFlag(MODULE_ID, 'rerollIndicadores') ?? {});
+  // Flags que uma substituição queira gravar junto (ver substituicoesDeDanoPorCritico).
+  const flagsExtra = {};
 
   const wrapper = document.createElement('div');
   wrapper.innerHTML = message.content;
@@ -484,6 +486,7 @@ async function aplicarNovasRolagens(message, substituicoes) {
     const anteriores = [sub.totalAnterior, ...(historico[sub.index] ?? [])];
     historico[sub.index] = anteriores;
     indicadores[sub.index] = sub.indicador;
+    Object.assign(flagsExtra, sub.flags ?? {});
     rolls[sub.index] = sub.nova;
 
     if (sub.animar !== false && game.dice3d) {
@@ -510,6 +513,7 @@ async function aplicarNovasRolagens(message, substituicoes) {
   }
 
   const update = {
+    ...flagsExtra,
     rolls: rolls.map(r => JSON.stringify(r)),
     content: wrapper.innerHTML,
     [`flags.${MODULE_ID}.rerolls`]: historico,
@@ -524,6 +528,9 @@ async function aplicarNovasRolagens(message, substituicoes) {
 }
 
 // ─── Recálculo automático do dano por crítico ──────────────────────────────────
+
+/** Flag com os termos do dano em cada estado de crítico (ver abaixo). */
+const FLAG_DANO_CRITICO = 'danoPorCritico';
 
 /** Resolve o item (arma) de um card de rolagem a partir do conteúdo da mensagem. */
 function resolverItemDaMensagem(message) {
@@ -575,60 +582,108 @@ function classesDeDestaqueAtaque(message, roll) {
 }
 
 /**
- * O item COMO FOI USADO naquela rolagem, e não como está guardado no ator.
- *
- * O sistema rola a partir de um `clone()` do item e aplica nele tudo o que
- * valeu naquele uso: efeitos "ao usar" (um Golpe Divino que soma +1d8, um
- * termo `danoCritico` que só entra no crítico), o bônus de dano digitado na
- * janela de uso e até outro multiplicador/margem de crítico. Esse clone é
- * gravado na mensagem em `flags.tormenta20.itemData`; o item do ator não sabe
- * nada disso. Recalcular o dano pelo item do ator descartava esses acréscimos.
+ * Multiplicador de crítico da arma (`criticoX`): o do item do ator, já que o
+ * flag da mensagem guarda o item de origem. Padrão 2.
  */
-function itemDaRolagem(message) {
-  const base = resolverItemDaMensagem(message);
-  const dados = message?.getFlag?.('tormenta20', 'itemData');
-  if (!base || !dados) return base;
-  try {
-    const system = foundry.utils.deepClone(dados);
-    delete system.rolled;
-    // `parts` é Array<Array<String>> no schema; os efeitos "ao usar" podem ter
-    // empurrado um número solto, que reprovaria na validação do clone.
-    for (const r of system.rolls ?? []) {
-      r.parts = (r.parts ?? []).map(p =>
-        (Array.isArray(p) ? p : [p, '']).map(v => String(v ?? '')));
-    }
-    return base.clone({ system }, { keepId: true });
-  } catch (err) {
-    console.warn('T20 Hayd GMTools | itemData da mensagem inválido; usando o item do ator', err);
-    return base;
-  }
+function multiplicadorCritico(message) {
+  const doFlag = Number(message?.getFlag?.('tormenta20', 'itemData')?.criticoX);
+  if (doFlag > 0) return doFlag;
+  const doItem = Number(resolverItemDaMensagem(message)?.system?.criticoX);
+  return doItem > 0 ? doItem : 2;
+}
+
+/** Índices das rolagens de dano da mensagem (tudo que não é o d20 do ataque). */
+function indicesDeDano(message) {
+  const indices = [];
+  (message?.rolls ?? []).forEach((r, i) => {
+    const ehAtaque = r?.options?.type === 'attack' || r?.dice?.[0]?.faces === 20;
+    if (!ehAtaque) indices.push(i);
+  });
+  return indices;
+}
+
+/** True para um termo de dados (1d12, 2d6...). */
+function ehTermoDeDado(term) {
+  return term instanceof foundry.dice.terms.Die;
+}
+
+/** True para a fórmula de um operador (`+`, `-`...), já em texto. */
+function ehTextoDeOperador(texto) {
+  return /^[+\-*/]$/.test(String(texto ?? '').trim());
+}
+
+/** Fórmula de um dado com outra quantidade, preservando modificadores e flavor. */
+function dadoComQuantidade(term, quantidade) {
+  const mods = (term.modifiers ?? []).join('');
+  const flavor = term.options?.flavor ? `[${term.options.flavor}]` : '';
+  return `${quantidade}d${term.faces}${mods}${flavor}`;
+}
+
+/** Fórmulas dos termos de uma rolagem, na ordem, operadores inclusive. */
+function termosDaRolagem(roll) {
+  return (roll?.terms ?? []).map(t => t.formula);
 }
 
 /**
- * Rola o dano do item com o estado de crítico forçado, usando o próprio
- * `rollDamage` do sistema (que aplica a multiplicação de dados do crítico, os
- * bônus e os termos de dano crítico corretamente). Retorna os rolls de dano.
+ * Os mesmos termos, como ficariam NO CRÍTICO: o `damageRoll` do sistema
+ * multiplica `terms[0]`, se for dado, e todo dado marcado `danoMultiplicavel`.
+ *
+ * Ao contrário do sistema, o flavor `danoMultiplicavel` é MANTIDO, para a volta
+ * ao dano normal saber o que desfazer.
  */
-async function rolarDanoDoItem(item, critical) {
-  const rolledAnterior = item.system.rolled;
-  item.system.rolled = { Ataque: { _critical: critical } };
-  try {
-    await item.rollDamage({ critical });
-    return Object.values(item.system.rolled)
-      .filter(r => r && r.options?.type === 'damage')
-      .map(r => foundry.dice.Roll.fromData(JSON.parse(JSON.stringify(r))));
-  } catch (err) {
-    console.warn('T20 Hayd GMTools | Falha ao recalcular dano do crítico', err);
-    return [];
-  } finally {
-    item.system.rolled = rolledAnterior;
-  }
+function termosNoCritico(roll, criticoX) {
+  return (roll?.terms ?? []).map((t, i) => {
+    const multiplica = i === 0 || t.options?.flavor === 'danoMultiplicavel';
+    if (!ehTermoDeDado(t) || !multiplica) return t.formula;
+    return dadoComQuantidade(t, (Number(t.number) || 1) * criticoX);
+  });
+}
+
+/**
+ * Os mesmos termos, como ficariam FORA do crítico: desfaz a multiplicação e
+ * descarta os termos `danoCritico` (que só valem no crítico) junto do operador
+ * que os precede — o mesmo que o sistema faz ao montar um dano normal.
+ */
+function termosSemCritico(roll, criticoX) {
+  const termos = roll?.terms ?? [];
+  const out = [];
+  termos.forEach((t, i) => {
+    if (t.options?.flavor === 'danoCritico') {
+      if (ehTextoDeOperador(out[out.length - 1])) out.pop();
+      return;
+    }
+    const multiplicado = i === 0 || t.options?.flavor === 'danoMultiplicavel';
+    if (ehTermoDeDado(t) && multiplicado) {
+      out.push(dadoComQuantidade(t, Math.max(1, Math.round((Number(t.number) || 1) / criticoX))));
+    } else out.push(t.formula);
+  });
+  return out;
+}
+
+/** Rola de novo uma rolagem de dano a partir da lista de termos. */
+async function rolarComTermos(original, termos) {
+  const opcoes = foundry.utils.deepClone(original?.options ?? {});
+  const nova = new foundry.dice.Roll(termos.join(' '), {}, opcoes);
+  await nova.evaluate();
+  return nova;
 }
 
 /**
  * Se a rolagem modificada foi o ATAQUE de uma arma e o estado de crítico mudou
- * (virou crítico ou deixou de ser), rola o dano de novo com o novo estado e
- * devolve as substituições correspondentes (com o valor de dano antigo riscado).
+ * (virou crítico ou deixou de ser), remonta o dano no novo estado e devolve as
+ * substituições correspondentes (com o valor de dano antigo riscado).
+ *
+ * O dano é remontado A PARTIR DA ROLAGEM QUE ESTÁ NA MENSAGEM, nunca rolando o
+ * item de novo: o item do ator não tem nada do que valeu naquele uso (um Golpe
+ * Divino de +1d8, o bônus digitado na janela de uso), e o flag
+ * `tormenta20.itemData` guarda justamente o item de origem, sem essas somas —
+ * rolar pelo item descartava tudo isso e deixava só os dados da arma.
+ *
+ * Os termos de cada estado ficam guardados em `flags.<módulo>.danoPorCritico`,
+ * porque a ida e a volta não são simétricas: o termo `danoCritico` (um +10 que
+ * só vale no crítico, por exemplo) é DESCARTADO pelo sistema ao montar um dano
+ * normal, então não há como deduzi-lo da rolagem normal — mas, se ele já
+ * apareceu uma vez, voltar ao crítico o traz de volta.
  */
 async function substituicoesDeDanoPorCritico(message, index, novaAtaque, ataqueOriginal) {
   const cls = classificarRolagens(message);
@@ -639,31 +694,39 @@ async function substituicoesDeDanoPorCritico(message, index, novaAtaque, ataqueO
   if (index !== cls.ataque || cls.dano === -1) return [];
   if (antesCrit === agoraCrit) return [];
 
-  const item = itemDaRolagem(message);
-  if (item?.type !== 'arma') return [];
-
-  const danoRolls = await rolarDanoDoItem(item, agoraCrit);
-  if (!danoRolls.length) return [];
-
-  const indicesDano = [];
-  message.rolls.forEach((r, i) => {
-    const ehAtaque = r?.options?.type === 'attack' || r?.dice?.[0]?.faces === 20;
-    if (!ehAtaque) indicesDano.push(i);
-  });
-
+  const criticoX = multiplicadorCritico(message);
+  const lembrados = foundry.utils.deepClone(message.getFlag(MODULE_ID, FLAG_DANO_CRITICO) ?? {});
+  const estadoAtual = antesCrit ? 'critico' : 'normal';
+  const estadoNovo = agoraCrit ? 'critico' : 'normal';
   const dica = agoraCrit
     ? game.i18n.localize('T20HaydGMTools.TipCritDamage')
     : game.i18n.localize('T20HaydGMTools.TipNormalDamage');
-  return indicesDano.map((idx, k) => {
-    const novoDano = danoRolls[k] ?? danoRolls[0];
-    return novoDano ? {
+
+  const subs = [];
+  for (const idx of indicesDeDano(message)) {
+    const atual = message.rolls[idx];
+    if (!atual?.terms?.length) continue;
+    const termosAtuais = termosDaRolagem(atual);
+    const termosNovos = lembrados[idx]?.[estadoNovo]
+      ?? (agoraCrit ? termosNoCritico(atual, criticoX) : termosSemCritico(atual, criticoX));
+    let nova;
+    try {
+      nova = await rolarComTermos(atual, termosNovos);
+    } catch (err) {
+      console.warn('T20 Hayd GMTools | Falha ao remontar o dano do crítico', err);
+      continue;
+    }
+    const memoria = { ...(lembrados[idx] ?? {}), [estadoAtual]: termosAtuais, [estadoNovo]: termosNovos };
+    subs.push({
       index: idx,
-      nova: novoDano,
-      totalAnterior: message.rolls[idx].total,
+      nova,
+      totalAnterior: atual.total,
       indicador: { icone: agoraCrit ? 'fa-burst' : 'fa-rotate', dica },
-      animar: true
-    } : null;
-  }).filter(Boolean);
+      animar: true,
+      flags: { [`flags.${MODULE_ID}.${FLAG_DANO_CRITICO}.${idx}`]: memoria }
+    });
+  }
+  return subs;
 }
 
 /**
