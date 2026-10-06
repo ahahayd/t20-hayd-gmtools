@@ -1,27 +1,39 @@
 /**
- * Marca as janelas do módulo com `t20g-ui`, a classe de onde pendem todos os
- * tokens e primitivas de `styles/t20g-ui.css`.
+ * Marca as janelas DESTE módulo com `t20g-ui`, a classe de onde pendem os
+ * tokens e as primitivas de `styles/hayd-ui-base.css`.
  *
- * Por que um hook e não `classes: ['t20g-ui']` em cada chamada: o módulo abre
- * quase cinquenta diálogos (DialogV2) espalhados por automações, tesouros,
- * atributos e party. Marcar um por um é uma lista que nasce desatualizada —
- * o próximo diálogo escrito sai sem a classe e sem o visual, e ninguém
- * percebe até alguém abrir.
+ * O critério é "a janela é nossa", e não "tem markup nosso dentro".
  *
- * O teste é a presença de markup do módulo (`t20g-*` ou `thm-*`) dentro da
- * janela. É um `querySelector` por render de janela, e nada mais: nenhuma
- * observação contínua, nenhum trabalho por quadro.
+ * A diferença importa: um módulo que injeta um botão na ficha do sistema, ou
+ * uma seção na tela de configurações do Foundry, deixa markup dele dentro de
+ * uma janela que é DOS OUTROS. Marcar por conteúdo acabava aplicando a base
+ * visual na barra lateral, no chat, no diretório de atores e na tela de
+ * configurações do core — que não são nossas para redesenhar.
+ *
+ * Então: só um diálogo criado por nós (DialogV2 com markup do módulo; os
+ * diálogos do core nunca têm) ou uma das janelas da lista explícita abaixo.
+ *
+ * O elemento sai de `app.element`: há fichas que chegam ao hook com o
+ * elemento de uma PARTE (já vi um <button> do cabeçalho), e marcar a parte
+ * não leva os tokens a lugar nenhum.
  */
 
 const CLASSE = 't20g-ui';
 const MARCADOR = '[class*="t20g-"], [class*="thm-"]';
+/** Janelas próprias do módulo, pelo nome da classe da aplicação. */
+const JANELAS_PROPRIAS = new Set(['PartySheetApp', 'PartyManagerApp', 'TesourosGeradorApp',
+  'TesourosHomebrewApp', 'TesourosLivrosApp', 'TesourosVinculosApp']);
 
-function marcar(_app, elemento) {
-  // `renderApplicationV2` entrega o HTMLElement; alguns hooks antigos passam
-  // um jQuery. Normaliza antes de tocar no DOM.
-  const raiz = elemento?.[0] ?? elemento;
+function ehNossa(app, raiz) {
+  if (JANELAS_PROPRIAS.has(app?.constructor?.name)) return true;
+  const ehDialogo = app instanceof foundry.applications.api.DialogV2;
+  return ehDialogo && (raiz.matches(MARCADOR) || !!raiz.querySelector(MARCADOR));
+}
+
+function marcar(app, elemento) {
+  const raiz = app?.element ?? elemento?.[0] ?? elemento;
   if (!(raiz instanceof HTMLElement) || raiz.classList.contains(CLASSE)) return;
-  if (!raiz.matches(MARCADOR) && !raiz.querySelector(MARCADOR)) return;
+  if (!ehNossa(app, raiz)) return;
   raiz.classList.add(CLASSE);
 }
 

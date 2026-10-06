@@ -7,7 +7,7 @@
 
    Três regras que valem para o arquivo inteiro:
 
-   1. NADA aqui é global. Tudo pende de `.t20g-ui`, a classe que cada janela
+   1. NADA aqui é global. Tudo pende de `:is(.hayd-ui, .t20g-ui)`, a classe que cada janela
       do módulo recebe. Um módulo de VTT divide a página com o sistema, com o
       core e com outros módulos — vazar token ou seletor daqui é quebrar a
       casa dos outros.
@@ -21,7 +21,7 @@
       custa frame.
    ========================================================================== */
 
-.t20g-ui {
+:is(.hayd-ui, .t20g-ui) {
   /* ─── Superfícies ──────────────────────────────────────────────────────
      Rampa quente e OPACA. Opaca é o ponto: as janelas do módulo deixavam a
      textura de fundo do core atravessar o conteúdo, e era de onde vinha boa
@@ -101,8 +101,8 @@
 
 /* Tema claro do Foundry: a rampa inteira é refeita, não só "clareada".
    O destaque mantém o tom, escurecido para passar no contraste sobre claro. */
-.theme-light .t20g-ui,
-.t20g-ui.theme-light {
+.theme-light :is(.hayd-ui, .t20g-ui),
+:is(.hayd-ui, .t20g-ui).theme-light {
   --t20g-s0: #efecf2;
   --t20g-s1: #f7f5f9;
   --t20g-s2: #e9e5ee;
@@ -129,7 +129,7 @@
 
 /* O corpo da janela é opaco e some com a textura do core por baixo do
    conteúdo. É a mudança de maior efeito deste arquivo. */
-.t20g-ui .window-content {
+:is(.hayd-ui, .t20g-ui) .window-content {
   background: var(--t20g-s0);
   color: var(--t20g-ink);
   padding: var(--t20g-e4);
@@ -137,7 +137,7 @@
 
 /* Quem respeita `prefers-reduced-motion` não recebe transição nenhuma. */
 @media (prefers-reduced-motion: reduce) {
-  .t20g-ui * {
+  :is(.hayd-ui, .t20g-ui) * {
     transition-duration: 1ms !important;
     animation-duration: 1ms !important;
   }
@@ -147,7 +147,7 @@
    Quatro papéis, e só. O módulo inteiro usava ~13px em negrito para tudo:
    sem escala, nada tem hierarquia e o olho não sabe onde pousar. */
 
-.t20g-ui .t20g-titulo {
+:is(.hayd-ui, .t20g-ui) .t20g-titulo {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
@@ -159,7 +159,7 @@
 
 /* Rótulo de seção: pequeno, espaçado, discreto. Estrutura a tela sem
    competir com o conteúdo. */
-.t20g-ui .t20g-rotulo {
+:is(.hayd-ui, .t20g-ui) .t20g-rotulo {
   margin: 0;
   font-size: 0.6875rem;
   font-weight: 600;
@@ -169,7 +169,7 @@
   color: var(--t20g-ink-3);
 }
 
-.t20g-ui .t20g-apoio {
+:is(.hayd-ui, .t20g-ui) .t20g-apoio {
   margin: 0;
   font-size: 0.75rem;
   line-height: 1.45;
@@ -178,7 +178,7 @@
 
 /* Número que se lê de relance (CD, defesa, total). Tabular para a coluna
    não dançar quando o valor muda de 9 para 10. */
-.t20g-ui .t20g-valor {
+:is(.hayd-ui, .t20g-ui) .t20g-valor {
   font-size: 1.125rem;
   font-weight: 600;
   line-height: 1;
@@ -188,7 +188,7 @@
 
 /* ══ Painel ═══════════════════════════════════════════════════════════════ */
 
-.t20g-ui .t20g-painel {
+:is(.hayd-ui, .t20g-ui) .t20g-painel {
   background: var(--t20g-s1);
   border: 1px solid var(--t20g-line);
   border-radius: var(--t20g-r2);
@@ -196,7 +196,7 @@
   overflow: hidden;
 }
 
-.t20g-ui .t20g-painel__topo {
+:is(.hayd-ui, .t20g-ui) .t20g-painel__topo {
   display: flex;
   align-items: center;
   gap: var(--t20g-e3);
@@ -206,27 +206,27 @@
   border-bottom: 1px solid var(--t20g-line);
 }
 
-.t20g-ui .t20g-painel__topo > i {
+:is(.hayd-ui, .t20g-ui) .t20g-painel__topo > i {
   color: var(--t20g-accent);
   font-size: 0.875rem;
 }
 
 /* Empurra para a direita o que vier depois (botões do cabeçalho). */
-.t20g-ui .t20g-painel__topo > .t20g-espaco {
+:is(.hayd-ui, .t20g-ui) .t20g-painel__topo > .t20g-espaco {
   margin-inline-start: auto;
 }
 
-.t20g-ui .t20g-painel__corpo {
+:is(.hayd-ui, .t20g-ui) .t20g-painel__corpo {
   padding: var(--t20g-e4);
 }
 
-.t20g-ui .t20g-painel__corpo--liso {
+:is(.hayd-ui, .t20g-ui) .t20g-painel__corpo--liso {
   padding: 0;
 }
 
 /* ══ Barra de ferramentas ════════════════════════════════════════════════ */
 
-.t20g-ui .t20g-barra {
+:is(.hayd-ui, .t20g-ui) .t20g-barra {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -244,8 +244,8 @@
    âmbar é a ação principal da tela (uma por tela), o resto é neutro, e
    vermelho é só para destruir. */
 
-.t20g-ui :where(button, a).t20g-btn,
-.t20g-ui .t20g-btn {
+:is(.hayd-ui, .t20g-ui) :where(button, a).t20g-btn,
+:is(.hayd-ui, .t20g-ui) .t20g-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -269,75 +269,75 @@
     transform var(--t20g-transicao), color var(--t20g-transicao);
 }
 
-.t20g-ui .t20g-btn > i {
+:is(.hayd-ui, .t20g-ui) .t20g-btn > i {
   margin: 0;              /* o core dá margin-right nos <i> dentro de botão */
   font-size: 0.8125rem;
   opacity: 0.85;
 }
 
-.t20g-ui .t20g-btn:hover:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) .t20g-btn:hover:not(:disabled) {
   background: var(--t20g-s3);
   border-color: var(--t20g-line-forte);
   color: var(--t20g-ink);
 }
 
 /* Resposta física ao clique: 1px para baixo é o bastante para o dedo sentir. */
-.t20g-ui .t20g-btn:active:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) .t20g-btn:active:not(:disabled) {
   transform: translateY(1px);
   background: var(--t20g-s4);
 }
 
-.t20g-ui .t20g-btn:focus-visible {
+:is(.hayd-ui, .t20g-ui) .t20g-btn:focus-visible {
   outline: none;
   box-shadow: var(--t20g-foco);
 }
 
-.t20g-ui .t20g-btn:disabled,
-.t20g-ui .t20g-btn[disabled] {
+:is(.hayd-ui, .t20g-ui) .t20g-btn:disabled,
+:is(.hayd-ui, .t20g-ui) .t20g-btn[disabled] {
   opacity: 0.45;
   cursor: default;
   transform: none;
 }
 
 /* Principal — uma por tela. */
-.t20g-ui .t20g-btn--primario {
+:is(.hayd-ui, .t20g-ui) .t20g-btn--primario {
   background: var(--t20g-accent);
   border-color: color-mix(in oklab, var(--t20g-accent) 70%, #000);
   color: var(--t20g-ink-sobre-accent);
   font-weight: 600;
 }
 
-.t20g-ui .t20g-btn--primario > i { opacity: 1; }
+:is(.hayd-ui, .t20g-ui) .t20g-btn--primario > i { opacity: 1; }
 
-.t20g-ui .t20g-btn--primario:hover:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) .t20g-btn--primario:hover:not(:disabled) {
   background: var(--t20g-accent-forte);
   color: var(--t20g-ink-sobre-accent);
 }
 
-.t20g-ui .t20g-btn--primario:active:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) .t20g-btn--primario:active:not(:disabled) {
   background: color-mix(in oklab, var(--t20g-accent) 85%, #000);
 }
 
 /* Fantasma — ação secundária que não deve puxar o olho. */
-.t20g-ui .t20g-btn--fantasma {
+:is(.hayd-ui, .t20g-ui) .t20g-btn--fantasma {
   background: transparent;
   border-color: transparent;
   color: var(--t20g-ink-2);
 }
 
-.t20g-ui .t20g-btn--fantasma:hover:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) .t20g-btn--fantasma:hover:not(:disabled) {
   background: var(--t20g-s2);
   color: var(--t20g-ink);
 }
 
 /* Perigo — e só quando destrói algo. */
-.t20g-ui .t20g-btn--perigo {
+:is(.hayd-ui, .t20g-ui) .t20g-btn--perigo {
   background: transparent;
   border-color: color-mix(in oklab, var(--t20g-perigo) 45%, transparent);
   color: var(--t20g-perigo);
 }
 
-.t20g-ui .t20g-btn--perigo:hover:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) .t20g-btn--perigo:hover:not(:disabled) {
   background: color-mix(in oklab, var(--t20g-perigo) 16%, transparent);
   border-color: var(--t20g-perigo);
   color: var(--t20g-perigo);
@@ -345,7 +345,7 @@
 
 /* Só ícone: quadrado de verdade. O Foundry dá largura generosa a todo
    <button>, e era por isso que os ícones apareciam descentralizados. */
-.t20g-ui .t20g-btn--icone {
+:is(.hayd-ui, .t20g-ui) .t20g-btn--icone {
   width: 28px;
   min-width: 28px;
   max-width: 28px;
@@ -353,43 +353,43 @@
   padding: 0;
 }
 
-.t20g-ui .t20g-btn--icone > i { opacity: 0.75; }
-.t20g-ui .t20g-btn--icone:hover:not(:disabled) > i { opacity: 1; }
+:is(.hayd-ui, .t20g-ui) .t20g-btn--icone > i { opacity: 0.75; }
+:is(.hayd-ui, .t20g-ui) .t20g-btn--icone:hover:not(:disabled) > i { opacity: 1; }
 
-.t20g-ui .t20g-btn--pequeno {
+:is(.hayd-ui, .t20g-ui) .t20g-btn--pequeno {
   min-height: 24px;
   padding: 0 var(--t20g-e3);
   font-size: 0.75rem;
 }
 
 /* Grupo colado: botões viram um segmento só. */
-.t20g-ui .t20g-btn-grupo {
+:is(.hayd-ui, .t20g-ui) .t20g-btn-grupo {
   display: inline-flex;
 }
 
-.t20g-ui .t20g-btn-grupo > .t20g-btn {
+:is(.hayd-ui, .t20g-ui) .t20g-btn-grupo > .t20g-btn {
   border-radius: 0;
   margin-inline-start: -1px;
 }
 
-.t20g-ui .t20g-btn-grupo > .t20g-btn:first-child {
+:is(.hayd-ui, .t20g-ui) .t20g-btn-grupo > .t20g-btn:first-child {
   border-start-start-radius: var(--t20g-r1);
   border-end-start-radius: var(--t20g-r1);
   margin-inline-start: 0;
 }
 
-.t20g-ui .t20g-btn-grupo > .t20g-btn:last-child {
+:is(.hayd-ui, .t20g-ui) .t20g-btn-grupo > .t20g-btn:last-child {
   border-start-end-radius: var(--t20g-r1);
   border-end-end-radius: var(--t20g-r1);
 }
 
-.t20g-ui .t20g-btn-grupo > .t20g-btn:hover { z-index: 1; }
+:is(.hayd-ui, .t20g-ui) .t20g-btn-grupo > .t20g-btn:hover { z-index: 1; }
 
 /* ══ Stepper (− valor +) ══════════════════════════════════════════════════
    O par de botões com um número solto no meio não lia como um controle só.
    Aqui vira uma peça: moldura única, número tabular no centro. */
 
-.t20g-ui .t20g-stepper {
+:is(.hayd-ui, .t20g-ui) .t20g-stepper {
   display: inline-flex;
   align-items: stretch;
   background: var(--t20g-s2);
@@ -398,7 +398,7 @@
   overflow: hidden;
 }
 
-.t20g-ui .t20g-stepper > button {
+:is(.hayd-ui, .t20g-ui) .t20g-stepper > button {
   width: 26px;
   min-width: 26px;
   flex: 0 0 26px;
@@ -415,16 +415,16 @@
   transition: background-color var(--t20g-transicao), color var(--t20g-transicao);
 }
 
-.t20g-ui .t20g-stepper > button > i { margin: 0; }
+:is(.hayd-ui, .t20g-ui) .t20g-stepper > button > i { margin: 0; }
 
-.t20g-ui .t20g-stepper > button:hover:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) .t20g-stepper > button:hover:not(:disabled) {
   background: var(--t20g-s3);
   color: var(--t20g-ink);
 }
 
-.t20g-ui .t20g-stepper > button:disabled { opacity: 0.35; cursor: default; }
+:is(.hayd-ui, .t20g-ui) .t20g-stepper > button:disabled { opacity: 0.35; cursor: default; }
 
-.t20g-ui .t20g-stepper__valor {
+:is(.hayd-ui, .t20g-ui) .t20g-stepper__valor {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -439,11 +439,11 @@
 
 /* ══ Campos ═══════════════════════════════════════════════════════════════ */
 
-.t20g-ui input[type="text"].t20g-campo,
-.t20g-ui input[type="number"].t20g-campo,
-.t20g-ui input[type="search"].t20g-campo,
-.t20g-ui select.t20g-campo,
-.t20g-ui .t20g-campo {
+:is(.hayd-ui, .t20g-ui) input[type="text"].t20g-campo,
+:is(.hayd-ui, .t20g-ui) input[type="number"].t20g-campo,
+:is(.hayd-ui, .t20g-ui) input[type="search"].t20g-campo,
+:is(.hayd-ui, .t20g-ui) select.t20g-campo,
+:is(.hayd-ui, .t20g-ui) .t20g-campo {
   min-height: 28px;
   padding: 0 var(--t20g-e3);
   background: var(--t20g-s2);
@@ -456,27 +456,27 @@
   transition: border-color var(--t20g-transicao), background-color var(--t20g-transicao);
 }
 
-.t20g-ui .t20g-campo:hover:not(:disabled) { border-color: var(--t20g-line-forte); background: var(--t20g-s3); }
+:is(.hayd-ui, .t20g-ui) .t20g-campo:hover:not(:disabled) { border-color: var(--t20g-line-forte); background: var(--t20g-s3); }
 
-.t20g-ui .t20g-campo:focus,
-.t20g-ui .t20g-campo:focus-visible {
+:is(.hayd-ui, .t20g-ui) .t20g-campo:focus,
+:is(.hayd-ui, .t20g-ui) .t20g-campo:focus-visible {
   outline: none;
   border-color: var(--t20g-accent-linha);
   box-shadow: var(--t20g-foco);
 }
 
-.t20g-ui .t20g-campo::placeholder { color: var(--t20g-ink-3); }
+:is(.hayd-ui, .t20g-ui) .t20g-campo::placeholder { color: var(--t20g-ink-3); }
 
 /* Rótulo em cima do controle: alinhamento garantido entre colunas de
    larguras diferentes. */
-.t20g-ui .t20g-grupo-campo {
+:is(.hayd-ui, .t20g-ui) .t20g-grupo-campo {
   display: flex;
   flex-direction: column;
   gap: var(--t20g-e1);
   min-width: 0;
 }
 
-.t20g-ui .t20g-grupo-campo > label {
+:is(.hayd-ui, .t20g-ui) .t20g-grupo-campo > label {
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -488,7 +488,7 @@
    Etiqueta de leitura. Neutra por padrão; a cor só entra com o modificador
    de estado, e aí quer dizer alguma coisa. */
 
-.t20g-ui .t20g-chip {
+:is(.hayd-ui, .t20g-ui) .t20g-chip {
   display: inline-flex;
   align-items: center;
   gap: var(--t20g-e1);
@@ -504,27 +504,27 @@
   white-space: nowrap;
 }
 
-.t20g-ui .t20g-chip > i { font-size: 0.625rem; opacity: 0.8; }
+:is(.hayd-ui, .t20g-ui) .t20g-chip > i { font-size: 0.625rem; opacity: 0.8; }
 
-.t20g-ui .t20g-chip--perigo {
+:is(.hayd-ui, .t20g-ui) .t20g-chip--perigo {
   background: color-mix(in oklab, var(--t20g-perigo) 14%, transparent);
   border-color: color-mix(in oklab, var(--t20g-perigo) 38%, transparent);
   color: color-mix(in oklab, var(--t20g-perigo) 80%, var(--t20g-ink));
 }
 
-.t20g-ui .t20g-chip--sucesso {
+:is(.hayd-ui, .t20g-ui) .t20g-chip--sucesso {
   background: color-mix(in oklab, var(--t20g-sucesso) 14%, transparent);
   border-color: color-mix(in oklab, var(--t20g-sucesso) 38%, transparent);
   color: color-mix(in oklab, var(--t20g-sucesso) 80%, var(--t20g-ink));
 }
 
-.t20g-ui .t20g-chip--aviso {
+:is(.hayd-ui, .t20g-ui) .t20g-chip--aviso {
   background: color-mix(in oklab, var(--t20g-aviso) 16%, transparent);
   border-color: color-mix(in oklab, var(--t20g-aviso) 40%, transparent);
   color: color-mix(in oklab, var(--t20g-aviso) 82%, var(--t20g-ink));
 }
 
-.t20g-ui .t20g-chip--accent {
+:is(.hayd-ui, .t20g-ui) .t20g-chip--accent {
   background: var(--t20g-accent-fundo);
   border-color: var(--t20g-accent-linha);
   color: var(--t20g-accent-forte);
@@ -535,14 +535,14 @@
    da barra, ora flutuando no meio da linha. Aqui: rótulo à esquerda, valor
    tabular à direita, trilho fino embaixo — a mesma leitura para os três. */
 
-.t20g-ui .t20g-medidor {
+:is(.hayd-ui, .t20g-ui) .t20g-medidor {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: baseline;
   gap: 0 var(--t20g-e2);
 }
 
-.t20g-ui .t20g-medidor__rotulo {
+:is(.hayd-ui, .t20g-ui) .t20g-medidor__rotulo {
   grid-column: 1;
   font-size: 0.625rem;
   font-weight: 700;
@@ -551,7 +551,7 @@
   color: var(--t20g-ink-3);
 }
 
-.t20g-ui .t20g-medidor__valor {
+:is(.hayd-ui, .t20g-ui) .t20g-medidor__valor {
   grid-column: 3;
   font-size: 0.75rem;
   font-weight: 600;
@@ -559,7 +559,7 @@
   color: var(--t20g-ink-2);
 }
 
-.t20g-ui .t20g-medidor__trilho {
+:is(.hayd-ui, .t20g-ui) .t20g-medidor__trilho {
   grid-column: 1 / -1;
   position: relative;
   height: 6px;
@@ -569,7 +569,7 @@
   overflow: hidden;
 }
 
-.t20g-ui .t20g-medidor__preenche {
+:is(.hayd-ui, .t20g-ui) .t20g-medidor__preenche {
   display: block;
   height: 100%;
   border-radius: inherit;
@@ -579,20 +579,20 @@
   transition: width 160ms ease;
 }
 
-.t20g-ui .t20g-medidor--pv    { --t20g-medidor-cor: var(--t20g-pv); }
-.t20g-ui .t20g-medidor--pm    { --t20g-medidor-cor: var(--t20g-pm); }
-.t20g-ui .t20g-medidor--carga { --t20g-medidor-cor: var(--t20g-carga); }
+:is(.hayd-ui, .t20g-ui) .t20g-medidor--pv    { --t20g-medidor-cor: var(--t20g-pv); }
+:is(.hayd-ui, .t20g-ui) .t20g-medidor--pm    { --t20g-medidor-cor: var(--t20g-pm); }
+:is(.hayd-ui, .t20g-ui) .t20g-medidor--carga { --t20g-medidor-cor: var(--t20g-carga); }
 
 /* Acima do limite: o trilho inteiro avisa, sem precisar de texto vermelho. */
-.t20g-ui .t20g-medidor--excedido { --t20g-medidor-cor: var(--t20g-perigo); }
-.t20g-ui .t20g-medidor--excedido .t20g-medidor__valor { color: var(--t20g-perigo); }
+:is(.hayd-ui, .t20g-ui) .t20g-medidor--excedido { --t20g-medidor-cor: var(--t20g-perigo); }
+:is(.hayd-ui, .t20g-ui) .t20g-medidor--excedido .t20g-medidor__valor { color: var(--t20g-perigo); }
 
 /* ══ Lista ════════════════════════════════════════════════════════════════
    `content-visibility` entra aqui de propósito: estas listas chegam a
    centenas de linhas (vínculos de tesouro, inventário de grupo) e o
    navegador passa a só compor o que está à vista. */
 
-.t20g-ui .t20g-lista {
+:is(.hayd-ui, .t20g-ui) .t20g-lista {
   display: flex;
   flex-direction: column;
   margin: 0;
@@ -600,9 +600,9 @@
   list-style: none;
 }
 
-.t20g-ui .t20g-lista > * + * { border-top: 1px solid var(--t20g-line); }
+:is(.hayd-ui, .t20g-ui) .t20g-lista > * + * { border-top: 1px solid var(--t20g-line); }
 
-.t20g-ui .t20g-linha {
+:is(.hayd-ui, .t20g-ui) .t20g-linha {
   display: flex;
   align-items: center;
   gap: var(--t20g-e3);
@@ -614,9 +614,9 @@
   transition: background-color var(--t20g-transicao);
 }
 
-.t20g-ui .t20g-linha:hover { background: var(--t20g-s2); }
+:is(.hayd-ui, .t20g-ui) .t20g-linha:hover { background: var(--t20g-s2); }
 
-.t20g-ui .t20g-linha__nome {
+:is(.hayd-ui, .t20g-ui) .t20g-linha__nome {
   flex: 1 1 auto;
   min-width: 0;
   font-size: 0.8125rem;
@@ -627,20 +627,20 @@
   white-space: nowrap;
 }
 
-.t20g-ui .t20g-linha__apoio {
+:is(.hayd-ui, .t20g-ui) .t20g-linha__apoio {
   font-size: 0.6875rem;
   color: var(--t20g-ink-3);
 }
 
 /* Ícone/retrato das linhas: quadrado arredondado, nunca círculo — combina
    com o resto dos cantos e não corta arte de ficha. */
-.t20g-ui .t20g-miniatura {
+:is(.hayd-ui, .t20g-ui) .t20g-miniatura {
   flex: 0 0 auto;
   width: 28px;
   height: 28px;
   border: 1px solid var(--t20g-line);
   border-radius: var(--t20g-r1);
-  object-fit: cover;
+  object-fit: cover; object-position: top;
   background: var(--t20g-s2);
 }
 
@@ -648,7 +648,7 @@
    Uma frase cinza no meio do nada é desperdício: o lugar mais visível da
    tela é onde o usuário está parado sem saber o que fazer. */
 
-.t20g-ui .t20g-vazio {
+:is(.hayd-ui, .t20g-ui) .t20g-vazio {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -659,18 +659,18 @@
   color: var(--t20g-ink-3);
 }
 
-.t20g-ui .t20g-vazio > i {
+:is(.hayd-ui, .t20g-ui) .t20g-vazio > i {
   font-size: 1.5rem;
   opacity: 0.35;
 }
 
-.t20g-ui .t20g-vazio__titulo {
+:is(.hayd-ui, .t20g-ui) .t20g-vazio__titulo {
   font-size: 0.8125rem;
   font-weight: 600;
   color: var(--t20g-ink-2);
 }
 
-.t20g-ui .t20g-vazio__texto {
+:is(.hayd-ui, .t20g-ui) .t20g-vazio__texto {
   max-width: 44ch;      /* linha curta o bastante para ler de um fôlego */
   font-size: 0.75rem;
   line-height: 1.5;
@@ -680,15 +680,15 @@
 
 /* ══ Abas ═════════════════════════════════════════════════════════════════ */
 
-.t20g-ui .t20g-abas {
+:is(.hayd-ui, .t20g-ui) .t20g-abas {
   display: flex;
   gap: var(--t20g-e1);
   padding: 0 var(--t20g-e2);
   border-bottom: 1px solid var(--t20g-line);
 }
 
-.t20g-ui .t20g-abas > a,
-.t20g-ui .t20g-abas > button {
+:is(.hayd-ui, .t20g-ui) .t20g-abas > a,
+:is(.hayd-ui, .t20g-ui) .t20g-abas > button {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -704,18 +704,18 @@
   transition: color var(--t20g-transicao);
 }
 
-.t20g-ui .t20g-abas > *:hover { color: var(--t20g-ink); text-shadow: none; }
+:is(.hayd-ui, .t20g-ui) .t20g-abas > *:hover { color: var(--t20g-ink); text-shadow: none; }
 
-.t20g-ui .t20g-abas > .ativa,
-.t20g-ui .t20g-abas > .active {
+:is(.hayd-ui, .t20g-ui) .t20g-abas > .ativa,
+:is(.hayd-ui, .t20g-ui) .t20g-abas > .active {
   color: var(--t20g-ink);
   font-weight: 600;
 }
 
 /* A aba ativa é marcada por uma régua embaixo, não por um bloco de fundo:
    menos peso, e a linha dá a direção do conteúdo que vem a seguir. */
-.t20g-ui .t20g-abas > .ativa::after,
-.t20g-ui .t20g-abas > .active::after {
+:is(.hayd-ui, .t20g-ui) .t20g-abas > .ativa::after,
+:is(.hayd-ui, .t20g-ui) .t20g-abas > .active::after {
   content: "";
   position: absolute;
   inset-inline: var(--t20g-e2);
@@ -727,7 +727,7 @@
 
 /* ══ Divisor com rótulo ══════════════════════════════════════════════════ */
 
-.t20g-ui .t20g-divisor {
+:is(.hayd-ui, .t20g-ui) .t20g-divisor {
   display: flex;
   align-items: center;
   gap: var(--t20g-e3);
@@ -739,38 +739,38 @@
   color: var(--t20g-ink-3);
 }
 
-.t20g-ui .t20g-divisor::after {
+:is(.hayd-ui, .t20g-ui) .t20g-divisor::after {
   content: "";
   flex: 1 1 auto;
   height: 1px;
   background: var(--t20g-line);
 }
 
-.t20g-ui .t20g-divisor:first-child { margin-top: 0; }
+:is(.hayd-ui, .t20g-ui) .t20g-divisor:first-child { margin-top: 0; }
 
 /* ══ Utilitários ══════════════════════════════════════════════════════════ */
 
-.t20g-ui .t20g-pilha   { display: flex; flex-direction: column; gap: var(--t20g-e3); }
-.t20g-ui .t20g-fileira { display: flex; align-items: center; gap: var(--t20g-e2); }
-.t20g-ui .t20g-cresce  { flex: 1 1 auto; min-width: 0; }
-.t20g-ui .t20g-rola    { overflow-y: auto; overscroll-behavior: contain; }
+:is(.hayd-ui, .t20g-ui) .t20g-pilha   { display: flex; flex-direction: column; gap: var(--t20g-e3); }
+:is(.hayd-ui, .t20g-ui) .t20g-fileira { display: flex; align-items: center; gap: var(--t20g-e2); }
+:is(.hayd-ui, .t20g-ui) .t20g-cresce  { flex: 1 1 auto; min-width: 0; }
+:is(.hayd-ui, .t20g-ui) .t20g-rola    { overflow-y: auto; overscroll-behavior: contain; }
 
 /* Barra de rolagem discreta, no tom da janela. */
-.t20g-ui .t20g-rola { scrollbar-width: thin; scrollbar-color: var(--t20g-s4) transparent; }
-.t20g-ui .t20g-rola::-webkit-scrollbar { width: 8px; }
-.t20g-ui .t20g-rola::-webkit-scrollbar-thumb {
+:is(.hayd-ui, .t20g-ui) .t20g-rola { scrollbar-width: thin; scrollbar-color: var(--t20g-s4) transparent; }
+:is(.hayd-ui, .t20g-ui) .t20g-rola::-webkit-scrollbar { width: 8px; }
+:is(.hayd-ui, .t20g-ui) .t20g-rola::-webkit-scrollbar-thumb {
   background: var(--t20g-s4);
   border-radius: var(--t20g-r-pill);
 }
-.t20g-ui .t20g-rola::-webkit-scrollbar-track { background: transparent; }
+:is(.hayd-ui, .t20g-ui) .t20g-rola::-webkit-scrollbar-track { background: transparent; }
 
 /* ══ Rodapé de diálogo ════════════════════════════════════════════════════
    O DialogV2 monta os próprios botões, fora do nosso markup. Sem isto, uma
    janela redesenhada terminava num rodapé com a aparência padrão do core —
    e é justamente o último elemento que o olho encontra antes de clicar. */
 
-.t20g-ui .dialog-buttons,
-.t20g-ui .form-footer {
+:is(.hayd-ui, .t20g-ui) .dialog-buttons,
+:is(.hayd-ui, .t20g-ui) .form-footer {
   display: flex;
   gap: var(--t20g-e2);
   padding-top: var(--t20g-e4);
@@ -778,7 +778,7 @@
   border-top: 1px solid var(--t20g-line);
 }
 
-.t20g-ui :where(.dialog-buttons, .form-footer) > button {
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button {
   flex: 1 1 auto;
   display: inline-flex;
   align-items: center;
@@ -798,53 +798,53 @@
     transform var(--t20g-transicao);
 }
 
-.t20g-ui :where(.dialog-buttons, .form-footer) > button > i { margin: 0; opacity: 0.85; }
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button > i { margin: 0; opacity: 0.85; }
 
-.t20g-ui :where(.dialog-buttons, .form-footer) > button:hover:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button:hover:not(:disabled) {
   background: var(--t20g-s3);
   border-color: var(--t20g-line-forte);
 }
 
-.t20g-ui :where(.dialog-buttons, .form-footer) > button:active:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-.t20g-ui :where(.dialog-buttons, .form-footer) > button:focus-visible {
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button:focus-visible {
   outline: none;
   box-shadow: var(--t20g-foco);
 }
 
 /* O botão padrão do diálogo (o que o Enter aciona) é a ação principal. */
-.t20g-ui :where(.dialog-buttons, .form-footer) > button[data-action="ok"],
-.t20g-ui :where(.dialog-buttons, .form-footer) > button.default,
-.t20g-ui :where(.dialog-buttons, .form-footer) > button[autofocus] {
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="ok"],
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button.default,
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[autofocus] {
   background: var(--t20g-accent);
   border-color: color-mix(in oklab, var(--t20g-accent) 70%, #000);
   color: var(--t20g-ink-sobre-accent);
   font-weight: 600;
 }
 
-.t20g-ui :where(.dialog-buttons, .form-footer) > button[data-action="ok"]:hover:not(:disabled),
-.t20g-ui :where(.dialog-buttons, .form-footer) > button.default:hover:not(:disabled),
-.t20g-ui :where(.dialog-buttons, .form-footer) > button[autofocus]:hover:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="ok"]:hover:not(:disabled),
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button.default:hover:not(:disabled),
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[autofocus]:hover:not(:disabled) {
   background: var(--t20g-accent-forte);
   color: var(--t20g-ink-sobre-accent);
 }
 
 /* Um "Fechar" sozinho no rodapé não é ação principal: é saída. Fica neutro
    para não disputar atenção com os controles da própria janela. */
-.t20g-ui :where(.dialog-buttons, .form-footer) > button[data-action="fechar"],
-.t20g-ui :where(.dialog-buttons, .form-footer) > button[data-action="cancelar"],
-.t20g-ui :where(.dialog-buttons, .form-footer) > button[data-action="close"] {
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="fechar"],
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="cancelar"],
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="close"] {
   background: var(--t20g-s2);
   border-color: var(--t20g-line-forte);
   color: var(--t20g-ink-2);
   font-weight: 500;
 }
 
-.t20g-ui :where(.dialog-buttons, .form-footer) > button[data-action="fechar"]:hover:not(:disabled),
-.t20g-ui :where(.dialog-buttons, .form-footer) > button[data-action="cancelar"]:hover:not(:disabled),
-.t20g-ui :where(.dialog-buttons, .form-footer) > button[data-action="close"]:hover:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="fechar"]:hover:not(:disabled),
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="cancelar"]:hover:not(:disabled),
+:is(.hayd-ui, .t20g-ui) :where(.dialog-buttons, .form-footer) > button[data-action="close"]:hover:not(:disabled) {
   background: var(--t20g-s3);
   color: var(--t20g-ink);
 }
@@ -860,7 +860,7 @@
    então não há disputa de especificidade entre ponte e componente — é um ou
    outro, nunca os dois. */
 
-.t20g-ui .window-content :where(button:not(.t20g-btn, .header-control, .t20g-stepper > button, .dialog-buttons > button, .form-footer > button)) {
+:is(.hayd-ui, .t20g-ui) .window-content :where(button:not(.t20g-btn, .header-control, .t20g-stepper > button, .dialog-buttons > button, .form-footer > button)) {
   min-height: 28px;
   padding: 0 var(--t20g-e3);
   background: var(--t20g-s2);
@@ -876,22 +876,22 @@
     transform var(--t20g-transicao);
 }
 
-.t20g-ui .window-content :where(button:not(.t20g-btn, .header-control, .t20g-stepper > button, .dialog-buttons > button, .form-footer > button)):hover:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) .window-content :where(button:not(.t20g-btn, .header-control, .t20g-stepper > button, .dialog-buttons > button, .form-footer > button)):hover:not(:disabled) {
   background: var(--t20g-s3);
   border-color: var(--t20g-line-forte);
 }
 
-.t20g-ui .window-content :where(button:not(.t20g-btn, .header-control, .t20g-stepper > button, .dialog-buttons > button, .form-footer > button)):active:not(:disabled) {
+:is(.hayd-ui, .t20g-ui) .window-content :where(button:not(.t20g-btn, .header-control, .t20g-stepper > button, .dialog-buttons > button, .form-footer > button)):active:not(:disabled) {
   transform: translateY(1px);
   background: var(--t20g-s4);
 }
 
-.t20g-ui .window-content :where(button:not(.t20g-btn, .header-control)):focus-visible {
+:is(.hayd-ui, .t20g-ui) .window-content :where(button:not(.t20g-btn, .header-control)):focus-visible {
   outline: none;
   box-shadow: var(--t20g-foco);
 }
 
-.t20g-ui .window-content :where(
+:is(.hayd-ui, .t20g-ui) .window-content :where(
   input[type="text"]:not(.t20g-campo), input[type="number"]:not(.t20g-campo),
   input[type="search"]:not(.t20g-campo), select:not(.t20g-campo), textarea:not(.t20g-campo)
 ) {
@@ -905,7 +905,7 @@
   font-size: 0.8125rem;
 }
 
-.t20g-ui .window-content :where(
+:is(.hayd-ui, .t20g-ui) .window-content :where(
   input[type="text"]:not(.t20g-campo), input[type="number"]:not(.t20g-campo),
   input[type="search"]:not(.t20g-campo), select:not(.t20g-campo), textarea:not(.t20g-campo)
 ):focus {
@@ -916,7 +916,7 @@
 
 /* Títulos de seção das telas antigas: viram o mesmo rótulo pequeno e
    espaçado do resto do módulo, em vez de cada janela inventar um tamanho. */
-.t20g-ui .window-content :where(h3:not([class]), h4:not([class])) {
+:is(.hayd-ui, .t20g-ui) .window-content :where(h3:not([class]), h4:not([class])) {
   margin: 0 0 var(--t20g-e2);
   border: 0;
   font-family: inherit;
@@ -929,18 +929,75 @@
 
 /* `p.notes` é o texto de apoio do core; no módulo ele aparece em quase toda
    janela e estava ora cinza-claro, ora quase invisível. */
-.t20g-ui .window-content p.notes,
-.t20g-ui .window-content .hint {
+:is(.hayd-ui, .t20g-ui) .window-content p.notes,
+:is(.hayd-ui, .t20g-ui) .window-content .hint {
   margin: 0 0 var(--t20g-e2);
   font-size: 0.75rem;
   line-height: 1.45;
   color: var(--t20g-ink-3);
 }
 
-.t20g-ui .window-content hr {
+:is(.hayd-ui, .t20g-ui) .window-content hr {
   border: 0;
   border-top: 1px solid var(--t20g-line);
   margin: var(--t20g-e4) 0;
 }
 
-.t20g-ui .window-content :where(label) { color: var(--t20g-ink-2); }
+:is(.hayd-ui, .t20g-ui) .window-content :where(label) { color: var(--t20g-ink-2); }
+
+/* ══ Tabelas ══════════════════════════════════════════════════════════════
+   Tabela de referência (níveis de negócio, custos, impostos) aparece em
+   quase todo módulo da família, e cada uma vinha com a borda e o
+   espaçamento que o navegador dá de graça. */
+
+:is(.hayd-ui, .t20g-ui) .window-content table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content thead th {
+  padding: var(--t20g-e2) var(--t20g-e3);
+  background: var(--t20g-s2);
+  border: 0;
+  border-bottom: 1px solid var(--t20g-line);
+  color: var(--t20g-ink-3);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content tbody td {
+  padding: var(--t20g-e2) var(--t20g-e3);
+  border: 0;
+  border-top: 1px solid var(--t20g-line);
+  color: var(--t20g-ink-2);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr:first-child td { border-top: 0; }
+
+/* Zebra em vez de grade: menos traço, mesma leitura de linha. */
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr:nth-child(even) td {
+  background: color-mix(in oklab, var(--t20g-s2) 55%, transparent);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr:hover td { background: var(--t20g-s2); }
+
+/* A linha em destaque (o nível atual, a faixa escolhida) fica marcada pela
+   lateral, que não disputa com o fundo da zebra. */
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr.ativa td,
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr.atual td {
+  background: var(--t20g-accent-fundo);
+  color: var(--t20g-ink);
+}
+
+:is(.hayd-ui, .t20g-ui) .window-content tbody tr:is(.ativa, .atual) td:first-child {
+  box-shadow: inset 2px 0 0 var(--t20g-accent);
+}

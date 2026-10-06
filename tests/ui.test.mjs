@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const raiz = new URL('../', import.meta.url);
-const base = await readFile(new URL('styles/t20g-ui.css', raiz), 'utf8');
+const base = await readFile(new URL('styles/hayd-ui-base.css', raiz), 'utf8');
 const gmtools = await readFile(new URL('t20-hayd-gmtools.css', raiz), 'utf8');
 const entrada = await readFile(new URL('t20-hayd-gmtools.mjs', raiz), 'utf8');
 const uiBase = await readFile(new URL('scripts/ui-base.mjs', raiz), 'utf8');
@@ -41,14 +41,14 @@ test('nenhum token do módulo vaza para fora das janelas do módulo', () => {
   assert.doesNotMatch(baseCru, /^:root\s*\{/m, 'tokens não podem ser declarados em :root');
   assert.doesNotMatch(baseCru, /^(body|html)\s*\{/m, 'seletor global demais');
   for (const sel of seletoresDe(base)) {
-    assert.ok(/\.t20g-ui/.test(sel), `seletor sem escopo em t20g-ui.css: ${sel}`);
+    assert.ok(/\.(hayd|t20g)-ui/.test(sel), `seletor sem escopo em hayd-ui-base.css: ${sel}`);
   }
 });
 
 test('o tema claro do Foundry refaz a rampa inteira', () => {
   // Sem isto, uma janela do módulo fica escura à força dentro de um mundo
   // claro — o erro clássico de módulo que ignora o tema do usuário.
-  const i = base.indexOf('.theme-light .t20g-ui');
+  const i = base.indexOf('.theme-light :is(.hayd-ui, .t20g-ui)');
   assert.ok(i > 0, 'não achou o bloco de tema claro');
   const claro = base.slice(i, base.indexOf('}', i));
   for (const token of ['--t20g-s0', '--t20g-s1', '--t20g-ink', '--t20g-accent', '--t20g-line']) {
@@ -104,9 +104,9 @@ test('a base entra pelos arquivos que o manifesto já carrega', () => {
   // De propósito: `module.json` só é relido quando o SERVIDOR do Foundry
   // reinicia. Entrando por @import e pelo esmodule principal, uma
   // atualização do módulo passa a valer com um F5.
-  assert.match(gmtools, /^\/\*[^\n]*\*\/\s*@import url\("styles\/t20g-ui\.css"\);/);
+  assert.match(gmtools, /^\/\*[^\n]*\*\/\s*@import url\("styles\/hayd-ui-base\.css"\);/);
   assert.match(entrada, /import '\.\/scripts\/ui-base\.mjs';/);
-  assert.ok(!manifesto.styles.includes('styles/t20g-ui.css'),
+  assert.ok(!manifesto.styles.includes('styles/hayd-ui-base.css'),
     'não duplicar: o CSS base entra por @import, não pelo manifesto');
   assert.ok(!manifesto.esmodules.includes('scripts/ui-base.mjs'),
     'não duplicar: o hook entra pelo esmodule principal');
@@ -120,4 +120,22 @@ test('a marcação das janelas é um teste por render, e não observação cont�
   assert.match(uiBase, /Hooks\.on\('renderDialogV2'/);
   // Só marca o que é do módulo: janela de terceiro não pode receber a classe.
   assert.match(uiBase, /\[class\*="t20g-"\], \[class\*="thm-"\]/);
+});
+
+test('a base visual só alcança as janelas do próprio módulo', () => {
+  // Regressão real: o critério era "tem markup nosso dentro". Só que o
+  // módulo injeta markup NAS JANELAS DOS OUTROS — uma seção na tela de
+  // configurações do Foundry, um botão na ficha do sistema, o painel de
+  // engenhocas na aba de magias. O resultado foi a barra lateral, o chat, o
+  // diretório de atores e a tela de configurações do core recebendo a base
+  // visual do módulo, que não é nossa para redesenhar.
+  assert.match(uiBase, /JANELAS_PROPRIAS/);
+  assert.match(uiBase, /app instanceof foundry\.applications\.api\.DialogV2/);
+  // Janela própria entra pelo nome da classe, não por conteúdo.
+  for (const janela of ['PartySheetApp', 'PartyManagerApp', 'TesourosGeradorApp']) {
+    assert.ok(uiBase.includes(janela), `${janela} fora da lista de janelas próprias`);
+  }
+  // E o conteúdo só decide dentro de um diálogo nosso.
+  const fn = uiBase.slice(uiBase.indexOf('function ehNossa'), uiBase.indexOf('function marcar'));
+  assert.match(fn, /ehDialogo && \(raiz\.matches\(MARCADOR\)/);
 });
