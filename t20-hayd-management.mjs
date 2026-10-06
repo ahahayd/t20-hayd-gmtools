@@ -1029,6 +1029,19 @@ function memberOptionsHtml(members, { selectedId = null } = {}) {
     .join("");
 }
 
+/**
+ * Rótulo de uma moeda num formulário: arte + sigla.
+ *
+ * "Tibar de Ouro (TO)" por extenso empurrava o campo de valor para longe e
+ * repetia "Tibar de" em todas as linhas. A arte identifica o metal antes da
+ * leitura; o nome completo continua no tooltip, para quem está começando.
+ */
+function coinLabelHtml(k) {
+  const nome = esc(loc(COIN_NAMES[k]));
+  return `<img class="thm-coin-icone" src="modules/${ASSET_MODULE_ID}/assets/moedas/moeda-${k}.webp"
+    alt="" data-tooltip="${nome}"><span>${COIN_LABELS[k]}</span>`;
+}
+
 function coinInputsHtml(max = null, { showTl = true } = {}) {
   const keys = showTl ? COINS : COINS.filter((k) => k !== "tl");
   return keys.map((k) => {
@@ -1036,7 +1049,7 @@ function coinInputsHtml(max = null, { showTl = true } = {}) {
     const maxTxt = max ? ` <span class="thm-hint">(máx. ${max[k]})</span>` : "";
     return `
       <div class="form-group">
-        <label>${loc(COIN_NAMES[k])}${maxTxt}</label>
+        <label>${coinLabelHtml(k)}${maxTxt}</label>
         <input type="number" name="coin-${k}" value="0" min="0" ${maxAttr} step="1" />
       </div>`;
   }).join("");
@@ -1468,7 +1481,7 @@ async function openEditStashMoneyDialog(folderId) {
     .map(
       (k) => `
       <div class="form-group">
-        <label>${loc(COIN_NAMES[k])}</label>
+        <label>${coinLabelHtml(k)}</label>
         <input type="number" name="coin-${k}" value="${money[k]}" min="0" step="1" />
       </div>`
     )

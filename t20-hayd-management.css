@@ -373,6 +373,26 @@ ul.currency li.currency-item.thm-send {
 
 /* ---------- Diálogos ---------- */
 
+/* Rótulo de moeda nos formulários: arte + sigla, alinhadas pelo meio. A
+   coluna do rótulo fica estreita e previsível, então os campos de valor de
+   todas as moedas caem na mesma vertical. */
+.t20g-ui .thm-dialog label:has(.thm-coin-icone) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--t20g-e2);
+  min-width: 68px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.thm-coin-icone {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 1px 1px rgb(10 7 16 / 45%));
+}
+
 .thm-dialog .form-group {
   display: flex;
   align-items: center;
