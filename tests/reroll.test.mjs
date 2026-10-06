@@ -76,3 +76,27 @@ test('rolagem sem .dice-roll no content (ex.: /r no chat) também mostra o indic
   const hook = gmtools.slice(gmtools.indexOf('function reinjetarIndicadoresDeRerolagem'));
   assert.match(hook, /Hooks\.on\('renderChatMessageHTML', \(message, html\) => \{\r?\n  const container[^\n]*\n  if \(container\) reinjetarIndicadoresDeRerolagem/);
 });
+
+test('o dano recalculado pelo crítico mantém o que os efeitos "ao usar" somaram', () => {
+  // Bug relatado: numa arma 1d12 (x2) com Golpe Divino (+1d8), rerolar o
+  // ataque para crítico dava 2d12 e perdia o 1d8; e um termo `danoCritico`
+  // (+10 só no crítico) que saía ao deixar de ser crítico não voltava ao
+  // virar crítico de novo. Causa: o sistema rola a partir de um `clone()` do
+  // item com os efeitos "ao usar" e o bônus da janela de uso aplicados, e
+  // guarda esse clone em `flags.tormenta20.itemData` — o item do ator não tem
+  // nada disso. Recalcular pelo item do ator descartava todos os acréscimos.
+  const fn = gmtools.slice(
+    gmtools.indexOf('function itemDaRolagem'), gmtools.indexOf('async function rolarDanoDoItem'));
+  assert.ok(fn.length > 0, 'não achou itemDaRolagem');
+  assert.match(fn, /getFlag\?\.\('tormenta20', 'itemData'\)/);
+  assert.match(fn, /base\.clone\(\{ system \}, \{ keepId: true \}\)/);
+  // Sem o flag (mensagem antiga) ou com ele inválido, volta ao item do ator.
+  assert.match(fn, /if \(!base \|\| !dados\) return base;/);
+  assert.match(fn, /catch[\s\S]*return base;/);
+  // O recálculo tem de usar o item da rolagem, não o do ator.
+  const sub = gmtools.slice(
+    gmtools.indexOf('async function substituicoesDeDanoPorCritico'),
+    gmtools.indexOf('async function rerolarResultado'));
+  assert.match(sub, /const item = itemDaRolagem\(message\)/);
+  assert.doesNotMatch(sub, /const item = resolverItemDaMensagem\(message\)/);
+});

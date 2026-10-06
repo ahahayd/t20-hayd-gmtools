@@ -575,6 +575,36 @@ function classesDeDestaqueAtaque(message, roll) {
 }
 
 /**
+ * O item COMO FOI USADO naquela rolagem, e não como está guardado no ator.
+ *
+ * O sistema rola a partir de um `clone()` do item e aplica nele tudo o que
+ * valeu naquele uso: efeitos "ao usar" (um Golpe Divino que soma +1d8, um
+ * termo `danoCritico` que só entra no crítico), o bônus de dano digitado na
+ * janela de uso e até outro multiplicador/margem de crítico. Esse clone é
+ * gravado na mensagem em `flags.tormenta20.itemData`; o item do ator não sabe
+ * nada disso. Recalcular o dano pelo item do ator descartava esses acréscimos.
+ */
+function itemDaRolagem(message) {
+  const base = resolverItemDaMensagem(message);
+  const dados = message?.getFlag?.('tormenta20', 'itemData');
+  if (!base || !dados) return base;
+  try {
+    const system = foundry.utils.deepClone(dados);
+    delete system.rolled;
+    // `parts` é Array<Array<String>> no schema; os efeitos "ao usar" podem ter
+    // empurrado um número solto, que reprovaria na validação do clone.
+    for (const r of system.rolls ?? []) {
+      r.parts = (r.parts ?? []).map(p =>
+        (Array.isArray(p) ? p : [p, '']).map(v => String(v ?? '')));
+    }
+    return base.clone({ system }, { keepId: true });
+  } catch (err) {
+    console.warn('T20 Hayd GMTools | itemData da mensagem inválido; usando o item do ator', err);
+    return base;
+  }
+}
+
+/**
  * Rola o dano do item com o estado de crítico forçado, usando o próprio
  * `rollDamage` do sistema (que aplica a multiplicação de dados do crítico, os
  * bônus e os termos de dano crítico corretamente). Retorna os rolls de dano.
@@ -609,7 +639,7 @@ async function substituicoesDeDanoPorCritico(message, index, novaAtaque, ataqueO
   if (index !== cls.ataque || cls.dano === -1) return [];
   if (antesCrit === agoraCrit) return [];
 
-  const item = resolverItemDaMensagem(message);
+  const item = itemDaRolagem(message);
   if (item?.type !== 'arma') return [];
 
   const danoRolls = await rolarDanoDoItem(item, agoraCrit);
