@@ -1299,6 +1299,7 @@ export const engenhocas = {
   abrirAparatos,
   aplicarAparatos: aplicarEfeitosDosAparatos,
   abrirPainel,
+  listar: engenhocasDoAtor,
   resetarEngenhocas,
   ligarFluxo,
   injetarPainel,

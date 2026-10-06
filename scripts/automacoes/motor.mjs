@@ -4382,7 +4382,15 @@ Hooks.once('ready', () => {
         abrirDialogo: abrirDialogoAutomacao,
         diario: garantirDiario,
         abrirDiario,
+        ativas: automacoesAtivas,
         engenhocas,
+        // Fichas de terceiros (a Ficha Hayd, por exemplo) montam o acesso ao
+        // painel com o visual delas em vez de receber o <section> injetado.
+        contadores: {
+          abrir: abrirPainelContadores,
+          temConteudo: temConteudoPainelContadores,
+          zerarTudo: zerarTodosContadores
+        },
         golpePessoal: {
           efeitos: GP_EFEITOS,
           abrirConstrutor: abrirConstrutorGolpe,
