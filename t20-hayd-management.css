@@ -385,6 +385,28 @@ ul.currency li.currency-item.thm-send {
   font-variant-numeric: tabular-nums;
 }
 
+/* Linha de moeda: rótulo estreito e fixo, campo ocupando o resto, limite
+   no fim. Em grade (e não em flex com proporções), o campo começa na mesma
+   vertical em todas as linhas e nada encolhe a ponto de quebrar o texto. */
+.thm-dialog .thm-moeda-linha {
+  display: grid;
+  grid-template-columns: 64px minmax(90px, 1fr) auto;
+  align-items: center;
+  gap: var(--t20g-e3);
+}
+
+.thm-dialog .thm-moeda-linha > label,
+.thm-dialog .thm-moeda-linha > input[type="number"] {
+  flex: none;
+  width: 100%;
+}
+
+.thm-moeda-max {
+  margin: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
 .thm-coin-icone {
   width: 20px;
   height: 20px;

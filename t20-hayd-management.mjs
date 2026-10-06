@@ -1046,11 +1046,12 @@ function coinInputsHtml(max = null, { showTl = true } = {}) {
   const keys = showTl ? COINS : COINS.filter((k) => k !== "tl");
   return keys.map((k) => {
     const maxAttr = max ? `max="${max[k]}"` : "";
-    const maxTxt = max ? ` <span class="thm-hint">(máx. ${max[k]})</span>` : "";
+    const maxTxt = max ? `<span class="thm-hint thm-moeda-max">máx. ${max[k]}</span>` : "";
     return `
-      <div class="form-group">
-        <label>${coinLabelHtml(k)}${maxTxt}</label>
+      <div class="form-group thm-moeda-linha">
+        <label>${coinLabelHtml(k)}</label>
         <input type="number" name="coin-${k}" value="0" min="0" ${maxAttr} step="1" />
+        ${maxTxt}
       </div>`;
   }).join("");
 }
@@ -1205,6 +1206,7 @@ async function openMoneyDialog({
 
   const result = await foundry.applications.api.DialogV2.wait({
     window: { title, icon: "fa-solid fa-coins" },
+    position: { width: 420 },
     content,
     rejectClose: false,
     buttons: [
@@ -1480,7 +1482,7 @@ async function openEditStashMoneyDialog(folderId) {
   const inputs = keys
     .map(
       (k) => `
-      <div class="form-group">
+      <div class="form-group thm-moeda-linha">
         <label>${coinLabelHtml(k)}</label>
         <input type="number" name="coin-${k}" value="${money[k]}" min="0" step="1" />
       </div>`
@@ -1489,7 +1491,7 @@ async function openEditStashMoneyDialog(folderId) {
 
   const result = await foundry.applications.api.DialogV2.wait({
     window: { title: loc("THM.EditStashMoneyTitle"), icon: "fa-solid fa-pen" },
-    position: { width: 340 },
+    position: { width: 380 },
     content: `<div class="thm-dialog">${inputs}
       <p class="thm-hint">${loc("THM.EditStashMoneyHint")}</p></div>`,
     rejectClose: false,
