@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const raiz = new URL('../../', import.meta.url);
-const motor = await readFile(new URL('scripts/automacoes/motor.mjs', raiz), 'utf8');
-const hooks = await readFile(new URL('scripts/automacoes/hooks.mjs', raiz), 'utf8');
+const semCR = (texto) => texto.split("\r\n").join("\n");
+const motor = semCR(await readFile(new URL('scripts/automacoes/motor.mjs', raiz), 'utf8'));
+const hooks = semCR(await readFile(new URL('scripts/automacoes/hooks.mjs', raiz), 'utf8'));
 const css = await readFile(new URL('t20-hayd-gmtools.css', raiz), 'utf8');
 const idioma = JSON.parse(await readFile(new URL('lang/pt-BR.json', raiz), 'utf8'));
 
