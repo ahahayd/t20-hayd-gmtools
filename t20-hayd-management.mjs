@@ -1905,24 +1905,71 @@ function sentidosDoMembro(actor) {
 }
 
 /**
- * Condições que estão pegando no personagem agora (Agarrado, Abalado,
- * Apavorado...), para o cartão de membro.
+ * O que está pegando no personagem agora, para o cartão de membro: as
+ * condições (Agarrado, Abalado, Apavorado...) e os efeitos temporários
+ * (uma bênção de 3 rodadas, um veneno de 1 minuto).
  *
- * O que conta como condição: o efeito traz um status do Foundry, ou está
- * marcado como condição pelo sistema. Efeito de poder ou de item, que é
- * bônus passivo e não estado de combate, fica de fora — senão a faixa do
- * cartão vira a lista de habilidades do personagem.
+ * Ficam de fora, por serem outra coisa: passivo de poder, bônus de item,
+ * aumento de atributo — e os "efeitos de uso", que são opções oferecidas na
+ * hora de usar um item, não estado em jogo.
  */
-function condicoesDoMembro(actor) {
-  const vistas = new Map();
+/**
+ * Duração em forma curta e em português.
+ *
+ * `duration.label` do core sai no idioma da INSTALAÇÃO do Foundry, não do
+ * sistema: numa instalação em inglês o cartão misturava "3 Rounds" com o
+ * resto em português. E o chip é estreito — "60 Seconds" não cabe onde
+ * "1 min" cabe.
+ */
+function duracaoCurta(ef) {
+  const d = ef?.duration ?? {};
+  const rodadas = Number(d.rounds) || 0;
+  const turnos = Number(d.turns) || 0;
+  const segundos = Number(d.seconds) || 0;
+  if (rodadas) return `${rodadas} rod.`;
+  if (turnos) return `${turnos} turno${turnos > 1 ? "s" : ""}`;
+  if (segundos >= 3600) {
+    const horas = Math.round(segundos / 3600);
+    return `${horas} h`;
+  }
+  if (segundos >= 60) return `${Math.round(segundos / 60)} min`;
+  if (segundos) return `${segundos} s`;
+  // Sem duração numérica: o rótulo do core ainda diz algo ("Cena", "None").
+  const rotulo = ef?.duration?.label;
+  return rotulo && rotulo !== "None" ? rotulo : "";
+}
+
+function efeitosDoMembro(actor) {
+  const vistos = new Map();
   for (const ef of actor.effects ?? []) {
     if (ef.disabled || ef.isSuppressed) continue;
+    // "Efeito de uso" é uma OPÇÃO que o sistema oferece na hora de usar um
+    // item (um Golpe Divino que você escolhe aplicar naquele ataque), não um
+    // estado em jogo. Fica de fora mesmo quando está habilitado na ficha —
+    // senão a faixa do cartão vira a lista de opções do personagem.
+    if (ef.getFlag?.("tormenta20", "onuse")) continue;
+
     const ehCondicao = ef.getFlag?.("tormenta20", "condition") === true || (ef.statuses?.size ?? 0) > 0;
-    if (!ehCondicao) continue;
-    // Duas fontes podem aplicar a mesma condição; o cartão mostra uma vez.
-    if (!vistas.has(ef.name)) vistas.set(ef.name, { nome: ef.name, img: ef.img });
+    // `isTemporary` é o que separa o que está pegando AGORA do que é
+    // permanente: só vale para efeito com duração (rodadas, turnos, segundos).
+    // Passivo de poder, bônus de item e aumento de atributo ficam todos de
+    // fora por aqui, sem precisar de lista de exceção.
+    const ehTemporario = ef.isTemporary === true;
+    if (!ehCondicao && !ehTemporario) continue;
+
+    // Duas fontes podem aplicar o mesmo efeito; o cartão mostra uma vez.
+    if (vistos.has(ef.name)) continue;
+    vistos.set(ef.name, {
+      nome: ef.name,
+      img: ef.img,
+      condicao: ehCondicao,
+      duracao: duracaoCurta(ef)
+    });
   }
-  return [...vistas.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+  // Condições primeiro (mudam a cada rodada), temporários depois.
+  return [...vistos.values()].sort(
+    (a, b) => Number(b.condicao) - Number(a.condicao) || a.nome.localeCompare(b.nome, "pt-BR")
+  );
 }
 
 /** Ordem e rótulos dos tipos de deslocamento (mesma ordem da ficha do sistema). */
@@ -2073,7 +2120,7 @@ class PartySheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
         percepcao: periciaSinal(a, "perc"),
         iniciativa: periciaSinal(a, "inic"),
         sentidos: sentidosDoMembro(a),
-        condicoes: condicoesDoMembro(a),
+        efeitos: efeitosDoMembro(a),
         desloc: movimentosDoMembro(a)
       };
     });

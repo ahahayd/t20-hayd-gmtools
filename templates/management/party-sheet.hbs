@@ -68,13 +68,15 @@
         </span>
       </div>
 
-      {{!-- Traços: o que o personagem É (sentidos) e o que está pegando nele
-            agora (condições). As condições vêm primeiro e em tom de aviso —
-            são o que muda de rodada para rodada. --}}
+      {{!-- Traços: o que está pegando no personagem agora (condições e
+            efeitos temporários) e o que ele é (sentidos). As condições vêm
+            primeiro, em tom de aviso; os temporários, em tom de informação,
+            com a duração no chip. A faixa some sozinha quando fica vazia. --}}
       <div class="thm-tracos">
-        {{#each this.condicoes}}
-        <span class="t20g-chip thm-condicao" data-tooltip="{{this.nome}}">
-          <img src="{{this.img}}" alt="" />{{this.nome}}
+        {{#each this.efeitos}}
+        <span class="t20g-chip {{#if this.condicao}}thm-condicao{{else}}thm-efeito{{/if}}"
+          data-tooltip="{{this.nome}}{{#if this.duracao}} — {{this.duracao}}{{/if}}">
+          <img src="{{this.img}}" alt="" />{{this.nome}}{{#unless this.condicao}}{{#if this.duracao}} <small>{{this.duracao}}</small>{{/if}}{{/unless}}
         </span>
         {{/each}}
         {{#each this.sentidos}}

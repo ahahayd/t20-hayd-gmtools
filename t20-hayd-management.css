@@ -209,6 +209,34 @@
   background: transparent;
 }
 
+/* Efeito temporário é informação, não alarme: tom frio, para a condição
+   (que é o que costuma exigir reação) continuar sendo a cor que salta. */
+.thm-party-sheet .thm-efeito {
+  padding-inline-start: 3px;
+  background: color-mix(in oklab, var(--t20g-info) 13%, transparent);
+  border-color: color-mix(in oklab, var(--t20g-info) 36%, transparent);
+  color: color-mix(in oklab, var(--t20g-info) 78%, var(--t20g-ink));
+  font-weight: 600;
+}
+
+.thm-party-sheet .thm-efeito > img {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 2px;
+  object-fit: contain;
+  background: transparent;
+}
+
+/* A duração acompanha o nome, apagada: quem precisa dela já está lendo o
+   chip, e quem não precisa não tropeça nela. */
+.thm-party-sheet .thm-efeito > small {
+  font-size: 0.625rem;
+  font-weight: 500;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+
 .thm-party-sheet .thm-sentido { font-weight: 500; }
 
 /* PV e PM dividem a linha; carga ocupa a largura inteira embaixo. */
