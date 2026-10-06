@@ -1904,6 +1904,27 @@ function sentidosDoMembro(actor) {
   return lista;
 }
 
+/**
+ * Condições que estão pegando no personagem agora (Agarrado, Abalado,
+ * Apavorado...), para o cartão de membro.
+ *
+ * O que conta como condição: o efeito traz um status do Foundry, ou está
+ * marcado como condição pelo sistema. Efeito de poder ou de item, que é
+ * bônus passivo e não estado de combate, fica de fora — senão a faixa do
+ * cartão vira a lista de habilidades do personagem.
+ */
+function condicoesDoMembro(actor) {
+  const vistas = new Map();
+  for (const ef of actor.effects ?? []) {
+    if (ef.disabled || ef.isSuppressed) continue;
+    const ehCondicao = ef.getFlag?.("tormenta20", "condition") === true || (ef.statuses?.size ?? 0) > 0;
+    if (!ehCondicao) continue;
+    // Duas fontes podem aplicar a mesma condição; o cartão mostra uma vez.
+    if (!vistas.has(ef.name)) vistas.set(ef.name, { nome: ef.name, img: ef.img });
+  }
+  return [...vistas.values()].sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
 /** Ordem e rótulos dos tipos de deslocamento (mesma ordem da ficha do sistema). */
 const MOVEMENT_ORDER = ["walk", "climb", "burrow", "swim", "fly"];
 const MOVEMENT_LABELS = {
@@ -2052,6 +2073,7 @@ class PartySheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
         percepcao: periciaSinal(a, "perc"),
         iniciativa: periciaSinal(a, "inic"),
         sentidos: sentidosDoMembro(a),
+        condicoes: condicoesDoMembro(a),
         desloc: movimentosDoMembro(a)
       };
     });
@@ -2670,6 +2692,78 @@ function registerTransferUiHooks() {
  * está ligada — é o que faz o recurso se comportar como se não existisse
  * quando desligado.
  */
+/* ============================================================
+   MENU DE CONTEXTO DAS PASTAS DE ATORES
+============================================================ */
+
+/** Id da pasta a partir do elemento de lista do diretório (jQuery ou DOM). */
+function idDaPastaDoMenu(alvo) {
+  const el = alvo?.[0] ?? alvo;
+  if (!(el instanceof HTMLElement)) return null;
+  return el.dataset?.folderId ?? el.closest?.("[data-folder-id]")?.dataset?.folderId ?? null;
+}
+
+/** Marca (ou desmarca) uma pasta como grupo e atualiza quem estiver aberto. */
+async function definirPastaComoGrupo(folderId, virarGrupo) {
+  if (!folderId || !game.user.isGM) return;
+  const parties = getPartiesSetting();
+  if (virarGrupo === !!parties[folderId]) return;
+  const nome = game.folders.get(folderId)?.name ?? "";
+  if (virarGrupo) parties[folderId] = parties[folderId] ?? {};
+  else delete parties[folderId];
+  await game.settings.set(SETTINGS_NS, "parties", parties);
+  atualizarUiDasParties();
+  ui.notifications.info(loc(virarGrupo ? "THM.FolderNowParty" : "THM.FolderNoLongerParty", { nome }));
+}
+
+/**
+ * "Definir como pasta de grupo" / "Deixar de ser pasta de grupo" no menu do
+ * botão direito das pastas de atores.
+ *
+ * O caminho até aqui era Configurações → Gestão de Grupos → Gerenciar
+ * Grupos, só para ligar uma chave — longe demais para algo que o Mestre
+ * muda no meio da sessão. O estoque, as subpastas e tudo o mais continuam
+ * no gerenciador; isto é só o atalho do caso comum.
+ *
+ * Desmarcar NÃO apaga o estoque do grupo: ele vive num flag da pasta e volta
+ * inteiro se a pasta for marcada de novo. Apagar por engano aqui seria caro
+ * demais para um item de menu.
+ */
+function opcoesDeGrupoNoMenu(opcoes) {
+  if (!game.user.isGM) return;
+  if (opcoes.some((o) => o.name === "THM.MarkAsParty")) return;
+  opcoes.push(
+    {
+      name: "THM.MarkAsParty",
+      icon: '<i class="fa-solid fa-users"></i>',
+      condition: (alvo) => {
+        const id = idDaPastaDoMenu(alvo);
+        return !!id && !getPartiesSetting()[id];
+      },
+      callback: (alvo) => definirPastaComoGrupo(idDaPastaDoMenu(alvo), true)
+    },
+    {
+      name: "THM.UnmarkAsParty",
+      icon: '<i class="fa-solid fa-users-slash"></i>',
+      condition: (alvo) => {
+        const id = idDaPastaDoMenu(alvo);
+        return !!id && !!getPartiesSetting()[id];
+      },
+      callback: (alvo) => definirPastaComoGrupo(idDaPastaDoMenu(alvo), false)
+    }
+  );
+}
+
+/** Registra o menu nos dois nomes de hook: o do v13 e o do diretório de atores. */
+function registerFolderContextHooks() {
+  // O v13 unificou em `getFolderContextOptions`; versões anteriores (e alguns
+  // diretórios) ainda disparam o nome específico. Registrar nos dois é mais
+  // barato do que descobrir a versão — a guarda de duplicata em
+  // `opcoesDeGrupoNoMenu` impede que as entradas apareçam duas vezes.
+  Hooks.on("getFolderContextOptions", (_app, opcoes) => opcoesDeGrupoNoMenu(opcoes));
+  Hooks.on("getActorDirectoryFolderContext", (_html, opcoes) => opcoesDeGrupoNoMenu(opcoes));
+}
+
 function registerPartyUiHooks() {
   // Botão "Party" no cabeçalho da pasta de cada party no diretório de atores
   Hooks.on("renderActorDirectory", (app, html) => {
@@ -2708,6 +2802,14 @@ function registerPartyUiHooks() {
   Hooks.on("deleteItem", (item) => {
     if (item.parent instanceof Actor) refreshPartyApps(item.parent);
   });
+  // Condições são ActiveEffects: sem estes três, o cartão de membro só
+  // mostraria a mudança na próxima abertura da ficha do grupo.
+  for (const hook of ["createActiveEffect", "updateActiveEffect", "deleteActiveEffect"]) {
+    Hooks.on(hook, (efeito) => {
+      const ator = efeito?.parent instanceof Actor ? efeito.parent : efeito?.parent?.parent;
+      if (ator instanceof Actor) refreshPartyApps(ator);
+    });
+  }
   Hooks.on("createActor", () => refreshPartyApps());
   Hooks.on("deleteActor", () => refreshPartyApps());
   Hooks.on("updateFolder", () => refreshPartyApps());
@@ -2797,6 +2899,9 @@ Hooks.once("init", () => {
   registerSettings();
   registerLojaCompatHooks();
   registerTransferUiHooks();
+  // O menu de contexto é independente da Ficha do Grupo: marcar a pasta é o
+  // que LIGA um grupo, então precisa existir mesmo com a ficha desligada.
+  registerFolderContextHooks();
   if (lerConfig("partySheetEnabled")) registerPartyUiHooks();
 });
 

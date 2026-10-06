@@ -3,10 +3,13 @@
 
   Três decisões de estrutura que valem a leitura:
 
-  * O cartão de membro é um GRID de três faixas (identidade, aptidões,
-    recursos), não uma pilha de divs. Com grid, nome, defesa e deslocamento
-    de todos os membros caem na mesma linha de base, que é o que faz uma
-    lista de personagens parecer uma tabela de verdade e não cartões soltos.
+  * O cartão de membro é um GRID de faixas (identidade, aptidões, traços,
+    recursos), não uma pilha de divs. Com grid, nome e defesa de todos os
+    membros caem na mesma linha de base, que é o que faz uma lista de
+    personagens parecer uma tabela de verdade e não cartões soltos.
+  * Deslocamento saiu do cartão: ocupava uma coluna inteira para repetir
+    "9m" em todo mundo. No lugar entraram os traços que mudam de
+    personagem para personagem e de rodada para rodada.
   * PV e PM ficam LADO A LADO. Eram três barras empilhadas ocupando a
     largura inteira da janela para mostrar dois números cada.
   * `thm-inv-item` continua sendo a classe das linhas de inventário: o
@@ -38,17 +41,12 @@
         {{#if this.level}}<span class="thm-member-level">{{localize "THM.Level"}} {{this.level}}</span>{{/if}}
       </header>
 
-      {{!-- Defesa e deslocamento: os dois números que o Mestre procura
-            primeiro, então ganham bloco próprio com rótulo. --}}
-      <div class="thm-vitals">
-        <div class="thm-vital" data-tooltip="{{localize 'THM.Defense'}}">
-          <span class="thm-vital-rotulo"><i class="fa-solid fa-shield-halved"></i> {{localize "THM.Defense"}}</span>
-          <span class="thm-vital-valor">{{this.defesa}}</span>
-        </div>
-        <div class="thm-vital" data-tooltip-html="<strong>{{localize 'THM.Movement'}}</strong>{{#each this.desloc.linhas}}<br>{{this}}{{else}}<br>{{localize 'THM.MovementNone'}}{{/each}}">
-          <span class="thm-vital-rotulo"><i class="fa-solid fa-shoe-prints"></i> {{localize "THM.Movement"}}</span>
-          <span class="thm-vital-valor">{{this.desloc.maxLabel}}</span>
-        </div>
+      {{!-- Defesa fica na mesma linha do nome, encostada na direita: é o
+            número que o Mestre procura primeiro, e fechar essa coluna acaba
+            com o vazio que sobrava ao lado do nome. --}}
+      <div class="thm-vital" data-tooltip="{{localize 'THM.Defense'}}">
+        <span class="thm-vital-rotulo">{{localize "THM.Defense"}}</span>
+        <span class="thm-vital-valor">{{this.defesa}}</span>
       </div>
 
       <div class="thm-stat-strip">
@@ -68,8 +66,21 @@
         <span class="t20g-chip" data-tooltip="{{localize 'THM.Initiative'}}">
           <i class="fa-solid fa-bolt"></i>{{this.iniciativa}}
         </span>
+      </div>
+
+      {{!-- Traços: o que o personagem É (sentidos) e o que está pegando nele
+            agora (condições). As condições vêm primeiro e em tom de aviso —
+            são o que muda de rodada para rodada. --}}
+      <div class="thm-tracos">
+        {{#each this.condicoes}}
+        <span class="t20g-chip thm-condicao" data-tooltip="{{this.nome}}">
+          <img src="{{this.img}}" alt="" />{{this.nome}}
+        </span>
+        {{/each}}
         {{#each this.sentidos}}
-        <span class="t20g-chip thm-sense-pill" data-tooltip="{{this.label}}"><i class="fa-solid {{this.icon}}"></i> {{this.label}}</span>
+        <span class="t20g-chip thm-sentido" data-tooltip="{{this.label}}">
+          <i class="fa-solid {{this.icon}}"></i>{{this.label}}
+        </span>
         {{/each}}
       </div>
 

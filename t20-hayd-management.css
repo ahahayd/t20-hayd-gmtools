@@ -50,17 +50,19 @@
   align-content: start;
 }
 
-/* O cartão é uma grade de duas colunas (retrato | conteúdo) e quatro
-   faixas. Assim nome, defesa, aptidões e recursos de TODOS os membros
-   caem nas mesmas linhas de base, mesmo com nomes de tamanhos diferentes. */
+/* O cartão é uma grade: retrato | conteúdo | defesa. Com as colunas
+   declaradas, nome e defesa de TODOS os membros caem nas mesmas verticais,
+   mesmo com nomes de tamanhos diferentes — e a defesa encostada na direita
+   fecha a linha do nome, que antes terminava num vazio. */
 .thm-member-card {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-columns: 52px minmax(0, 1fr) auto;
   grid-template-areas:
-    "retrato cabeca"
-    "retrato vitais"
-    "faixa   faixa"
-    "barras  barras";
+    "retrato cabeca defesa"
+    "retrato faixa  defesa"
+    "tracos  tracos tracos"
+    "barras  barras barras";
+  align-items: center;
   gap: var(--t20g-e2) var(--t20g-e3);
   padding: var(--t20g-e3);
   background: var(--t20g-s1);
@@ -74,6 +76,7 @@
 
 .thm-portrait {
   grid-area: retrato;
+  align-self: start;
   width: 52px;
   height: 52px;
   object-fit: cover;
@@ -95,6 +98,7 @@
   align-items: baseline;
   gap: var(--t20g-e2);
   min-width: 0;
+  align-self: end;
 }
 
 .thm-member-name {
@@ -123,31 +127,23 @@
   color: var(--t20g-ink-3);
 }
 
-/* Defesa e deslocamento: rótulo pequeno em cima, número grande embaixo.
-   Antes eram ícones ornamentados com o valor por cima — bonito de longe,
+/* Defesa: rótulo pequeno em cima, número grande embaixo, à direita do nome.
+   Antes era um ícone de escudo com o valor por cima — bonito de longe,
    ilegível de perto, e sem dizer qual número era qual. */
-.thm-vitals {
-  grid-area: vitais;
-  display: flex;
-  gap: var(--t20g-e2);
-  align-self: end;
-}
-
 .thm-vital {
+  grid-area: defesa;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 1px;
-  min-width: 68px;
-  padding: 3px var(--t20g-e2);
+  min-width: 56px;
+  padding: var(--t20g-e1) var(--t20g-e2);
   background: var(--t20g-s2);
   border: 1px solid var(--t20g-line);
   border-radius: var(--t20g-r1);
 }
 
 .thm-vital-rotulo {
-  display: flex;
-  align-items: center;
-  gap: 4px;
   font-size: 0.5625rem;
   font-weight: 700;
   letter-spacing: 0.07em;
@@ -155,24 +151,22 @@
   color: var(--t20g-ink-3);
 }
 
-.thm-vital-rotulo > i { font-size: 0.5625rem; }
-
 .thm-vital-valor {
-  font-size: 1rem;
+  font-size: 1.25rem;
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--t20g-ink);
 }
 
-/* Faixa de aptidões: resistências | percepção e iniciativa | sentidos.
-   Os chips herdam o visual neutro de `.t20g-chip`. */
+/* Faixa de aptidões: resistências | percepção e iniciativa. */
 .thm-stat-strip {
   grid-area: faixa;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--t20g-e1);
+  align-self: start;
 }
 
 .thm-stat-sep {
@@ -182,7 +176,40 @@
   background: var(--t20g-line);
 }
 
-.thm-sense-pill { font-weight: 500; }
+/* Traços: condições primeiro (mudam de rodada para rodada), sentidos depois
+   (são o que o personagem é). A faixa some sozinha quando não há nem um nem
+   outro — por isso o :empty aqui, em vez de um condicional no template: o
+   Handlebars do Foundry não garante um helper "or". */
+.thm-tracos {
+  grid-area: tracos;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--t20g-e1);
+}
+
+.thm-tracos:empty { display: none; }
+
+/* Condição é estado de combate: tom de aviso, com o ícone do próprio efeito,
+   para bater com o que o jogador vê sobre o token na cena. */
+.thm-party-sheet .thm-condicao {
+  padding-inline-start: 3px;
+  background: color-mix(in oklab, var(--t20g-aviso) 14%, transparent);
+  border-color: color-mix(in oklab, var(--t20g-aviso) 38%, transparent);
+  color: color-mix(in oklab, var(--t20g-aviso) 82%, var(--t20g-ink));
+  font-weight: 600;
+}
+
+.thm-party-sheet .thm-condicao > img {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 2px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.thm-party-sheet .thm-sentido { font-weight: 500; }
 
 /* PV e PM dividem a linha; carga ocupa a largura inteira embaixo. */
 .thm-bars {
