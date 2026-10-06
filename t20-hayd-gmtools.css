@@ -85,14 +85,25 @@
 .t20g-atr-metodos { display: flex; flex-direction: column; gap: 4px; }
 .t20g-atr-metodo {
   display: flex;
-  gap: 8px;
+  gap: var(--t20g-e3);
   align-items: flex-start;
-  padding: 6px 8px;
-  border: 1px solid var(--color-border-light-2, #999);
-  border-radius: 6px;
+  padding: var(--t20g-e2) var(--t20g-e3);
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
   cursor: pointer;
+  transition: background-color var(--t20g-transicao), border-color var(--t20g-transicao);
 }
-.t20g-atr-metodo:hover { border-color: var(--color-border-highlight, #c0392b); }
+.t20g-atr-metodo:hover { background: var(--t20g-s2); border-color: var(--t20g-line-forte); }
+/* Escolhido: a mesma marca de seleção do resto do módulo. O contorno
+   carmim de antes não combinava com o radio, que já é âmbar. */
+.t20g-atr-metodo:has(input:checked) {
+  background: var(--t20g-accent-fundo);
+  border-color: var(--t20g-accent-linha);
+}
+.t20g-atr-metodo input[type="radio"] { accent-color: var(--t20g-accent); }
+/* O nome do método é o que se lê primeiro; a fonte e a página, depois. */
+.t20g-atr-metodo b { color: var(--t20g-ink); font-weight: 600; }
 .t20g-atr-metodo input[type="radio"] { margin-top: 3px; flex: 0 0 auto; }
 .t20g-atr-metodo .notes { font-size: 0.85em; opacity: 0.85; }
 
