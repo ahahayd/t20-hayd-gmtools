@@ -76,7 +76,7 @@
         {{#each this.efeitos}}
         <span class="t20g-chip {{#if this.condicao}}thm-condicao{{else}}thm-efeito{{/if}}"
           data-tooltip="{{this.nome}}{{#if this.duracao}} — {{this.duracao}}{{/if}}">
-          <img src="{{this.img}}" alt="" />{{this.nome}}{{#unless this.condicao}}{{#if this.duracao}} <small>{{this.duracao}}</small>{{/if}}{{/unless}}
+          <img src="{{this.img}}" alt="" />{{this.nome}}{{#if this.duracao}} <small>{{this.duracao}}</small>{{/if}}
         </span>
         {{/each}}
         {{#each this.sentidos}}

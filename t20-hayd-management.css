@@ -230,6 +230,7 @@
 
 /* A duração acompanha o nome, apagada: quem precisa dela já está lendo o
    chip, e quem não precisa não tropeça nela. */
+.thm-party-sheet .thm-condicao > small,
 .thm-party-sheet .thm-efeito > small {
   font-size: 0.625rem;
   font-weight: 500;

@@ -1914,29 +1914,31 @@ function sentidosDoMembro(actor) {
  * hora de usar um item, não estado em jogo.
  */
 /**
- * Duração em forma curta e em português.
+ * Duração que vai no chip do efeito: "Cena", a duração de combate, ou nada.
  *
- * `duration.label` do core sai no idioma da INSTALAÇÃO do Foundry, não do
- * sistema: numa instalação em inglês o cartão misturava "3 Rounds" com o
- * resto em português. E o chip é estreito — "60 Seconds" não cabe onde
- * "1 min" cabe.
+ * O texto é montado aqui, e não lido de `duration.label`, por dois motivos:
+ * o rótulo do core sai no idioma da INSTALAÇÃO do Foundry (numa instalação
+ * em inglês o cartão misturava "3 Rounds" com o resto em português), e ele
+ * não conhece a caixa "Cena" do sistema.
  */
 function duracaoCurta(ef) {
-  const d = ef?.duration ?? {};
-  const rodadas = Number(d.rounds) || 0;
-  const turnos = Number(d.turns) || 0;
-  const segundos = Number(d.seconds) || 0;
-  if (rodadas) return `${rodadas} rod.`;
-  if (turnos) return `${turnos} turno${turnos > 1 ? "s" : ""}`;
-  if (segundos >= 3600) {
-    const horas = Math.round(segundos / 3600);
-    return `${horas} h`;
-  }
-  if (segundos >= 60) return `${Math.round(segundos / 60)} min`;
-  if (segundos) return `${segundos} s`;
-  // Sem duração numérica: o rótulo do core ainda diz algo ("Cena", "None").
-  const rotulo = ef?.duration?.label;
-  return rotulo && rotulo !== "None" ? rotulo : "";
+  // 1) A caixa "Cena" do efeito ganha de tudo. Ela precisa vir primeiro
+  //    porque o sistema grava `duration.rounds = 99` nos efeitos de cena —
+  //    sem esta ordem, o chip anunciaria "99 rodadas".
+  if (ef?.getFlag?.("tormenta20", "durationScene")) return "Cena";
+
+  // 2) Duração de combate, que é a que o Mestre precisa acompanhar rodada a
+  //    rodada. Com as duas definidas, as duas aparecem.
+  const rodadas = Number(ef?.duration?.rounds) || 0;
+  const turnos = Number(ef?.duration?.turns) || 0;
+  const partes = [];
+  if (rodadas) partes.push(`${rodadas} rodada${rodadas > 1 ? "s" : ""}`);
+  if (turnos) partes.push(`${turnos} turno${turnos > 1 ? "s" : ""}`);
+  if (partes.length) return partes.join(", ");
+
+  // 3) Resto (duração em segundos, horas, dias) não vai para o chip: fora de
+  //    combate ninguém conta o relógio, e o número só ocuparia a linha.
+  return "";
 }
 
 function efeitosDoMembro(actor) {
