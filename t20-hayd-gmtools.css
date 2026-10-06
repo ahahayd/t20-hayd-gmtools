@@ -619,24 +619,57 @@ a.header-button.t20g-atr-header {
 
 .t20g-ui .t20g-contadores-linha select.t20g-campo { max-width: 190px; }
 
-/* Cancelar um efeito ativo é destrutivo: a caixa fica marcada em vermelho
-   quando ligada, para não se confundir com "alterar um contador". */
+/* Cancelar um efeito ativo é destrutivo: o chip fica vermelho quando ligado,
+   para não se confundir com "alterar um contador".
+
+   A caixa de marcação é desenhada aqui, e a nativa fica escondida (mas no
+   fluxo, focável e clicável pelo teclado). Motivo: o <input type=checkbox>
+   do core tem altura própria e desenho próprio por tema — dentro de um chip
+   de 22px ele encostava na borda e lia como se estivesse FORA do botão. */
 .t20g-contadores-cancelar {
   display: inline-flex;
   align-items: center;
   gap: var(--t20g-e2);
-  padding: 3px var(--t20g-e2);
+  padding: 3px var(--t20g-e3);
   border: 1px solid var(--t20g-line);
   border-radius: var(--t20g-r1);
   font-size: 0.6875rem;
   color: var(--t20g-ink-2);
   cursor: pointer;
-  transition: border-color var(--t20g-transicao), color var(--t20g-transicao);
+  transition: background-color var(--t20g-transicao), border-color var(--t20g-transicao),
+    color var(--t20g-transicao);
+}
+
+.t20g-contadores-cancelar::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  opacity: 0.5;
+  transition: background-color var(--t20g-transicao), opacity var(--t20g-transicao);
+}
+
+.t20g-ui .t20g-contadores-cancelar input[type="checkbox"] {
+  /* Escondida da vista, presente para o teclado e para o form. */
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .t20g-contadores-cancelar:hover {
   border-color: color-mix(in oklab, var(--t20g-perigo) 45%, transparent);
   color: var(--t20g-perigo);
+}
+
+.t20g-contadores-cancelar:has(input:focus-visible) {
+  outline: none;
+  box-shadow: var(--t20g-foco);
 }
 
 .t20g-contadores-cancelar:has(input:checked) {
@@ -645,11 +678,10 @@ a.header-button.t20g-atr-header {
   color: var(--t20g-perigo);
 }
 
-.t20g-contadores-cancelar input {
-  width: 13px;
-  height: 13px;
-  margin: 0;
-  accent-color: var(--t20g-perigo);
+.t20g-contadores-cancelar:has(input:checked)::before {
+  background: var(--t20g-perigo);
+  border-color: var(--t20g-perigo);
+  opacity: 1;
 }
 
 .t20g-contadores-vazio {
@@ -2259,4 +2291,98 @@ a.header-button.t20g-atr-header {
 .t20g-preset-lista li small {
   grid-column: 2;
   opacity: 0.75;
+}
+
+/* ── Transformar em engenhoca (conversor em lote) ── */
+
+.t20g-conv {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t20g-e3);
+}
+
+.t20g-ui .t20g-conv-busca { width: 100%; }
+
+.t20g-conv-lista {
+  max-height: 46vh;
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  overflow-y: auto;
+}
+
+.t20g-conv-lista > * + * { border-top: 1px solid var(--t20g-line); }
+
+.t20g-conv-linha {
+  display: grid;
+  grid-template-columns: auto 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e2) var(--t20g-e3);
+  margin: 0;
+  cursor: pointer;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 40px;
+  transition: background-color var(--t20g-transicao);
+}
+
+.t20g-conv-linha[hidden] { display: none; }
+.t20g-conv-linha:hover { background: var(--t20g-s2); }
+
+/* Marcada = é engenhoca. O fundo âmbar deixa ver de relance quantas são,
+   sem ter de conferir caixa por caixa. */
+.t20g-conv-linha:has(input:checked) { background: var(--t20g-accent-fundo); }
+
+/* Caixa desenhada por nós, pelo mesmo motivo do painel de automações: a
+   nativa muda de tamanho conforme o tema e desalinha a coluna. */
+.t20g-ui .t20g-conv-linha > input[type="checkbox"] {
+  appearance: none;
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background-color var(--t20g-transicao), border-color var(--t20g-transicao);
+}
+
+.t20g-ui .t20g-conv-linha > input[type="checkbox"]:checked {
+  background: var(--t20g-accent);
+  border-color: var(--t20g-accent);
+}
+
+.t20g-ui .t20g-conv-linha > input[type="checkbox"]:focus-visible {
+  outline: none;
+  box-shadow: var(--t20g-foco);
+}
+
+.t20g-conv-texto { min-width: 0; }
+
+.t20g-conv-texto > b {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--t20g-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.t20g-conv-texto > small {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--t20g-ink-3);
+}
+
+.t20g-ui .t20g-conv-volta { max-width: 128px; }
+.t20g-ui .t20g-conv-volta:disabled { opacity: 0.4; }
+
+.t20g-conv-resumo {
+  min-height: 1.2em;
+  margin: 0;
+  font-weight: 600;
+  color: var(--t20g-accent-forte);
 }
