@@ -16,6 +16,53 @@ export const IMPACTO_CONFIG = {
   partySheetEnabled: 'medio'
 };
 
+/**
+ * Opções que NÃO levam etiqueta de impacto.
+ *
+ * A etiqueta responde a uma pergunta só: "ligar isto custa o quê ao meu
+ * mundo?". Ela só faz sentido onde há um recurso para ligar e desligar.
+ *
+ * Em duas situações ela vira ruído — e ruído numa tela de configurações é
+ * pior do que informação faltando, porque ensina a ignorar a etiqueta
+ * justamente onde ela importa (Automações e Prévia de dano):
+ *
+ * - BOTÃO DE JANELA: abrir o gerador de tesouros ou o editor de custos não
+ *   deixa nada rodando; o custo é o da janela enquanto está aberta.
+ * - PREFERÊNCIA DE UM RECURSO JÁ LIGADO: o método padrão da campanha, o
+ *   total de pontos de compra, permitir atributos negativos, o modo de chat
+ *   ou quem pode rerolar mudam o COMPORTAMENTO, não o custo. Etiquetar isso
+ *   de "impacto baixo" sugere uma escolha de desempenho onde não há nenhuma.
+ */
+export const SEM_ETIQUETA_DE_IMPACTO = new Set([
+  // Botões que apenas abrem uma janela.
+  // `metagameMenu` fica FORA desta lista de propósito: é o único caminho
+  // para ligar e desligar o metagame, então ali a etiqueta responde mesmo
+  // à pergunta de custo.
+  'partyManager',
+  'tesourosGeradorMenu',
+  'tesourosVinculosMenu',
+  'tesourosLivrosMenu',
+  'tesourosHomebrewMenu',
+  'atributosCustosMenu',
+  'atributosConversaoMenu',
+  // Preferências de comportamento/conteúdo
+  'atributosMetodoPadrao',
+  'atributosPontos',
+  'atributosMultiNegativos',
+  'abrirDiarioAutomacoes',
+  'visibility',
+  'requireConfirmation',
+  'chatMode',
+  'lojaCompat',
+  'jogadoresReroll',
+  'jogadoresManual'
+]);
+
+/** A opção merece etiqueta de impacto? */
+export function temEtiquetaDeImpacto(chave) {
+  return !SEM_ETIQUETA_DE_IMPACTO.has(chave);
+}
+
 export const IMPACTO_PADRAO = 'baixo';
 export const IMPACTO_CHAVES = { baixo: 'ImpactoBaixo', medio: 'ImpactoMedio', alto: 'ImpactoAlto' };
 

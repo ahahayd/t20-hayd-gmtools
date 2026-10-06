@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { FUNCOES, IMPACTO_CONFIG, ligadasNoPreset, nivelDaConfiguracao } from '../scripts/impacto.mjs';
+import { FUNCOES, IMPACTO_CONFIG, SEM_ETIQUETA_DE_IMPACTO, ligadasNoPreset, nivelDaConfiguracao, temEtiquetaDeImpacto } from '../scripts/impacto.mjs';
 
 const ligadas = (teto) => ligadasNoPreset(teto).filter(f => f.ligada).map(f => f.chave);
 
@@ -39,4 +39,28 @@ test('configuração sem impacto declarado é baixo', () => {
 test('toda função do preset declara um nível conhecido', () => {
   assert.ok(FUNCOES.every(f => ['baixo', 'medio', 'alto'].includes(f.nivel)));
   assert.equal(new Set(FUNCOES.map(f => f.chave)).size, FUNCOES.length);
+});
+
+test('a etiqueta de impacto não aparece onde não há o que ligar', () => {
+  // A etiqueta responde "ligar isto custa o quê?". Em botão que só abre
+  // janela, e em preferência de um recurso já ligado (método padrão da
+  // campanha, pontos de compra, atributos negativos), não há escolha de
+  // desempenho nenhuma — e etiquetar tudo ensina a ignorar a etiqueta
+  // justamente onde ela importa.
+  for (const chave of ['atributosMetodoPadrao', 'atributosPontos', 'atributosMultiNegativos',
+    'tesourosGeradorMenu', 'partyManager', 'chatMode', 'jogadoresReroll']) {
+    assert.equal(temEtiquetaDeImpacto(chave), false, `${chave} não devia levar etiqueta`);
+  }
+  // E continua aparecendo justamente nas que custam caro.
+  for (const chave of ['automacoesEnabled', 'previewDano', 'partySheetEnabled', 'metagame']) {
+    assert.equal(temEtiquetaDeImpacto(chave), true, `${chave} precisa da etiqueta`);
+  }
+});
+
+test('nenhuma opção sem etiqueta carrega nível declarado', () => {
+  // Se uma chave estivesse nos dois lugares, o nível estaria escrito e
+  // invisível: ou ela custa algo e merece etiqueta, ou não custa.
+  for (const chave of SEM_ETIQUETA_DE_IMPACTO) {
+    assert.ok(!(chave in IMPACTO_CONFIG), `${chave} está em IMPACTO_CONFIG e sem etiqueta`);
+  }
 });

@@ -16,7 +16,7 @@ import './t20-hayd-custo-pm.mjs';
 import './t20-hayd-mensagens-dano.mjs';
 // Janela de presets na primeira abertura do mundo. Mesmo motivo acima.
 import './t20-hayd-presets.mjs';
-import { IMPACTO_CHAVES, nivelDaConfiguracao } from './scripts/impacto.mjs';
+import { IMPACTO_CHAVES, nivelDaConfiguracao, temEtiquetaDeImpacto } from './scripts/impacto.mjs';
 import { atalhoDeMenu } from './scripts/atalho-menu.mjs';
 // Preview de dano na janela de uso, com maximizar/minimizar. Mesmo motivo acima.
 import './t20-hayd-preview-dano.mjs';
@@ -1533,6 +1533,7 @@ function grupoDaConfiguracao(root, chave) {
 /** Etiqueta de impacto ao lado do nome da configuração. */
 function marcarImpacto(grupo, chave) {
   if (grupo.querySelector('.t20g-impacto')) return;
+  if (!temEtiquetaDeImpacto(chave)) return;
   const nivel = nivelDaConfiguracao(chave);
   const base = IMPACTO_CHAVES[nivel];
   const marca = document.createElement('span');
