@@ -388,6 +388,13 @@ function ligarControlesPainel(container, ator) {
     botao.addEventListener('click', async (evento) => {
       evento.preventDefault();
       evento.stopPropagation();
+      // Anotado ANTES de desabilitar: desabilitar tira o foco do botão, e
+      // aí a janela redesenhada não teria como saber para onde devolvê-lo.
+      const janela = botao.closest('.t20g-eng-painel-janela');
+      if (janela && botao === document.activeElement) {
+        janela.dataset.focoAcao = botao.dataset.engPainelAcao ?? '';
+        janela.dataset.focoItem = botao.dataset.itemId ?? '';
+      }
       botao.disabled = true;
       try { await acaoPainel(ator, botao); }
       catch (err) {
@@ -456,11 +463,30 @@ export function atualizarPaineis(ator) {
   }
   for (const antiga of document.querySelectorAll('.t20g-eng-painel-janela')) {
     if (antiga.dataset.actorUuid !== ator.uuid) continue;
+    // A janela do painel É o elemento que rola. Trocá-la inteira zerava a
+    // rolagem a cada mudança: quem ajustava os usos da terceira engenhoca
+    // voltava para o topo da lista a cada clique. Guardar a posição (e o
+    // botão em foco) antes de trocar deixa o painel parado onde estava.
+    const rolagem = antiga.scrollTop;
+    const focado = antiga.contains(document.activeElement) ? document.activeElement : null;
+    // O botão clicado é desabilitado durante a ação e perde o foco antes de
+    // chegarmos aqui; o próprio clique deixou anotado quem era.
+    const acaoFocada = focado?.dataset?.engPainelAcao ?? antiga.dataset.focoAcao ?? null;
+    const itemFocado = focado?.dataset?.itemId ?? antiga.dataset.focoItem ?? null;
+
     const temp = document.createElement('div');
     temp.innerHTML = conteudoPainel(ator);
     const nova = temp.firstElementChild;
     ligarControlesPainel(nova, ator);
     antiga.replaceWith(nova);
+    nova.scrollTop = rolagem;
+
+    if (acaoFocada) {
+      const seletor = `[data-eng-painel-acao="${CSS.escape(acaoFocada)}"]`
+        + (itemFocado ? `[data-item-id="${CSS.escape(itemFocado)}"]` : '');
+      // Sem `preventScroll` o próprio foco rolaria a lista de novo.
+      nova.querySelector(seletor)?.focus({ preventScroll: true });
+    }
   }
 }
 
