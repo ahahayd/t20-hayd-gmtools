@@ -233,7 +233,11 @@ test('o painel troca Ativar por Consertar quando a engenhoca está enguiçada', 
   const fonte = readFileSync(new URL('../../scripts/automacoes/engenhocas/index.mjs', import.meta.url), 'utf8');
   const linhaPainel = fonte.slice(
     fonte.indexOf('function linhaPainel'), fonte.indexOf('function conteudoPainel'));
-  assert.match(linhaPainel, /estado\.enguicada\s*\n\s*\? `<button type="button" class="t20g-eng-painel-consertar"/);
+  const ini = linhaPainel.indexOf("const acaoPrincipal = estado.enguicada");
+  assert.ok(ini > 0, "o ternário de enguiçada sumiu");
+  const ternario = linhaPainel.slice(ini, linhaPainel.indexOf(";", ini));
+  assert.ok(ternario.includes("t20g-eng-painel-consertar"), "falta o botão Consertar");
+  assert.ok(ternario.includes('data-eng-painel-acao="ativar"'), 'falta o botão Ativar');
   // Os dois nunca no ar ao mesmo tempo — só o ternário decide qual aparece.
   assert.doesNotMatch(linhaPainel, /estado\.enguicada \? `<button[^`]*Consertar/);
 });

@@ -5,6 +5,7 @@ import {
   souResponsavelPeloAtor
 } from '../runtime.mjs';
 import { APARATOS, nomeAparato } from './catalogo.mjs';
+import { abrirConversorDeEngenhocas } from './conversor.mjs';
 import {
   bonusPorDado,
   calcularCD,
@@ -351,7 +352,10 @@ function conteudoPainel(ator) {
   return `<div class="t20g-eng-painel-janela" data-actor-uuid="${ator.uuid}">
     <div class="t20g-eng-painel-janela-topo t20g-barra">
       <p class="t20g-apoio t20g-cresce"><i class="fa-solid fa-circle-info"></i> As CDs abaixo não incluem aprimoramentos escolhidos na próxima ativação.</p>
-      ${controlar ? `<button type="button" class="t20g-btn" data-eng-painel-acao="resetar"
+      ${controlar ? `<button type="button" class="t20g-btn" data-eng-painel-acao="converter"
+        data-tooltip="Marcar magias da ficha como engenhocas, várias de uma vez">
+        <i class="fa-solid fa-screwdriver-wrench"></i> Transformar em engenhoca</button>
+      <button type="button" class="t20g-btn" data-eng-painel-acao="resetar"
         data-tooltip="Zera os usos do dia de todas as engenhocas">
         <i class="fa-solid fa-sun"></i> Resetar</button>` : ''}
     </div>
@@ -363,6 +367,7 @@ async function acaoPainel(ator, botao) {
   const acao = botao.dataset.engPainelAcao;
   if (!podeControlar(ator)) return;
   if (acao === 'resetar') return resetarEngenhocas([ator]);
+  if (acao === 'converter') return abrirConversorDeEngenhocas(ator);
   const item = ator.items.get(botao.dataset.itemId);
   if (!item || !ehEngenhoca(item)) return;
   if (acao === 'ativar') return item.roll();
