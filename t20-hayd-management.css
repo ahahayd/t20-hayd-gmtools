@@ -1,5 +1,8 @@
 /* ============================================================
    T20 Hayd — Gestão de Party
+   ------------------------------------------------------------
+   Visual sobre os tokens de `styles/t20g-ui.css`. Cores, raios e
+   espaços vêm de lá; aqui fica só o que é desta tela.
 ============================================================ */
 
 .thm-party-sheet .window-content {
@@ -7,6 +10,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--t20g-s0);
 }
 
 .thm-party-sheet .thm-sheet-root {
@@ -21,366 +25,240 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 8px;
+  overscroll-behavior: contain;
+  padding: var(--t20g-e4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--t20g-s4) transparent;
 }
 
-.thm-party-sheet section.tab:not(.active) {
-  display: none;
-}
+.thm-party-sheet section.tab:not(.active) { display: none; }
 
 .thm-party-sheet nav.tabs {
   flex: 0 0 auto;
-  border-bottom: 1px solid var(--color-border-light-primary, #7a7971);
-  display: flex;
-  gap: 4px;
-  padding: 4px 8px 0;
+  background: var(--t20g-s1);
 }
 
-.thm-party-sheet nav.tabs a {
-  padding: 5px 14px;
-  font-weight: bold;
-  border-radius: 4px 4px 0 0;
-}
-
-.thm-party-sheet nav.tabs a.active {
-  background: rgba(120, 46, 34, 0.25);
-  text-shadow: 0 0 8px var(--color-shadow-primary, #ff6400);
-}
-
-/* ---------- Aba Membros ---------- */
+/* ---------- Aba Membros ----------
+   Grade, não coluna: numa janela larga cabem dois membros por linha, e a
+   ficha deixa de ser uma tira estreita com metade da janela vazia. O
+   `minmax` é o que decide sozinho quantas colunas cabem. */
 
 .thm-members {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: var(--t20g-e3);
+  align-content: start;
 }
 
+/* O cartão é uma grade de duas colunas (retrato | conteúdo) e quatro
+   faixas. Assim nome, defesa, aptidões e recursos de TODOS os membros
+   caem nas mesmas linhas de base, mesmo com nomes de tamanhos diferentes. */
 .thm-member-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 1px solid var(--color-border-light-tertiary, #b5b3a4);
-  border-radius: 8px;
-  background: linear-gradient(160deg, rgba(120, 46, 34, 0.08), rgba(0, 0, 0, 0.05));
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-areas:
+    "retrato cabeca"
+    "retrato vitais"
+    "faixa   faixa"
+    "barras  barras";
+  gap: var(--t20g-e2) var(--t20g-e3);
+  padding: var(--t20g-e3);
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  box-shadow: var(--t20g-sombra1);
+  transition: border-color var(--t20g-transicao), background-color var(--t20g-transicao);
 }
 
-.thm-member-card:hover {
-  border-color: #782e22;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-}
+.thm-member-card:hover { border-color: var(--t20g-line-forte); }
 
-.thm-member-card img.thm-portrait {
-  width: 56px;
-  height: 56px;
+.thm-portrait {
+  grid-area: retrato;
+  width: 52px;
+  height: 52px;
   object-fit: cover;
-  object-position: top center;
-  border: 1px solid #782e22;
-  border-radius: 6px;
+  border: 1px solid var(--t20g-line-forte);
+  border-radius: var(--t20g-r2);
+  background: var(--t20g-s2);
   cursor: pointer;
-  flex: 0 0 56px;
-  box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.35);
+  transition: border-color var(--t20g-transicao), transform var(--t20g-transicao);
 }
 
-.thm-member-info {
-  flex: 1;
+.thm-portrait:hover {
+  border-color: var(--t20g-accent-linha);
+  transform: scale(1.03);
+}
+
+.thm-member-head {
+  grid-area: cabeca;
+  display: flex;
+  align-items: baseline;
+  gap: var(--t20g-e2);
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.thm-member-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
 }
 
 .thm-member-name {
-  font-weight: bold;
-  font-size: 1.05em;
-  white-space: nowrap;
+  margin: 0;
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--t20g-ink);
+  border: 0;
+  cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-top: 2px;
-}
-
-.thm-member-name .thm-member-level {
-  font-weight: normal;
-  font-size: 0.85em;
-  opacity: 0.75;
-  margin-left: 6px;
-}
-
-/* Defesa e Deslocamento em destaque — ícones (Font Awesome) com o valor sobreposto */
-.thm-badge-row {
-  display: flex;
-  flex: 0 0 auto;
-  gap: 6px;
-}
-
-.thm-icon-badge {
-  position: relative;
-  flex: 0 0 auto;
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.thm-icon-badge i {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 40px;
-  color: #782e22;
-  -webkit-text-stroke: 1px #d4af37;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
-}
-
-.thm-desloc-badge i {
-  font-size: 32px;
-}
-
-.thm-badge-value {
-  position: relative;
-  z-index: 1;
-  margin-top: 3px;
-  font-weight: bold;
-  font-size: 1.05em;
-  color: #f2e6c9;
-  text-shadow: 0 0 3px #000, 0 0 3px #000, 0 1px 1px #000;
-}
-
-/* O valor de deslocamento inclui a unidade (ex.: "12m") — fonte um pouco
-   menor para caber confortavelmente no mesmo selo de 40px. */
-.thm-desloc-badge .thm-badge-value {
-  font-size: calc(0.82em + 2px);
-}
-
-/* Testes de resistência + Percepção/Iniciativa */
-.thm-stat-strip {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.thm-stat {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
-  font-size: 0.82em;
-  font-weight: 600;
-  border-radius: 10px;
-  border: 1px solid rgba(120, 46, 34, 0.4);
-  background: rgba(120, 46, 34, 0.08);
   white-space: nowrap;
 }
 
-.thm-stat i {
-  color: #782e22;
-  font-size: 0.9em;
+.thm-member-name:hover { color: var(--t20g-accent-forte); }
+
+.thm-member-level {
+  flex: 0 0 auto;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--t20g-ink-3);
+}
+
+/* Defesa e deslocamento: rótulo pequeno em cima, número grande embaixo.
+   Antes eram ícones ornamentados com o valor por cima — bonito de longe,
+   ilegível de perto, e sem dizer qual número era qual. */
+.thm-vitals {
+  grid-area: vitais;
+  display: flex;
+  gap: var(--t20g-e2);
+  align-self: end;
+}
+
+.thm-vital {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 68px;
+  padding: 3px var(--t20g-e2);
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r1);
+}
+
+.thm-vital-rotulo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
+}
+
+.thm-vital-rotulo > i { font-size: 0.5625rem; }
+
+.thm-vital-valor {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--t20g-ink);
+}
+
+/* Faixa de aptidões: resistências | percepção e iniciativa | sentidos.
+   Os chips herdam o visual neutro de `.t20g-chip`. */
+.thm-stat-strip {
+  grid-area: faixa;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--t20g-e1);
 }
 
 .thm-stat-sep {
   width: 1px;
-  align-self: stretch;
-  background: var(--color-border-light-tertiary, #b5b3a4);
-  opacity: 0.5;
-  margin: 0 1px;
-}
-
-/* Sentidos */
-.thm-senses-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.thm-sense-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 7px;
-  font-size: 0.78em;
-  border-radius: 9px;
-  background: rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--color-border-light-tertiary, #b5b3a4);
-  opacity: 0.9;
-}
-
-.thm-sense-pill i {
-  color: #5a4a1f;
-  font-size: 0.9em;
-}
-
-.thm-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.thm-bar {
-  position: relative;
   height: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.5);
-  border-radius: 3px;
-  background: rgba(0, 0, 0, 0.35);
-  overflow: hidden;
+  margin-inline: 2px;
+  background: var(--t20g-line);
 }
 
-.thm-bar .thm-bar-fill {
-  position: absolute;
-  inset: 0 auto 0 0;
-  border-radius: 2px;
-  transition: width 0.3s ease;
+.thm-sense-pill { font-weight: 500; }
+
+/* PV e PM dividem a linha; carga ocupa a largura inteira embaixo. */
+.thm-bars {
+  grid-area: barras;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--t20g-e2) var(--t20g-e4);
+  margin-top: 2px;
 }
 
-.thm-bar.thm-pv .thm-bar-fill {
-  background: linear-gradient(to right, #8b0000, #c0392b);
-}
-
-.thm-bar.thm-pm .thm-bar-fill {
-  background: linear-gradient(to right, #1a4a8b, #2980b9);
-}
-
-.thm-bar.thm-carga .thm-bar-fill {
-  background: linear-gradient(to right, #5d4a1f, #8a6d2f);
-}
-
-.thm-bar.thm-carga.thm-encumbered .thm-bar-fill {
-  background: linear-gradient(to right, #8a2f1f, #c0392b);
-}
-
-.thm-bar .thm-bar-label {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: bold;
-  color: #fff;
-  text-shadow: 0 0 3px #000, 0 0 3px #000;
-  pointer-events: none;
-}
-
-.thm-member-actions {
-  flex: 0 0 auto;
-  display: flex;
-  gap: 4px;
-}
-
-.thm-member-actions button {
-  width: 28px;
-  height: 28px;
-  line-height: 26px;
-  padding: 0;
-  font-size: 12px;
-}
-
-.thm-empty {
-  text-align: center;
-  font-style: italic;
-  opacity: 0.7;
-  padding: 20px 0;
-}
+.thm-bars > .thm-carga { grid-column: 1 / -1; }
 
 /* ---------- Aba Inventário ---------- */
 
 .thm-money-row {
-  display: flex;
+  margin-bottom: var(--t20g-e3);
+  padding: var(--t20g-e2) var(--t20g-e3);
+}
+
+.thm-coin {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 8px;
-  margin-bottom: 8px;
-  border: 1px solid var(--color-border-light-tertiary, #b5b3a4);
-  border-radius: 6px;
-  background: rgba(0, 0, 0, 0.05);
+  gap: 5px;
+  padding: 0 var(--t20g-e2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--t20g-ink);
 }
 
-.thm-money-row .thm-coin {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: bold;
-}
-
-.thm-money-row .thm-coin i {
-  font-size: 12px;
-}
-
-.thm-coin-to i { color: #d4af37; }
-.thm-coin-tp i { color: #a8a9ad; }
-.thm-coin-tc i { color: #b87333; }
+.thm-coin > i { color: var(--t20g-accent); font-size: 0.75rem; opacity: 0.9; }
+.thm-coin > small { font-size: 0.625rem; font-weight: 600; color: var(--t20g-ink-3); }
 
 .thm-money-actions {
-  margin-left: auto;
   display: flex;
-  gap: 4px;
-}
-
-.thm-money-actions button,
-.thm-inv-header button {
-  width: auto;
-  padding: 2px 8px;
-  font-size: 12px;
-  line-height: 20px;
+  align-items: center;
+  gap: var(--t20g-e2);
 }
 
 .thm-inv-list {
-  display: flex;
-  flex-direction: column;
-}
-
-.thm-inv-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 6px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.thm-inv-item:hover {
-  background: rgba(120, 46, 34, 0.1);
-}
-
-.thm-inv-item img {
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 3px;
-  flex: 0 0 26px;
-}
-
-.thm-inv-item .thm-item-name {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.thm-inv-item .thm-item-qty {
-  flex: 0 0 50px;
-  text-align: center;
-  opacity: 0.85;
-}
+.thm-inv-item { cursor: grab; }
+.thm-inv-item:active { cursor: grabbing; }
 
-.thm-inv-item .thm-item-type {
-  flex: 0 0 90px;
+.thm-item-qty {
+  flex: 0 0 auto;
+  min-width: 34px;
   text-align: right;
-  font-size: 0.85em;
-  opacity: 0.6;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--t20g-ink-2);
+}
+
+.thm-item-type { flex: 0 0 auto; }
+
+/* Os botões de ação ficam discretos e ganham contorno ao passar o mouse na
+   linha: a lista fica limpa, e a ação continua a um clique (sem esconder
+   nada de quem usa teclado ou toque — eles seguem no fluxo e focáveis). */
+.thm-item-acoes {
+  display: flex;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.thm-inv-item .t20g-btn--fantasma { opacity: 0.55; }
+.thm-inv-item:hover .t20g-btn--fantasma,
+.thm-inv-item .t20g-btn--fantasma:focus-visible { opacity: 1; }
+
+.thm-party-sheet .thm-danger:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--t20g-perigo) 16%, transparent);
+  color: var(--t20g-perigo);
 }
 
 /* ---------- Botão de enviar dinheiro na ficha ---------- */
@@ -512,33 +390,88 @@ ul.currency li.currency-item.thm-send {
   color: #782e22;
 }
 
-/* ═══ Ferramentas do Mestre ═════════════════════════════════════════════ */
+/* ═══ Ferramentas do Mestre ═════════════════════════════════════════════
+   Quatro ações de peso igual: grade de duas colunas, cada uma um cartão
+   com ladrilho de ícone, título e uma linha de explicação. Em coluna
+   única, quatro barras largas com um ícone minúsculo não diziam qual era
+   a mais importante — e nenhuma delas é. */
 
 .thm-gm-tools {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 8px;
-}
-.thm-gm-tools > button {
   display: grid;
-  grid-template-columns: 34px 1fr;
-  grid-template-rows: auto auto;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--t20g-e3);
+}
+
+.thm-party-sheet .thm-gm-acao {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  grid-template-areas:
+    "icone titulo"
+    "icone texto";
   align-items: center;
-  text-align: left;
-  gap: 0 8px;
-  padding: 8px 10px;
+  gap: 0 var(--t20g-e3);
+  width: 100%;
   height: auto;
-  line-height: 1.3;
+  padding: var(--t20g-e4);
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  box-shadow: var(--t20g-sombra1);
+  color: var(--t20g-ink);
+  text-align: left;
+  line-height: 1.35;
+  cursor: pointer;
+  transition: background-color var(--t20g-transicao), border-color var(--t20g-transicao),
+    transform var(--t20g-transicao);
 }
-.thm-gm-tools > button > i {
-  grid-row: 1 / span 2;
-  font-size: 1.4em;
-  justify-self: center;
+
+.thm-party-sheet .thm-gm-acao:hover {
+  background: var(--t20g-s2);
+  border-color: var(--t20g-accent-linha);
 }
-.thm-gm-tools > button > span { font-weight: bold; }
-.thm-gm-tools > button > small { opacity: 0.75; }
-.thm-gm-tools .thm-hint { text-align: center; opacity: 0.7; }
+
+.thm-party-sheet .thm-gm-acao:active { transform: translateY(1px); }
+
+.thm-party-sheet .thm-gm-acao:focus-visible {
+  outline: none;
+  box-shadow: var(--t20g-foco);
+}
+
+.thm-gm-icone {
+  grid-area: icone;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: var(--t20g-accent-fundo);
+  border: 1px solid var(--t20g-accent-linha);
+  border-radius: var(--t20g-r2);
+  color: var(--t20g-accent-forte);
+  font-size: 1rem;
+}
+
+.thm-gm-icone > i { margin: 0; }
+
+.thm-gm-titulo {
+  grid-area: titulo;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--t20g-ink);
+}
+
+.thm-party-sheet .thm-gm-acao > small {
+  grid-area: texto;
+  font-size: 0.75rem;
+  color: var(--t20g-ink-3);
+  text-wrap: pretty;
+}
+
+.thm-party-sheet .thm-hint {
+  margin-top: var(--t20g-e4);
+  text-align: center;
+  color: var(--t20g-ink-3);
+}
 
 /* Botão de editar dinheiro (lápis, só GM) */
 .thm-edit-money {
@@ -706,28 +639,79 @@ ul.currency li.currency-item.thm-send {
   flex: 0 0 auto;
 }
 
+/* Lista de pastas: cada linha é uma faixa clicável inteira, com separador
+   fino e realce no hover. Antes eram labels soltos sobre o fundo da janela —
+   dava para errar o alvo entre uma pasta e a de baixo. */
+.thm-party-manager .thm-folder-list {
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  padding: var(--t20g-e1) 0;
+}
+
 .thm-party-manager .thm-folder-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--t20g-e2);
+  min-height: 28px;
+  padding-inline-end: var(--t20g-e3);
+  border-radius: var(--t20g-r1);
+  transition: background-color var(--t20g-transicao);
 }
+
+.thm-party-manager .thm-folder-row:hover { background: var(--t20g-s2); }
 
 .thm-party-manager .thm-folder-main {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--t20g-e2);
   flex: 1;
   min-width: 0;
+  padding-block: 2px;
+  font-size: 0.8125rem;
+  color: var(--t20g-ink);
   cursor: pointer;
+}
+
+.thm-party-manager .thm-folder-main > input { accent-color: var(--t20g-accent); }
+
+/* Pasta marcada como grupo: nome em destaque, para a lista se ler de relance. */
+.thm-party-manager .thm-folder-main:has(input:checked) {
+  font-weight: 600;
+  color: var(--t20g-accent-forte);
 }
 
 .thm-party-manager .thm-sub-toggle {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--t20g-e1);
   flex: 0 0 auto;
-  font-size: 12px;
-  opacity: 0.85;
+  padding: 1px var(--t20g-e2);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r1);
+  font-size: 0.6875rem;
+  color: var(--t20g-ink-3);
   cursor: pointer;
-  margin-right: 6px;
+  transition: border-color var(--t20g-transicao), color var(--t20g-transicao);
+}
+
+.thm-party-manager .thm-sub-toggle:hover { color: var(--t20g-ink-2); border-color: var(--t20g-line-forte); }
+
+.thm-party-manager .thm-sub-toggle:has(input:checked) {
+  background: var(--t20g-accent-fundo);
+  border-color: var(--t20g-accent-linha);
+  color: var(--t20g-accent-forte);
+}
+
+.thm-party-manager .thm-sub-toggle input { margin: 0; accent-color: var(--t20g-accent); }
+
+/* A explicação do topo não pode esticar até a borda: linha longa demais
+   cansa antes de terminar a frase. */
+.thm-party-manager .thm-hint {
+  max-width: 62ch;
+  margin: 0 0 var(--t20g-e3);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--t20g-ink-2);
+  text-wrap: pretty;
 }

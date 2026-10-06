@@ -286,37 +286,46 @@ function engenhocasDoAtor(ator) {
 function linhaPainel(item, controlar) {
   const estado = estadoDaEngenhoca(item);
   const aparatos = estado.aparatos.map(nomeAparato).join(', ') || 'Sem aparatos';
+  // A situação é um chip de estado: cor só quando há o que avisar.
   const situacao = estado.enguicada
-    ? '<span class="t20g-eng-painel-alerta"><i class="fa-solid fa-triangle-exclamation"></i> Enguiçada</span>'
+    ? '<span class="t20g-chip t20g-chip--perigo"><i class="fa-solid fa-triangle-exclamation"></i> Enguiçada</span>'
     : estado.resfriada
-      ? '<span><i class="fa-solid fa-snowflake"></i> Resfriada</span>'
+      ? '<span class="t20g-chip"><i class="fa-solid fa-snowflake"></i> Resfriada</span>'
       : '';
   // Enguiçada substitui Ativar por Consertar — nunca os dois juntos, senão o
   // botão de ativar continua clicável (e o roll() só bloqueia DEPOIS, com um
   // aviso que passa despercebido se a janela tiver sido fechada e reaberta).
   const acaoPrincipal = estado.enguicada
-    ? `<button type="button" class="t20g-eng-painel-consertar" data-eng-painel-acao="consertar"
-        data-item-id="${item.id}"><i class="fa-solid fa-wrench"></i> Consertar engenhoca</button>`
-    : `<button type="button" class="t20g-eng-painel-ativar" data-eng-painel-acao="ativar"
+    ? `<button type="button" class="t20g-btn t20g-eng-painel-consertar" data-eng-painel-acao="consertar"
+        data-item-id="${item.id}"><i class="fa-solid fa-wrench"></i> Consertar</button>`
+    : `<button type="button" class="t20g-btn t20g-btn--primario" data-eng-painel-acao="ativar"
         data-item-id="${item.id}"><i class="fa-solid fa-play"></i> Ativar</button>`;
   const controles = controlar ? `<div class="t20g-eng-painel-controles">
       ${acaoPrincipal}
-      <button type="button" data-eng-painel-acao="diminuir" data-item-id="${item.id}"
-        data-tooltip="Diminuir um uso diário (−5 na CD)" ${estado.usosDia <= 0 ? 'disabled' : ''}>
-        <i class="fa-solid fa-minus"></i></button>
-      <span>${estado.usosDia} uso(s)</span>
-      <button type="button" data-eng-painel-acao="aumentar" data-item-id="${item.id}"
-        data-tooltip="Aumentar um uso diário (+5 na CD)"><i class="fa-solid fa-plus"></i></button>
-      <button type="button" class="t20g-eng-painel-aparatos" data-eng-painel-acao="aparatos"
-        data-item-id="${item.id}"><i class="fa-solid fa-gears"></i> Aparatos</button>
-    </div>` : `<span class="t20g-eng-painel-leitura">${estado.usosDia} uso(s)</span>`;
+      <span class="t20g-eng-usos" data-tooltip="Usos gastos hoje — cada um soma +5 na CD">
+        <span class="t20g-eng-usos-rotulo">Usos</span>
+        <span class="t20g-stepper">
+          <button type="button" data-eng-painel-acao="diminuir" data-item-id="${item.id}"
+            data-tooltip="Diminuir um uso diário (−5 na CD)" ${estado.usosDia <= 0 ? 'disabled' : ''}>
+            <i class="fa-solid fa-minus"></i></button>
+          <span class="t20g-stepper__valor">${estado.usosDia}</span>
+          <button type="button" data-eng-painel-acao="aumentar" data-item-id="${item.id}"
+            data-tooltip="Aumentar um uso diário (+5 na CD)"><i class="fa-solid fa-plus"></i></button>
+        </span>
+      </span>
+      <button type="button" class="t20g-btn t20g-btn--icone" data-eng-painel-acao="aparatos"
+        data-item-id="${item.id}" data-tooltip="Aparatos instalados"><i class="fa-solid fa-gears"></i></button>
+    </div>` : `<span class="t20g-chip">${estado.usosDia} uso(s)</span>`;
   return `<article class="t20g-eng-painel-item" data-item-id="${item.id}">
-    <img src="${esc(item.img)}" alt="">
+    <img class="t20g-miniatura" src="${esc(item.img)}" alt="">
     <div class="t20g-eng-painel-info">
-      <div><b>${esc(item.name)}</b>${situacao}</div>
+      <div class="t20g-eng-painel-nome"><b>${esc(item.name)}</b>${situacao}</div>
       <small>${esc(aparatos)}</small>
     </div>
-    <div class="t20g-eng-painel-cd"><small>CD atual</small><b>${cdAtual(item, estado)}</b></div>
+    <div class="t20g-eng-painel-cd" data-tooltip="Classe de Dificuldade atual, já com os usos do dia">
+      <span class="t20g-eng-painel-cd-rotulo">CD</span>
+      <b>${cdAtual(item, estado)}</b>
+    </div>
     ${controles}
   </article>`;
 }
@@ -331,16 +340,22 @@ function conteudoPainel(ator) {
   }
   const circulos = [...grupos.keys()].sort((a, b) => a - b);
   const corpo = circulos.map((circulo) => `<section class="t20g-eng-painel-circulo">
-    <h3>${circulo}º círculo</h3>
-    ${grupos.get(circulo).map((item) => linhaPainel(item, controlar)).join('')}
+    <h3 class="t20g-divisor">${circulo}º círculo</h3>
+    <div class="t20g-eng-painel-lista">${grupos.get(circulo).map((item) => linhaPainel(item, controlar)).join('')}</div>
   </section>`).join('');
+  const vazio = `<div class="t20g-vazio">
+    <i class="fa-solid fa-screwdriver-wrench"></i>
+    <p class="t20g-vazio__titulo">Nenhuma engenhoca na ficha</p>
+    <p class="t20g-vazio__texto">Engenhocas são magias do tipo <b>Engenhoca</b>. Crie uma na aba de magias e ela aparece aqui, com CD, usos do dia e aparatos.</p>
+  </div>`;
   return `<div class="t20g-eng-painel-janela" data-actor-uuid="${ator.uuid}">
-    <div class="t20g-eng-painel-janela-topo">
-      <p class="notes">As CDs abaixo não incluem aprimoramentos escolhidos na próxima ativação.</p>
-      ${controlar ? `<button type="button" data-eng-painel-acao="resetar">
-        <i class="fa-solid fa-sun"></i> Resetar engenhocas</button>` : ''}
+    <div class="t20g-eng-painel-janela-topo t20g-barra">
+      <p class="t20g-apoio t20g-cresce"><i class="fa-solid fa-circle-info"></i> As CDs abaixo não incluem aprimoramentos escolhidos na próxima ativação.</p>
+      ${controlar ? `<button type="button" class="t20g-btn" data-eng-painel-acao="resetar"
+        data-tooltip="Zera os usos do dia de todas as engenhocas">
+        <i class="fa-solid fa-sun"></i> Resetar</button>` : ''}
     </div>
-    ${corpo || '<p class="notes">Nenhuma magia do tipo Engenhoca na ficha.</p>'}
+    ${corpo || vazio}
   </div>`;
 }
 

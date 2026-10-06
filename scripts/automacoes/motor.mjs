@@ -3197,17 +3197,17 @@ function htmlLinhaPainelContadores(linha) {
   const atributos = `data-contador-tipo="${esc(linha.tipo)}" data-contador-chave="${esc(linha.chave)}"`
     + ` data-contador-original="${linha.valor}"`;
   const controle = linha.opcoes
-    ? `<select ${atributos}>${linha.opcoes.map((dado, indice) =>
+    ? `<select class="t20g-campo" ${atributos}>${linha.opcoes.map((dado, indice) =>
       `<option value="${indice}" ${indice === linha.valor ? 'selected' : ''}>${indice} — ${dado}</option>`
     ).join('')}</select>`
-    : `<input type="number" min="0" step="1" value="${linha.valor}" ${atributos}`
+    : `<input class="t20g-campo t20g-contadores-numero" type="number" min="0" step="1" value="${linha.valor}" ${atributos}`
       + `${linha.max === null ? '' : ` max="${linha.max}"`}>`;
   const detalhe = linha.detalhe
     ? `<small>${esc(linha.detalhe)}</small>`
     : '';
   return `<label class="t20g-contadores-linha">
-      <i class="${esc(linha.icone ?? 'fa-solid fa-hashtag')}"></i>
-      <span><b>${esc(linha.nome)}</b>${detalhe}</span>
+      <span class="t20g-contadores-icone"><i class="${esc(linha.icone ?? 'fa-solid fa-hashtag')}"></i></span>
+      <span class="t20g-contadores-texto"><b>${esc(linha.nome)}</b>${detalhe}</span>
       ${controle}
     </label>`;
 }
@@ -3215,8 +3215,8 @@ function htmlLinhaPainelContadores(linha) {
 function htmlAutomacaoAtivaPainelContadores(linha) {
   const esc = foundry.utils.escapeHTML;
   return `<div class="t20g-contadores-linha t20g-contadores-ativa">
-      <i class="${esc(linha.icone ?? 'fa-solid fa-wand-magic-sparkles')}"></i>
-      <span><b>${esc(linha.nome)}</b><small>${esc(linha.detalhe ?? '')}</small></span>
+      <span class="t20g-contadores-icone"><i class="${esc(linha.icone ?? 'fa-solid fa-wand-magic-sparkles')}"></i></span>
+      <span class="t20g-contadores-texto"><b>${esc(linha.nome)}</b><small>${esc(linha.detalhe ?? '')}</small></span>
       <label class="t20g-contadores-cancelar">
         <input type="checkbox" data-automacao-cancelar-tipo="${esc(linha.tipo)}"
           data-automacao-cancelar-chave="${esc(linha.chave)}">
@@ -3228,19 +3228,27 @@ function htmlAutomacaoAtivaPainelContadores(linha) {
 function htmlPainelContadores(ator) {
   const grupos = gruposDoPainelContadores(ator);
   const ativas = automacoesAtivasCancelaveis(ator);
+  const secao = (titulo, ajuda, corpo) => `<section class="t20g-painel t20g-contadores-secao">
+      <header class="t20g-painel__topo"><span class="t20g-rotulo">${titulo}</span></header>
+      <div class="t20g-painel__corpo t20g-painel__corpo--liso">
+        ${ajuda ? `<p class="t20g-apoio t20g-contadores-ajuda-secao">${ajuda}</p>` : ''}
+        ${corpo}
+      </div>
+    </section>`;
   return `<div class="t20g-contadores-dialogo">
-    <p class="notes">${game.i18n.localize('T20HaydGMTools.ContadoresAjuda')}</p>
-    ${ativas.length ? `<section>
-      <h3>${game.i18n.localize('T20HaydGMTools.ContadoresEfeitosAtivos')}</h3>
-      <p class="notes t20g-contadores-efeitos-ajuda">${game.i18n.localize('T20HaydGMTools.ContadoresEfeitosAtivosAjuda')}</p>
-      ${ativas.map(htmlAutomacaoAtivaPainelContadores).join('')}
-    </section>` : ''}
-    ${grupos.map((grupo) => `<section>
-      <h3>${foundry.utils.escapeHTML(grupo.titulo)}</h3>
-      ${grupo.linhas.length
+    <p class="t20g-apoio t20g-contadores-ajuda">${game.i18n.localize('T20HaydGMTools.ContadoresAjuda')}</p>
+    ${ativas.length ? secao(
+      game.i18n.localize('T20HaydGMTools.ContadoresEfeitosAtivos'),
+      game.i18n.localize('T20HaydGMTools.ContadoresEfeitosAtivosAjuda'),
+      ativas.map(htmlAutomacaoAtivaPainelContadores).join('')
+    ) : ''}
+    ${grupos.map((grupo) => secao(
+      foundry.utils.escapeHTML(grupo.titulo),
+      '',
+      grupo.linhas.length
         ? grupo.linhas.map(htmlLinhaPainelContadores).join('')
-        : `<p class="notes t20g-contadores-vazio">${grupo.vazio ?? ''}</p>`}
-    </section>`).join('')}
+        : `<p class="t20g-apoio t20g-contadores-vazio">${grupo.vazio ?? ''}</p>`
+    )).join('')}
   </div>`;
 }
 

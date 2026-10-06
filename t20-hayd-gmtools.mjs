@@ -6,6 +6,7 @@
 
 // Automações de itens (registra os próprios hooks). Importado daqui, e não
 // listado em esmodules, para que novas versões carreguem sem reiniciar o servidor.
+import './scripts/ui-base.mjs';
 import './t20-hayd-automacoes.mjs';
 // Régua opcional para efeitos (ignora diagonais). Mesmo motivo do import acima.
 import './t20-hayd-regua.mjs';

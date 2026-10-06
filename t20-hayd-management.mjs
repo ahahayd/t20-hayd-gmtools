@@ -2028,6 +2028,8 @@ class PartySheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
           ? {
               pct: Math.round(Math.clamp(Number(carga.pct) || 0, 0, 100)),
               encumbered: !!carga.encumbered,
+              // Curto para o medidor (a coluna é estreita), completo no tooltip.
+              curto: `${Number(carga.value) || 0} / ${Number(carga.max) || 0}`,
               label: loc("THM.EncumbranceLabel", {
                 value: Number(carga.value) || 0,
                 max: Number(carga.max) || 0,

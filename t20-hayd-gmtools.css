@@ -1,4 +1,5 @@
 /* T20 Hayd GMTools — estilos do módulo */
+@import url("styles/t20g-ui.css");
 
 /* Fórmula ocultada: aparência discreta para indicar que foi mascarada */
 .tormenta20 .dice-formula:is([data-formula-hidden]) {
@@ -526,94 +527,123 @@ a.header-button.t20g-atr-header {
   background: rgba(120, 46, 34, 0.16);
 }
 
+/* ── Painel de automações do personagem (contadores e efeitos ativos) ── */
+
 .t20g-contadores-dialogo {
-  max-height: 62vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--t20g-e3);
+  max-height: 64vh;
   overflow-y: auto;
-  padding-right: 4px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--t20g-s4) transparent;
 }
 
-.t20g-contadores-dialogo > section {
-  margin-top: 10px;
-  border: 1px solid rgba(120, 46, 34, 0.22);
-  border-radius: 5px;
-  overflow: hidden;
+.t20g-contadores-ajuda { margin: 0 0 var(--t20g-e1); }
+
+.t20g-contadores-secao > .t20g-painel__corpo > * + .t20g-contadores-linha,
+.t20g-contadores-secao .t20g-contadores-linha + .t20g-contadores-linha {
+  border-top: 1px solid var(--t20g-line);
 }
 
-.t20g-contadores-dialogo > section > h3 {
-  margin: 0;
-  padding: 5px 8px;
-  font-family: inherit;
-  font-size: 0.85em;
-  text-transform: uppercase;
-  letter-spacing: 0.45px;
-  background: rgba(120, 46, 34, 0.1);
+.t20g-contadores-ajuda-secao {
+  padding: var(--t20g-e2) var(--t20g-e4);
+  border-bottom: 1px solid var(--t20g-line);
 }
 
+/* Linha: ladrilho de ícone | nome e detalhe | controle. O controle fica
+   sempre na mesma coluna, à direita, em todas as linhas da janela. */
 .t20g-contadores-linha {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) 92px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 7px;
-  min-height: 42px;
-  padding: 4px 8px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e2) var(--t20g-e4);
+  margin: 0;
+  cursor: pointer;
+  transition: background-color var(--t20g-transicao);
 }
 
-.t20g-contadores-linha > i {
-  color: #782e22;
-  text-align: center;
+.t20g-contadores-linha:hover { background: var(--t20g-s2); }
+
+.t20g-contadores-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r1);
+  color: var(--t20g-accent);
+  font-size: 0.75rem;
 }
 
-.t20g-contadores-linha > span {
-  min-width: 0;
-}
+.t20g-contadores-icone > i { margin: 0; }
 
-.t20g-contadores-linha b,
-.t20g-contadores-linha small {
+.t20g-contadores-texto { min-width: 0; }
+
+.t20g-contadores-texto > b {
   display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--t20g-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.t20g-contadores-linha small {
-  margin-top: 2px;
-  opacity: 0.7;
+.t20g-contadores-texto > small {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--t20g-ink-3);
 }
 
-.t20g-contadores-linha input,
-.t20g-contadores-linha select {
-  width: 92px;
-  margin: 0;
+.t20g-ui .t20g-contadores-numero {
+  width: 68px;
   text-align: center;
+  font-weight: 600;
 }
 
-.t20g-contadores-efeitos-ajuda {
-  margin: 0;
-  padding: 7px 8px;
-}
+.t20g-ui .t20g-contadores-linha select.t20g-campo { max-width: 190px; }
 
+/* Cancelar um efeito ativo é destrutivo: a caixa fica marcada em vermelho
+   quando ligada, para não se confundir com "alterar um contador". */
 .t20g-contadores-cancelar {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
+  gap: var(--t20g-e2);
+  padding: 3px var(--t20g-e2);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r1);
+  font-size: 0.6875rem;
+  color: var(--t20g-ink-2);
   cursor: pointer;
-  white-space: nowrap;
+  transition: border-color var(--t20g-transicao), color var(--t20g-transicao);
+}
+
+.t20g-contadores-cancelar:hover {
+  border-color: color-mix(in oklab, var(--t20g-perigo) 45%, transparent);
+  color: var(--t20g-perigo);
+}
+
+.t20g-contadores-cancelar:has(input:checked) {
+  background: color-mix(in oklab, var(--t20g-perigo) 14%, transparent);
+  border-color: var(--t20g-perigo);
+  color: var(--t20g-perigo);
 }
 
 .t20g-contadores-cancelar input {
-  width: auto;
+  width: 13px;
+  height: 13px;
   margin: 0;
-}
-
-.t20g-contadores-cancelar span {
-  font-size: 0.85em;
+  accent-color: var(--t20g-perigo);
 }
 
 .t20g-contadores-vazio {
   margin: 0;
-  padding: 8px;
+  padding: var(--t20g-e4);
 }
 
 /* Diálogo de distribuição de projéteis */
@@ -944,6 +974,7 @@ a.header-button.t20g-atr-header {
   overflow: hidden;
   display: flex;
   min-height: 0;
+  background: var(--t20g-s0);
 }
 /* O corpo precisa ocupar a janela inteira para as metades poderem rolar. */
 .t20g-tesouros .t20g-tesouro-body { flex: 1 1 auto; min-height: 0; }
@@ -961,9 +992,26 @@ a.header-button.t20g-atr-header {
   font-weight: 600;
   white-space: nowrap;
 }
-.t20g-badge.t20g-ok { background: rgba(46, 160, 67, 0.18); color: #2ea043; }
-.t20g-badge.t20g-ambiguo { background: rgba(210, 153, 34, 0.2); color: #d29922; }
-.t20g-badge.t20g-sem { background: rgba(200, 60, 60, 0.18); color: #c83c3c; }
+.t20g-badge {
+  border: 1px solid transparent;
+  border-radius: var(--t20g-r1);
+  font-variant-numeric: tabular-nums;
+}
+.t20g-badge.t20g-ok {
+  background: color-mix(in oklab, var(--t20g-sucesso) 14%, transparent);
+  border-color: color-mix(in oklab, var(--t20g-sucesso) 38%, transparent);
+  color: color-mix(in oklab, var(--t20g-sucesso) 80%, var(--t20g-ink));
+}
+.t20g-badge.t20g-ambiguo {
+  background: color-mix(in oklab, var(--t20g-aviso) 16%, transparent);
+  border-color: color-mix(in oklab, var(--t20g-aviso) 40%, transparent);
+  color: color-mix(in oklab, var(--t20g-aviso) 82%, var(--t20g-ink));
+}
+.t20g-badge.t20g-sem {
+  background: color-mix(in oklab, var(--t20g-perigo) 14%, transparent);
+  border-color: color-mix(in oklab, var(--t20g-perigo) 38%, transparent);
+  color: color-mix(in oklab, var(--t20g-perigo) 80%, var(--t20g-ink));
+}
 .t20g-badge-build {
   font-size: 0.75em;
   font-weight: 600;
@@ -992,32 +1040,45 @@ a.header-button.t20g-atr-header {
   min-height: 0;
   overflow-y: auto;
 }
+/* Cada grupo da barra lateral é um painel: fundo opaco, contorno fino e o
+   mesmo cabeçalho de rótulo do resto do módulo. */
 .t20g-tesouro-sidebar-grupo {
-  border: 1px solid var(--color-border-light-tertiary, #999);
-  border-radius: 6px;
-  padding: 8px;
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  box-shadow: var(--t20g-sombra1);
+  padding: var(--t20g-e3);
 }
-.t20g-tesouro-sidebar-grupo h3 {
-  margin: 0 0 6px;
-  font-size: 0.95em;
+.t20g-tesouros .t20g-tesouro-sidebar-grupo h3 {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--t20g-e2);
+  margin: 0 0 var(--t20g-e3);
+  padding-bottom: var(--t20g-e2);
+  border-bottom: 1px solid var(--t20g-line);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
 }
+.t20g-tesouros .t20g-tesouro-sidebar-grupo h3 > i { color: var(--t20g-accent); }
 .t20g-tesouro-sidebar-acoes { display: flex; flex-direction: column; gap: 6px; }
 .t20g-tesouro-sidebar-distribuicao { display: flex; flex-direction: column; gap: 6px; }
 /* Botão principal das janelas do GMTools: a ação que o Mestre veio fazer.
    Usa o tom quente de destaque do próprio Foundry (vale nos temas claro e
    escuro) para se separar das ações secundárias ao lado. */
-.t20g-botao-principal {
+.t20g-ui .window-content .t20g-botao-principal {
+  min-height: 32px;
+  background: var(--t20g-accent);
+  border-color: color-mix(in oklab, var(--t20g-accent) 70%, #000);
+  color: var(--t20g-ink-sobre-accent);
   font-weight: 600;
-  padding: 8px;
-  border-color: var(--color-warm-2, #c9593f);
-  background: color-mix(in srgb, var(--color-warm-2, #c9593f) 22%, transparent);
 }
-.t20g-botao-principal:hover,
-.t20g-botao-principal:focus-visible {
-  background: color-mix(in srgb, var(--color-warm-2, #c9593f) 40%, transparent);
+.t20g-ui .window-content .t20g-botao-principal > i { opacity: 1; }
+.t20g-ui .window-content .t20g-botao-principal:hover:not(:disabled) {
+  background: var(--t20g-accent-forte);
+  color: var(--t20g-ink-sobre-accent);
 }
 /* Ação secundária que apaga o resultado: presente, mas sem competir. */
 .t20g-tesouros [data-action="limpar"] {
@@ -1103,14 +1164,29 @@ a.header-button.t20g-atr-header {
 .t20g-tesouro-grupo { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
 
 /* --- diálogo de vínculo (drag & drop) ------------------------------------ */
+/* Área de soltar: tracejado discreto que acende quando o item passa por
+   cima. O tracejado já diz "solte aqui" — não precisa gritar antes disso. */
 .t20g-tesouro-drop {
-  border: 2px dashed var(--color-border-light-tertiary, #999);
-  border-radius: 6px;
-  padding: 16px;
+  border: 1px dashed var(--t20g-line-forte);
+  border-radius: var(--t20g-r1);
+  padding: var(--t20g-e5);
   text-align: center;
-  opacity: 0.85;
+  color: var(--t20g-ink-3);
+  font-size: 0.75rem;
+  transition: border-color var(--t20g-transicao), background-color var(--t20g-transicao),
+    color var(--t20g-transicao);
 }
-.t20g-tesouro-drop-compacto { padding: 4px 8px; font-size: 0.82em; flex: 0 0 auto; }
+.t20g-tesouro-drop:hover,
+.t20g-tesouro-drop.dragover {
+  background: var(--t20g-accent-fundo);
+  border-color: var(--t20g-accent-linha);
+  color: var(--t20g-accent-forte);
+}
+.t20g-tesouro-drop-compacto {
+  padding: 3px var(--t20g-e3);
+  font-size: 0.6875rem;
+  flex: 0 0 auto;
+}
 
 /* --- app-vinculos ---------------------------------------------------------*/
 /* A janela de Vínculos é uma coluna: topo e resumo fixos, lista rolando.
@@ -1151,18 +1227,38 @@ a.header-button.t20g-atr-header {
   background: color-mix(in srgb, var(--color-level-error, #c0392b) 18%, transparent);
   border-color: var(--color-level-error, #c0392b);
 }
-.t20g-tesouro-vinculos-lista { display: flex; flex-direction: column; gap: 4px; }
+/* A lista é um painel só, com separadores entre as linhas: centenas de
+   entradas soltas sobre o fundo da janela não davam onde o olho se apoiar. */
+.t20g-tesouro-vinculos-lista {
+  display: flex;
+  flex-direction: column;
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  overflow: hidden;
+}
 /* O corpo desta janela precisa ser coluna para a lista poder rolar. */
 .t20g-tesouros .t20g-tesouro-body:has(.t20g-tesouro-vinculos-lista) { display: flex; flex-direction: column; min-height: 0; }
 .t20g-tesouro-vinculo-linha {
   display: flex;
   align-items: center;
-  gap: 8px;
-  border-bottom: 1px solid var(--color-border-light-tertiary, #ccc);
-  padding: 4px 0;
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e2) var(--t20g-e3);
+  /* Listas aqui passam de 250 linhas: o navegador só compõe o que está à
+     vista, e a rolagem deixa de engasgar. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 44px;
+  transition: background-color var(--t20g-transicao);
 }
+.t20g-tesouro-vinculo-linha + .t20g-tesouro-vinculo-linha { border-top: 1px solid var(--t20g-line); }
+.t20g-tesouro-vinculo-linha:hover { background: var(--t20g-s2); }
 .t20g-tesouro-vinculo-info { flex: 1 1 auto; min-width: 0; }
-.t20g-tesouro-vinculo-nome { font-weight: 600; }
+.t20g-tesouro-vinculo-nome {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--t20g-ink);
+  text-wrap: pretty;
+}
 
 /* --- app-homebrew ---------------------------------------------------------*/
 .t20g-tesouro-homebrew-lista { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
@@ -1667,184 +1763,179 @@ a.header-button.t20g-atr-header {
 
 /* Painel próprio, sem reutilizar `.item`/`.item-list`: isso evita que a ficha
    nativa e o t20-hayd-ui instalem listeners ou grades de item nestes controles. */
+
+/* ── Acesso dentro da ficha (aba de magias) ── */
 .t20g-eng-painel {
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  margin: 0 0 8px;
-  border: 1px solid rgba(120, 46, 34, 0.38);
-  border-radius: 6px;
-  overflow: hidden;
-  background: rgba(120, 46, 34, 0.055);
+  gap: var(--t20g-e2, 6px);
+  align-items: center;
+  margin: 4px 0 6px;
 }
 
 .t20g-eng-painel > button {
-  flex: 1 1 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   width: auto;
-  margin: 0;
 }
 
 .t20g-eng-painel > button span {
-  display: inline-block;
-  min-width: 20px;
-  margin-left: 5px;
-  padding: 1px 6px;
-  border-radius: 10px;
-  background: rgba(120, 46, 34, 0.18);
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--t20g-accent-fundo, rgba(226, 164, 76, 0.14));
+  color: var(--t20g-accent-forte, #f0b75f);
+  font-size: 0.72em;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
-.t20g-eng-painel > header {
-  display: flex;
-  align-items: stretch;
-  gap: 4px;
-  padding: 4px;
-  background: rgba(120, 46, 34, 0.12);
+/* ── Janela do painel ── */
+
+.t20g-eng-painel-janela {
+  max-height: 68vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--t20g-s4) transparent;
 }
 
-.t20g-eng-painel button {
-  min-height: 28px;
-  margin: 0;
-  line-height: 1.1;
-}
-
-.t20g-eng-painel-alternar {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex: 1 1 auto;
-  text-align: left;
-}
-
-.t20g-eng-painel-alternar span { flex: 1 1 auto; font-weight: 700; }
-.t20g-eng-painel-alternar em {
-  min-width: 22px;
-  padding: 2px 6px;
-  border-radius: 10px;
-  text-align: center;
-  font-style: normal;
-  background: rgba(120, 46, 34, 0.18);
-}
-
-.t20g-eng-painel-resetar { flex: 0 0 auto; width: auto; padding-inline: 9px; }
-.t20g-eng-painel-corpo { padding: 4px; }
-.t20g-eng-painel-corpo[hidden] { display: none !important; }
-
-.t20g-eng-painel-item {
-  display: grid;
-  grid-template-columns: 34px minmax(130px, 1fr) 52px minmax(205px, auto);
-  align-items: center;
-  gap: 7px;
-  min-height: 42px;
-  padding: 4px 5px;
-  border-bottom: 1px solid rgba(120, 46, 34, 0.16);
-}
-
-.t20g-eng-painel-item:last-child { border-bottom: 0; }
-.t20g-eng-painel-item > img {
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: 4px;
-  object-fit: cover;
-}
-
-.t20g-eng-painel-info { min-width: 0; }
-.t20g-eng-painel-info > div { display: flex; align-items: center; gap: 6px; }
-.t20g-eng-painel-info b,
-.t20g-eng-painel-info small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.t20g-eng-painel-info small { opacity: 0.72; }
-.t20g-eng-painel-alerta { color: #9b241a; font-size: 0.78em; white-space: nowrap; }
-
-.t20g-eng-painel-cd { text-align: center; }
-.t20g-eng-painel-cd small { display: block; font-size: 0.68em; opacity: 0.72; }
-.t20g-eng-painel-cd b { font-size: 1.35em; color: #782e22; }
-
-.t20g-eng-painel-controles {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 3px;
-}
-
-.t20g-eng-painel-controles button { flex: 0 0 28px; width: 28px; padding: 0; }
-.t20g-eng-painel-controles span { min-width: 48px; text-align: center; font-size: 0.78em; }
-.t20g-eng-painel-controles .t20g-eng-painel-ativar {
-  flex: 0 0 auto;
-  width: auto;
-  padding-inline: 8px;
-  color: #25773d;
-}
-.t20g-eng-painel-controles .t20g-eng-painel-aparatos {
-  flex: 0 0 auto;
-  width: auto;
-  padding-inline: 7px;
-}
-
-.t20g-eng-painel-controles .t20g-eng-painel-consertar {
-  flex: 1 0 150px;
-  width: auto;
-  padding-inline: 7px;
-  color: #8f2119;
-}
-
-.t20g-eng-painel-janela { max-height: 68vh; overflow-y: auto; padding-right: 4px; }
 .t20g-eng-painel-janela-topo {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: var(--t20g-e3);
+  margin-bottom: var(--t20g-e4);
 }
+
 .t20g-eng-painel-janela-topo p { margin: 0; }
-.t20g-eng-painel-janela-topo button { flex: 0 0 auto; width: auto; }
-.t20g-eng-painel-circulo { margin: 0 0 10px; }
-.t20g-eng-painel-circulo > h3 {
-  margin: 2px 0 3px;
-  padding: 2px 5px;
-  border-bottom: 1px solid rgba(120, 46, 34, 0.22);
-  background: transparent;
-  font-size: 0.8em;
+.t20g-eng-painel-janela-topo p > i { color: var(--t20g-accent); margin-inline-end: 4px; }
+
+.t20g-eng-painel-circulo { margin: 0 0 var(--t20g-e4); }
+.t20g-eng-painel-circulo:last-child { margin-bottom: 0; }
+
+.t20g-eng-painel-lista {
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  overflow: hidden;
+}
+
+.t20g-eng-painel-lista > * + * { border-top: 1px solid var(--t20g-line); }
+
+/* Grade fixa: miniatura | nome | CD | controles. Com colunas declaradas, a
+   CD e os botões de todas as linhas ficam na mesma vertical — era isso que
+   faltava para a lista parecer uma lista, e não linhas independentes. */
+.t20g-eng-painel-item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e2) var(--t20g-e3);
+  transition: background-color var(--t20g-transicao);
+}
+
+.t20g-eng-painel-item:hover { background: var(--t20g-s2); }
+
+.t20g-eng-painel-info { min-width: 0; }
+
+.t20g-eng-painel-nome {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e2);
+  min-width: 0;
+}
+
+.t20g-eng-painel-nome > b {
+  min-width: 0;
+  font-size: 0.8125rem;
   font-weight: 600;
-  opacity: 0.72;
+  color: var(--t20g-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.t20g-eng-ativacao-resultado {
-  margin: 7px 0 0;
-  padding: 8px;
-  border: 1px solid rgba(120, 46, 34, 0.3);
-  border-radius: 5px;
-  background: rgba(120, 46, 34, 0.06);
+.t20g-eng-painel-info > small {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--t20g-ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.t20g-eng-ativacao-resultado > div { display: flex; align-items: center; gap: 6px; }
-.t20g-eng-ativacao-resultado > p { margin: 5px 0; }
-.t20g-eng-ativacao-resultado.sucesso { border-color: rgba(37, 119, 61, 0.55); background: rgba(37, 119, 61, 0.08); }
-.t20g-eng-ativacao-resultado.sucesso > div > i { color: #25773d; }
-.t20g-eng-ativacao-resultado.falha > div > i { color: #9b241a; }
-.t20g-eng-ativacao-resultado button { width: 100%; margin: 4px 0 0; }
 
-/* Marca simples no cartão da PRÓPRIA MAGIA quando ela veio de um teste de
-   engenhoca que falhou — a magia é gerada de qualquer jeito, então sem isto
-   o cartão fica idêntico ao de um sucesso comum. */
-.t20g-eng-conjuracao-falhou {
-  border: 1px solid rgba(155, 36, 26, 0.5) !important;
-  border-radius: 5px;
+/* CD: rótulo minúsculo em cima, número grande embaixo, largura fixa para a
+   coluna não pular quando o valor passa de 9 para 10. */
+.t20g-eng-painel-cd {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 44px;
+  padding: 2px var(--t20g-e2);
+  background: var(--t20g-s2);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r1);
 }
-.t20g-eng-conjuracao-falhou-aviso {
-  margin: 0 0 4px !important;
-  padding: 3px 6px;
-  border-radius: 4px;
-  background: rgba(155, 36, 26, 0.1);
-  color: #9b241a;
-  font-size: 0.85em;
+
+.t20g-eng-painel-cd-rotulo {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--t20g-ink-3);
+}
+
+.t20g-eng-painel-cd > b {
+  font-size: 1rem;
   font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--t20g-accent-forte);
 }
 
+.t20g-eng-painel-controles {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e2);
+}
+
+.t20g-eng-usos {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--t20g-e2);
+}
+
+.t20g-eng-usos-rotulo {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--t20g-ink-3);
+}
+
+/* Consertar é a ação de uma engenhoca quebrada: cor de aviso, não de ação
+   principal — quem está lendo a linha precisa ver primeiro o que houve. */
+.t20g-ui .t20g-eng-painel-consertar {
+  border-color: color-mix(in oklab, var(--t20g-aviso) 45%, transparent);
+  color: var(--t20g-aviso);
+}
+
+.t20g-ui .t20g-eng-painel-consertar:hover:not(:disabled) {
+  background: color-mix(in oklab, var(--t20g-aviso) 16%, transparent);
+  border-color: var(--t20g-aviso);
+}
+
+/* Janela estreita: os controles descem para uma linha própria, alinhados à
+   esquerda, em vez de espremer a coluna do nome até sumir. */
 @media (max-width: 620px) {
-  .t20g-eng-painel-item { grid-template-columns: 34px 1fr 52px; }
-  .t20g-eng-painel-controles { grid-column: 2 / -1; justify-content: flex-start; }
-  .t20g-eng-painel-resetar { font-size: 0; }
-  .t20g-eng-painel-resetar i { font-size: 13px; }
+  .t20g-eng-painel-item {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+  }
+  .t20g-eng-painel-controles {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+    padding-top: var(--t20g-e1);
+  }
 }
 
 .t20g-eng-ativacao .t20g-eng-cd {

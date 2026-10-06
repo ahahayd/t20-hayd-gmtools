@@ -199,10 +199,18 @@
           {{#if entrada.no}}{{> no-card entrada.no}}{{/if}}
         </div>
       {{else}}
+        {{!-- Coluna sem conteúdo: estado vazio com ícone, não uma frase solta
+              no canto. É o que o Mestre vê antes de rolar qualquer coisa. --}}
         {{#if this.rolada}}
-          <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosColunaNada"}}</p>
+          <div class="t20g-vazio">
+            <i class="fa-solid fa-circle-minus"></i>
+            <p class="t20g-vazio__texto">{{localize "T20HaydGMTools.TesourosColunaNada"}}</p>
+          </div>
         {{else}}
-          <p class="t20g-hint">{{localize "T20HaydGMTools.TesourosColunaVazia"}}</p>
+          <div class="t20g-vazio">
+            <i class="fa-solid fa-dice-d20"></i>
+            <p class="t20g-vazio__texto">{{localize "T20HaydGMTools.TesourosColunaVazia"}}</p>
+          </div>
         {{/if}}
       {{/each}}
     </div>
