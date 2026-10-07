@@ -115,7 +115,11 @@ test('a base entra pelos arquivos que o manifesto já carrega', () => {
 test('a marcação das janelas é um teste por render, e não observação contínua', () => {
   // O hook roda em TODA janela que o Foundry abre, inclusive as do core e de
   // outros módulos. Um MutationObserver aqui custaria para a mesa inteira.
-  assert.doesNotMatch(uiBase, /MutationObserver|setInterval|requestAnimationFrame/);
+  assert.doesNotMatch(uiBase, /MutationObserver|setInterval|setTimeout/);
+  // Um requestAnimationFrame de uma volta só é permitido: ele existe para
+  // remedir a altura do diálogo v1 depois de o CSS entrar, e termina no
+  // quadro seguinte. O que não pode é trabalho por quadro.
+  assert.equal((uiBase.match(/requestAnimationFrame/g) ?? []).length, 1);
   assert.match(uiBase, /Hooks\.on\('renderApplicationV2'/);
   assert.match(uiBase, /Hooks\.on\('renderDialogV2'/);
   // Só marca o que é do módulo: janela de terceiro não pode receber a classe.
