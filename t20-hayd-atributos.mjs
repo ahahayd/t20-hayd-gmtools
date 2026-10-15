@@ -192,7 +192,8 @@ function registrarConfiguracoes() {
       epica: 'Épica',
       valkaria: 'Valkaria',
       nimb: 'Nimb',
-      predefinido: 'Khalmyr'
+      predefinido: 'Khalmyr',
+      manual: 'Manual'
     }
   });
   game.settings.register(MODULE_ID, 'atributosPontos', {
@@ -464,9 +465,24 @@ async function confirmarAplicar(actor, bases, raciais, resumo) {
   return true;
 }
 
+/* ─── Destino do resultado ────────────────────────────────────────────── */
+
+/**
+ * Cada método termina entregando os valores a um destino (`ctx.fim`).
+ * Pelo menu da ficha, o destino confirma e grava no ator; pelo Assistente
+ * de Criação, só devolve os valores — quem grava é o assistente, no fim.
+ * `ctx.racial` diz se a coluna Racial aparece na compra (no assistente o
+ * racial vem da raça escolhida, então ela some).
+ *
+ * `fim(bases, raciais, resumo)` devolve se o resultado foi aceito.
+ */
+function ctxNaFicha(actor) {
+  return { racial: true, fim: (bases, raciais, resumo) => confirmarAplicar(actor, bases, raciais, resumo) };
+}
+
 /* ─── Compra por pontos ───────────────────────────────────────────────── */
 
-async function abrirCompra(actor, pontosTotais, tituloMetodo, estadoInicial = null) {
+async function abrirCompra(actor, pontosTotais, tituloMetodo, estadoInicial = null, ctx = ctxNaFicha(actor)) {
   const attrs = atributosSistema();
   const custos = obterCustos();
   const valores = Object.keys(custos).map(Number).sort((a, b) => a - b);
@@ -506,6 +522,7 @@ async function abrirCompra(actor, pontosTotais, tituloMetodo, estadoInicial = nu
         <span class="t20g-num" data-campo="base">0</span>
         <button type="button" class="t20g-mais" data-campo="base" data-tooltip="Aumentar">+</button>
       </span>
+      ${ctx.racial ? `
       <span class="t20g-atr-op">+</span>
       <span class="t20g-atr-controle t20g-atr-racial">
         <button type="button" class="t20g-menos" data-campo="racial">−</button>
@@ -513,7 +530,7 @@ async function abrirCompra(actor, pontosTotais, tituloMetodo, estadoInicial = nu
         <button type="button" class="t20g-mais" data-campo="racial">+</button>
       </span>
       <span class="t20g-atr-op">=</span>
-      <span class="t20g-atr-total">${estado[k].base + estado[k].racial}</span>
+      <span class="t20g-atr-total">${estado[k].base + estado[k].racial}</span>` : ''}
     </div>`;
 
   /** Explicação da compra, com a tabela de custos VIGENTE (lida na hora,
@@ -531,7 +548,7 @@ async function abrirCompra(actor, pontosTotais, tituloMetodo, estadoInicial = nu
       ${multiNeg
         ? '<p>O mestre liberou deixar <b>mais de um</b> atributo negativo.</p>'
         : '<p>Você pode reduzir <b>um único</b> atributo abaixo de 0 para receber pontos adicionais (T20 p.17).</p>'}
-      <p class="notes">A coluna Racial é opcional — o sistema preenche automaticamente pela raça.</p>`;
+      ${ctx.racial ? '<p class="notes">A coluna Racial é opcional — o sistema preenche automaticamente pela raça.</p>' : ''}`;
   };
 
   const resultado = await DialogV2.wait({
@@ -540,7 +557,7 @@ async function abrirCompra(actor, pontosTotais, tituloMetodo, estadoInicial = nu
     content: `
       <div class="t20g-atr-pontos">Pontos restantes: <output class="t20g-atr-restantes">${pontosTotais}</output>${botaoAjuda()}</div>
       <div class="t20g-atr-cab">
-        <span></span><span>Base</span><span></span><span>Racial</span><span></span><span>Total</span>
+        <span></span><span>Base</span>${ctx.racial ? '<span></span><span>Racial</span><span></span><span>Total</span>' : ''}
       </div>
       ${Object.entries(attrs).map(([k, r]) => linha(k, r)).join('')}`,
     buttons: [
@@ -577,8 +594,10 @@ async function abrirCompra(actor, pontosTotais, tituloMetodo, estadoInicial = nu
         for (const [k, e] of Object.entries(estado)) {
           const l = el.querySelector(`[data-attr="${k}"]`);
           l.querySelector('.t20g-num[data-campo="base"]').textContent = e.base;
-          l.querySelector('.t20g-num[data-campo="racial"]').textContent = e.racial;
-          l.querySelector('.t20g-atr-total').textContent = e.base + e.racial;
+          if (ctx.racial) {
+            l.querySelector('.t20g-num[data-campo="racial"]').textContent = e.racial;
+            l.querySelector('.t20g-atr-total').textContent = e.base + e.racial;
+          }
           l.querySelector('.t20g-mais[data-campo="base"]').disabled = !podeMudar(k, +1);
           l.querySelector('.t20g-menos[data-campo="base"]').disabled = !podeMudar(k, -1);
         }
@@ -609,23 +628,23 @@ async function abrirCompra(actor, pontosTotais, tituloMetodo, estadoInicial = nu
     rejectClose: false
   });
 
-  if (resultado === 'invalido') return abrirCompra(actor, pontosTotais, tituloMetodo, { ...estado });
+  if (resultado === 'invalido') return abrirCompra(actor, pontosTotais, tituloMetodo, { ...estado }, ctx);
   if (!resultado || resultado === 'cancelar') return;
 
   const sobra = pontosTotais - Object.values(resultado).reduce((t, e) => t + (custos[e.base] ?? 0), 0);
   const bases = {}, raciais = {};
   for (const [k, e] of Object.entries(resultado)) { bases[k] = e.base; raciais[k] = e.racial; }
   const resumo = `${tituloMetodo} (${pontosTotais} pontos${sobra > 0 ? `, ${sobra} não gastos` : ''}).`;
-  const ok = await confirmarAplicar(actor, bases, raciais, resumo);
+  const ok = await ctx.fim(bases, raciais, resumo);
   // Cancelou a confirmação: volta à compra preservando o que foi montado.
-  if (!ok) return abrirCompra(actor, pontosTotais, tituloMetodo, resultado);
+  if (!ok) return abrirCompra(actor, pontosTotais, tituloMetodo, resultado, ctx);
 }
 
 /**
  * Compra por Pontos: escolhe o total (presets do livro/Heróis de Arton ou
  * personalizado, com a sugestão do mestre) e abre a compra.
  */
-async function abrirEscolhaPontos(actor) {
+async function abrirEscolhaPontos(actor, ctx = ctxNaFicha(actor)) {
   const padrao = Number(game.settings.get(MODULE_ID, 'atributosPontos')) || 10;
   let sugerido = false;
   try { sugerido = ['compra', 'pontosVariados'].includes(game.settings.get(MODULE_ID, 'atributosMetodoPadrao')); }
@@ -667,55 +686,119 @@ async function abrirEscolhaPontos(actor) {
     rejectClose: false
   });
   if (dados === null || dados === 'cancelar' || !Number.isFinite(dados)) return;
-  return abrirCompra(actor, Math.max(0, dados), 'Compra por Pontos');
+  return abrirCompra(actor, Math.max(0, dados), 'Compra por Pontos', null, ctx);
 }
 
 /* ─── Distribuição de valores (compartilhada) ─────────────────────────── */
 
 /**
- * Bloco de distribuição: um <select> por atributo escolhendo qual dos seis
- * resultados ele recebe. Seleções são únicas — escolher um valor já usado
- * troca com o atributo que o detinha.
+ * Bloco de distribuição: os atributos ficam parados à esquerda e, à direita,
+ * uma lista ordenável de cartões "14 → 2" — o cartão da linha N vai para o
+ * atributo da linha N. Cada resultado é uma peça própria, então dois "14 → 2"
+ * iguais não se confundem (com <select> eles eram indistinguíveis).
+ *
+ * Mover: arrastar o cartão para outra linha (os dois trocam de lugar; os do
+ * meio não se mexem) ou, sem mouse, as setas ↑/↓ do cartão, que o trocam com
+ * o vizinho. O foco acompanha o cartão movido, para dar para seguir só no
+ * teclado.
+ *
+ * A ordem vive em `container._ordem` (índices de `entradas`).
  */
 function montarDistribuicao(container, entradas) {
-  const attrs = atributosSistema();
-  const opcoes = (sel) => entradas
-    .map((e, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${e.rotulo}</option>`)
-    .join('');
+  container._ordem = entradas.map((_, i) => i);
+  desenharDistribuicao(container, entradas);
+}
+
+function desenharDistribuicao(container, entradas, foco = null) {
+  const attrs = Object.entries(atributosSistema());
+  const ordem = container._ordem;
+  const ultimo = attrs.length - 1;
   container.innerHTML = `
     <h4>Distribua os valores</h4>
-    ${Object.entries(attrs).map(([k, rotulo], idx) => `
-      <div class="t20g-atr-dist-linha">
-        <span class="t20g-atr-nome"><i class="fa-solid ${ICONES[k] ?? 'fa-star'}"></i> ${rotulo}</span>
-        <select data-attr="${k}">${opcoes(idx)}</select>
-      </div>`).join('')}`;
+    <p class="notes t20g-atr-dist-dica">Arraste cada valor para o atributo que você quer — ou use as setas.</p>
+    <div class="t20g-atr-dist-lista">
+      ${attrs.map(([k, rotulo], pos) => {
+        const e = entradas[ordem[pos]];
+        return `
+        <div class="t20g-atr-dist-linha" data-pos="${pos}">
+          <span class="t20g-atr-nome"><i class="fa-solid ${ICONES[k] ?? 'fa-star'}"></i> ${rotulo}</span>
+          <div class="t20g-atr-dist-valor" draggable="true" data-pos="${pos}">
+            <i class="fa-solid fa-grip-vertical t20g-atr-dist-alca" aria-hidden="true"></i>
+            <b>${e.rotulo}</b>
+            <button type="button" class="t20g-atr-dist-mover" data-pos="${pos}" data-delta="-1" ${pos === 0 ? 'disabled' : ''}
+                    aria-label="Mover ${e.rotulo} para cima" data-tooltip="Para cima"><i class="fa-solid fa-chevron-up"></i></button>
+            <button type="button" class="t20g-atr-dist-mover" data-pos="${pos}" data-delta="1" ${pos === ultimo ? 'disabled' : ''}
+                    aria-label="Mover ${e.rotulo} para baixo" data-tooltip="Para baixo"><i class="fa-solid fa-chevron-down"></i></button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
 
-  container.querySelectorAll('select[data-attr]').forEach(sel => {
-    sel.dataset.anterior = sel.value;
-    sel.addEventListener('change', () => {
-      const outro = [...container.querySelectorAll('select[data-attr]')]
-        .find(s => s !== sel && s.value === sel.value);
-      if (outro) {
-        outro.value = sel.dataset.anterior;
-        outro.dataset.anterior = outro.value;
-      }
-      sel.dataset.anterior = sel.value;
+  // Troca os cartões das posições `de` e `para`; o resto fica onde está.
+  const mover = (de, para, focoDepois = null) => {
+    if (de === para || para < 0 || para > ultimo) return;
+    [ordem[de], ordem[para]] = [ordem[para], ordem[de]];
+    desenharDistribuicao(container, entradas, focoDepois);
+  };
+
+  container.querySelectorAll('.t20g-atr-dist-mover').forEach(btn => btn.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    const de = Number(btn.dataset.pos), delta = Number(btn.dataset.delta);
+    mover(de, de + delta, { pos: de + delta, delta });
+  }));
+
+  let arrastando = null;
+  container.querySelectorAll('.t20g-atr-dist-valor').forEach(cartao => {
+    cartao.addEventListener('dragstart', (ev) => {
+      arrastando = Number(cartao.dataset.pos);
+      ev.dataTransfer.effectAllowed = 'move';
+      ev.dataTransfer.setData('text/plain', `t20g-atr:${arrastando}`);
+      cartao.classList.add('t20g-atr-dist-valor--arrastando');
+    });
+    cartao.addEventListener('dragend', () => {
+      arrastando = null;
+      container.querySelectorAll('.t20g-atr-dist-linha--alvo').forEach(l => l.classList.remove('t20g-atr-dist-linha--alvo'));
+      cartao.classList.remove('t20g-atr-dist-valor--arrastando');
     });
   });
+  container.querySelectorAll('.t20g-atr-dist-linha').forEach(linha => {
+    linha.addEventListener('dragover', (ev) => {
+      if (arrastando === null) return;
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'move';
+      container.querySelectorAll('.t20g-atr-dist-linha--alvo').forEach(l => l !== linha && l.classList.remove('t20g-atr-dist-linha--alvo'));
+      linha.classList.add('t20g-atr-dist-linha--alvo');
+    });
+    linha.addEventListener('drop', (ev) => {
+      if (arrastando === null) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      mover(arrastando, Number(linha.dataset.pos));
+    });
+  });
+
+  // O foco volta para a mesma seta do cartão movido (ou a outra, se essa
+  // ficou desabilitada no topo/fundo).
+  if (foco) {
+    const cartao = container.querySelector(`.t20g-atr-dist-valor[data-pos="${foco.pos}"]`);
+    const alvo = cartao?.querySelector(`.t20g-atr-dist-mover[data-delta="${foco.delta}"]:not(:disabled)`)
+      ?? cartao?.querySelector('.t20g-atr-dist-mover:not(:disabled)');
+    alvo?.focus();
+  }
 }
 
 /** Lê a distribuição → { for: valorFinal, ... } */
 function lerDistribuicao(container, entradas) {
   const bases = {};
-  container.querySelectorAll('select[data-attr]').forEach(sel => {
-    bases[sel.dataset.attr] = entradas[Number(sel.value)].valor;
+  Object.keys(atributosSistema()).forEach((k, pos) => {
+    bases[k] = entradas[container._ordem[pos]].valor;
   });
   return bases;
 }
 
 /* ─── Métodos com rolagem (padrão, Clássica, Épica) ───────────────────── */
 
-async function abrirRolagem(actor, chave) {
+async function abrirRolagem(actor, chave, ctx = ctxNaFicha(actor)) {
   const met = METODOS_ROLAGEM[chave];
   const attrs = atributosSistema();
   const n = Object.keys(attrs).length;
@@ -836,13 +919,13 @@ async function abrirRolagem(actor, chave) {
 
   // Sem reabrir no cancelamento: reabrir rolaria dados NOVOS. As rolagens
   // originais permanecem registradas no chat.
-  const ok = await confirmarAplicar(actor, resultado, null, `${met.nome} (${met.formula}, ${met.fonte}).`);
+  const ok = await ctx.fim(resultado, null, `${met.nome} (${met.formula}, ${met.fonte}).`);
   if (!ok) ui.notifications.info('Definição cancelada — as rolagens continuam no chat.');
 }
 
 /* ─── Valkaria (7d6 sobre base 8) ─────────────────────────────────────── */
 
-async function abrirValkaria(actor) {
+async function abrirValkaria(actor, ctx = ctxNaFicha(actor)) {
   const attrs = atributosSistema();
   const N = 7;
   const dados = new Array(N).fill(null);   // resultado de cada d6
@@ -948,13 +1031,13 @@ async function abrirValkaria(actor) {
   resultado.atribuicao.forEach((k, i) => { if (k) bases[k] += resultado.dados[i]; });
   for (const k of Object.keys(bases)) bases[k] = converter(bases[k]);
 
-  const ok = await confirmarAplicar(actor, bases, null, 'Valkaria (7d6 sobre base 8, Heróis de Arton p.281).');
+  const ok = await ctx.fim(bases, null, 'Valkaria (7d6 sobre base 8, Heróis de Arton p.281).');
   if (!ok) ui.notifications.info('Definição cancelada — a rolagem continua no chat.');
 }
 
 /* ─── Nimb (7d20, descarta o menor) ───────────────────────────────────── */
 
-async function abrirNimb(actor) {
+async function abrirNimb(actor, ctx = ctxNaFicha(actor)) {
   const N = 7;
   const dados = new Array(N).fill(null); // resultados individuais dos d20
 
@@ -1046,13 +1129,13 @@ async function abrirNimb(actor) {
 
   if (!resultado || resultado === 'cancelar') return;
 
-  const ok = await confirmarAplicar(actor, resultado, null, 'Nimb (7d20 descartando o menor, Heróis de Arton p.281).');
+  const ok = await ctx.fim(resultado, null, 'Nimb (7d20 descartando o menor, Heróis de Arton p.281).');
   if (!ok) ui.notifications.info('Definição cancelada — a rolagem continua no chat.');
 }
 
 /* ─── Arranjo Khalmyr ─────────────────────────────────────────────────── */
 
-async function abrirArranjo(actor) {
+async function abrirArranjo(actor, ctx = ctxNaFicha(actor)) {
   const a = ARRANJO_KHALMYR;
 
   const resultado = await DialogV2.wait({
@@ -1085,9 +1168,74 @@ async function abrirArranjo(actor) {
 
   if (!resultado || resultado === 'cancelar') return;
 
-  const ok = await confirmarAplicar(actor, resultado, null,
+  const ok = await ctx.fim(resultado, null,
     `Khalmyr (${a.valores.join(', ')}, Heróis de Arton p.281).`);
-  if (!ok) return abrirArranjo(actor);
+  if (!ok) return abrirArranjo(actor, ctx);
+}
+
+/* ─── Manual ──────────────────────────────────────────────────────────── */
+
+/** Limites do campo manual: os extremos que os métodos do livro alcançam,
+ *  com folga para mesas que usam valores fora da regra. */
+const MANUAL_MIN = -5;
+const MANUAL_MAX = 10;
+
+/**
+ * Valores digitados direto, para quem já tem os atributos definidos (vindos
+ * de fora do Foundry, de uma regra da casa ou ajustados pelo Mestre). Começa
+ * com o que já está na ficha.
+ */
+async function abrirManual(actor, ctx = ctxNaFicha(actor), inicial = null) {
+  const attrs = atributosSistema();
+  const atual = (k) => inicial?.[k] ?? Number(actor.system.atributos?.[k]?.base) ?? 0;
+  const resultado = await DialogV2.wait({
+    window: { title: `Manual — ${actor.name}`, icon: 'fa-solid fa-pen-to-square' },
+    position: { width: 380 },
+    content: `
+      <p class="notes">Digite o valor de cada atributo (de ${MANUAL_MIN} a ${MANUAL_MAX}) — sem rolagens nem pontos.</p>
+      <div class="t20g-atr-manual">
+        ${Object.entries(attrs).map(([k, rotulo]) => `
+          <div class="t20g-atr-linha t20g-atr-manual-linha" data-attr="${k}">
+            <span class="t20g-atr-nome"><i class="fa-solid ${ICONES[k] ?? 'fa-star'}"></i> ${rotulo}</span>
+            <span class="t20g-atr-controle">
+              <button type="button" class="t20g-menos" data-tooltip="Reduzir" aria-label="Reduzir ${rotulo}">−</button>
+              <input type="number" name="${k}" value="${atual(k) || 0}" min="${MANUAL_MIN}" max="${MANUAL_MAX}" step="1" aria-label="${rotulo}">
+              <button type="button" class="t20g-mais" data-tooltip="Aumentar" aria-label="Aumentar ${rotulo}">+</button>
+            </span>
+          </div>`).join('')}
+      </div>`,
+    buttons: [
+      {
+        action: 'aplicar', label: 'Aplicar', icon: 'fa-solid fa-check', default: true,
+        callback: (ev, btn) => {
+          const bases = {};
+          for (const k of Object.keys(attrs)) {
+            const v = Math.trunc(Number(btn.form.elements[k]?.value));
+            bases[k] = Number.isFinite(v) ? Math.clamp(v, MANUAL_MIN, MANUAL_MAX) : 0;
+          }
+          return bases;
+        }
+      },
+      { action: 'cancelar', label: 'Cancelar' }
+    ],
+    render: (ev, dialog) => {
+      dialog.element.querySelectorAll('.t20g-atr-manual-linha').forEach(linha => {
+        const campo = linha.querySelector('input');
+        const passo = (d) => {
+          campo.value = Math.clamp((Math.trunc(Number(campo.value)) || 0) + d, MANUAL_MIN, MANUAL_MAX);
+        };
+        linha.querySelector('.t20g-menos').addEventListener('click', () => passo(-1));
+        linha.querySelector('.t20g-mais').addEventListener('click', () => passo(1));
+        // Fora dos limites (ou vazio), o campo se corrige ao perder o foco.
+        campo.addEventListener('change', () => passo(0));
+      });
+    },
+    rejectClose: false
+  });
+
+  if (!resultado || resultado === 'cancelar') return;
+  const ok = await ctx.fim(resultado, null, 'Manual (valores definidos à mão).');
+  if (!ok) return abrirManual(actor, ctx, resultado);
 }
 
 /* ─── Seleção de método ───────────────────────────────────────────────── */
@@ -1099,8 +1247,53 @@ const METODOS = [
   { key: 'epica', nome: 'Épica', fonte: 'Heróis de Arton p.280', desc: () => '3d6+6 descartando o menor — heróis "escolhidos".' },
   { key: 'valkaria', nome: 'Valkaria', fonte: 'Heróis de Arton p.281', desc: () => '7d6 aplicados livremente sobre base 8.' },
   { key: 'nimb', nome: 'Nimb', fonte: 'Heróis de Arton p.281', desc: () => '7d20 descartando o menor — de −3 a 5. Conta e risco!' },
-  { key: 'predefinido', nome: 'Khalmyr', fonte: 'Heróis de Arton p.281', desc: () => 'Conjunto fixo 3, 3, 2, 1, 0, −1 — sem rolagens, grupo equilibrado.' }
+  { key: 'predefinido', nome: 'Khalmyr', fonte: 'Heróis de Arton p.281', desc: () => 'Conjunto fixo 3, 3, 2, 1, 0, −1 — sem rolagens, grupo equilibrado.' },
+  { key: 'manual', nome: 'Manual', fonte: 'livre', desc: () => 'Digite cada valor à mão — para atributos definidos fora do Foundry ou por regra da casa.' }
 ];
+
+/** Método padrão da campanha (configurado pelo mestre), ou '' sem configuração. */
+function obterMetodoPadrao() {
+  let metodoPadrao = '';
+  try { metodoPadrao = game.settings.get(MODULE_ID, 'atributosMetodoPadrao') ?? ''; }
+  catch { metodoPadrao = ''; }
+  // Mundos que configuraram o antigo "Pontos Variados" caem na Compra.
+  if (metodoPadrao === 'pontosVariados') metodoPadrao = 'compra';
+  if (!METODOS.some(m => m.key === metodoPadrao)) metodoPadrao = '';
+  return metodoPadrao;
+}
+
+/** Os métodos na ordem do menu, com o padrão da mesa marcado. */
+export function metodosDeAtributos() {
+  const padrao = obterMetodoPadrao();
+  return METODOS.map(m => ({ key: m.key, nome: m.nome, fonte: m.fonte, desc: m.desc(), padrao: m.key === padrao }));
+}
+
+function executarMetodo(actor, metodo, ctx) {
+  switch (metodo) {
+    case 'compra': return abrirEscolhaPontos(actor, ctx);
+    case 'rolagem':
+    case 'classica':
+    case 'epica': return abrirRolagem(actor, metodo, ctx);
+    case 'valkaria': return abrirValkaria(actor, ctx);
+    case 'nimb': return abrirNimb(actor, ctx);
+    case 'predefinido': return abrirArranjo(actor, ctx);
+    case 'manual': return abrirManual(actor, ctx);
+  }
+}
+
+/**
+ * Roda um método e DEVOLVE os valores, sem gravar nada no ator: é a porta
+ * do Assistente de Criação. Resolve `{ bases, resumo }`, ou `null` se o
+ * jogador desistir no meio.
+ */
+export async function escolherAtributos(actor, metodo) {
+  let saida = null;
+  await executarMetodo(actor, metodo, {
+    racial: false,
+    fim: async (bases, _raciais, resumo) => { saida = { bases: { ...bases }, resumo }; return true; }
+  });
+  return saida;
+}
 
 export async function abrirDefinicaoAtributos(actor) {
   if (!actor || actor.type !== 'character') {
@@ -1109,12 +1302,7 @@ export async function abrirDefinicaoAtributos(actor) {
 
   /* Método padrão da campanha (configurado pelo mestre): pré-selecionado
    * e destacado; sem configuração, o primeiro da lista fica marcado. */
-  let metodoPadrao = '';
-  try { metodoPadrao = game.settings.get(MODULE_ID, 'atributosMetodoPadrao') ?? ''; }
-  catch { metodoPadrao = ''; }
-  // Mundos que configuraram o antigo "Pontos Variados" caem na Compra.
-  if (metodoPadrao === 'pontosVariados') metodoPadrao = 'compra';
-  if (!METODOS.some(m => m.key === metodoPadrao)) metodoPadrao = '';
+  const metodoPadrao = obterMetodoPadrao();
 
   const radios = METODOS.map((m, i) => {
     const ehPadrao = m.key === metodoPadrao;
@@ -1143,15 +1331,7 @@ export async function abrirDefinicaoAtributos(actor) {
   });
   if (!escolha || escolha === 'cancelar') return;
 
-  switch (escolha) {
-    case 'compra': return abrirEscolhaPontos(actor);
-    case 'rolagem':
-    case 'classica':
-    case 'epica': return abrirRolagem(actor, escolha);
-    case 'valkaria': return abrirValkaria(actor);
-    case 'nimb': return abrirNimb(actor);
-    case 'predefinido': return abrirArranjo(actor);
-  }
+  return executarMetodo(actor, escolha, ctxNaFicha(actor));
 }
 
 /* ─── Hooks ───────────────────────────────────────────────────────────── */
@@ -1175,6 +1355,9 @@ Hooks.on('getActorSheetHeaderButtons', (sheet, buttons) => {
 
   const zerado = Object.values(actor.system?.atributos ?? {}).every(a => !a?.base);
   if (!zerado) return;
+  // Ficha em branco ganha o "Criar personagem" do assistente, que já
+  // começa pelos atributos — dois botões para a mesma coisa só confundem.
+  if (game.modules.get(MODULE_ID)?.api?.criacao?.precisaCriacao?.(actor)) return;
 
   buttons.unshift({
     label: 'Definir Atributos',
@@ -1194,7 +1377,8 @@ Hooks.on('renderActorSheet', (app) => {
   const btn = janela?.querySelector?.('.header-button.t20g-atr-header');
   if (!btn) return;
   const zerado = Object.values(actor.system?.atributos ?? {}).every(a => !a?.base);
-  btn.style.display = zerado ? '' : 'none';
+  const assistente = !!game.modules.get(MODULE_ID)?.api?.criacao?.precisaCriacao?.(actor);
+  btn.style.display = zerado && !assistente ? '' : 'none';
 });
 
 /* Injeta o botão em "Configurações de Personagem" (ActorSettings, App V1). */

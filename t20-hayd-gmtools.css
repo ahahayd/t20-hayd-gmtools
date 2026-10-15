@@ -162,6 +162,10 @@
   font-size: 1.05em;
 }
 .t20g-atr-num { text-align: center; }
+/* Método manual: o valor digitado entre − e +. */
+.t20g-atr-manual { display: flex; flex-direction: column; gap: 4px; }
+.t20g-atr-linha.t20g-atr-manual-linha { grid-template-columns: 1fr 140px; }
+.t20g-atr-manual-linha input[type="number"] { width: 56px; height: 26px; text-align: center; font-weight: bold; }
 .t20g-atr-novo { color: var(--t20a-chat-cor, #c0392b); font-weight: bold; }
 .t20g-atr-seta { opacity: 0.6; text-align: center; }
 
@@ -174,6 +178,19 @@
   flex-wrap: wrap;
 }
 .t20g-atr-acoes button { width: auto; flex: 0 0 auto; }
+/* Botão indisponível ("Rerolar o menor" antes de a soma ficar abaixo de 6,
+   "Rolar todos" depois de usado, "Rolar" de um conjunto já rolado): precisa
+   parecer indisponível, e não um botão igual aos outros que não responde.
+   Seletor reforçado para vencer o estilo genérico de botão da base visual. */
+.t20g-ui .window-content :is(.t20g-atr-acoes, .t20g-atr-slot) button:disabled,
+.t20g-ui .window-content :is(.t20g-atr-acoes, .t20g-atr-slot) button:disabled:hover {
+  opacity: 0.4;
+  background: transparent;
+  border-style: dashed;
+  color: var(--t20g-ink-3, #847e92);
+  box-shadow: none;
+  cursor: not-allowed;
+}
 .t20g-atr-soma { font-weight: bold; margin-left: auto; }
 .t20g-atr-slot {
   display: grid;
@@ -190,13 +207,47 @@
 
 /* Distribuição de valores */
 .t20g-atr-dist h4 { margin: 8px 0 4px; }
+/* Distribuição: atributos parados à esquerda, cartões de valor ordenáveis
+   à direita (arrastar ou setas ↑/↓). */
+.t20g-atr-dist-dica { margin: 0 0 6px; }
+.t20g-atr-dist-lista { display: flex; flex-direction: column; gap: 4px; }
 .t20g-atr-dist-linha {
   display: grid;
-  grid-template-columns: 1fr 140px;
+  grid-template-columns: 1fr 190px;
   gap: 8px;
   align-items: center;
-  margin-bottom: 3px;
+  padding: 2px;
+  border-radius: 6px;
+  transition: background-color 120ms ease;
 }
+.t20g-atr-dist-linha--alvo { background: var(--t20g-accent-fundo, rgba(226, 164, 76, 0.14)); }
+.t20g-atr-dist-valor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 4px 0 8px;
+  background: var(--t20g-s2, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--t20g-line-forte, rgba(255, 255, 255, 0.16));
+  border-radius: 6px;
+  cursor: grab;
+  user-select: none;
+}
+.t20g-atr-dist-valor:active { cursor: grabbing; }
+.t20g-atr-dist-valor b { flex: 1 1 auto; font-variant-numeric: tabular-nums; }
+.t20g-atr-dist-valor--arrastando { opacity: 0.4; }
+.t20g-atr-dist-alca { opacity: 0.45; font-size: 0.8em; }
+.t20g-atr-dist-valor .t20g-atr-dist-mover {
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  line-height: 1;
+  font-size: 0.75em;
+}
+.t20g-atr-dist-valor .t20g-atr-dist-mover > i { margin: 0; }
+.t20g-atr-dist-valor .t20g-atr-dist-mover:disabled { opacity: 0.3; cursor: default; }
 
 /* Valkaria */
 .t20g-atr-valk-dados {
