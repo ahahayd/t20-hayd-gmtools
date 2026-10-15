@@ -1,0 +1,55 @@
+<header class="t20g-cc-cab">
+  <span class="t20g-rotulo">Etapa {{numero}} · opcional</span>
+  <h2>Escolha sua divindade</h2>
+  <p class="t20g-apoio">Existem vinte deuses em Arton. Se quiser, você pode se devotar a um deles — devotos
+    seguem obrigações e restrições e recebem um poder concedido{{#if dobro}} (sua classe, como devoto fiel,
+    recebe dois){{/if}}. Os suplementos trazem também divindades menores, na aba Outras divindades. Pode pular esta etapa.</p>
+</header>
+
+<div class="t20g-cc-nome-campo">
+  <i class="fa-solid fa-sun"></i>
+  <input type="text" class="t20g-campo" data-campo="divindade" value="{{nome}}" list="t20g-cc-deuses-lista"
+         placeholder="Nome da divindade (ou deixe vazio)" autocomplete="off">
+  <datalist id="t20g-cc-deuses-lista">{{#each nomesLista}}<option value="{{nome}}">{{extra}}</option>{{/each}}</datalist>
+  {{#if deus}}<span class="t20g-chip t20g-chip--accent">{{#if deus.maior}}{{deus.dominio}}{{else}}divindade menor{{/if}}</span>{{/if}}
+</div>
+
+<div class="t20g-cc-deuses-abas">
+  <button type="button" class="{{#if (eq aba "panteao")}}ativa{{/if}}" data-action="abaDeuses" data-aba="panteao">
+    <i class="fa-solid fa-sun"></i> Panteão <small>{{divindades.length}}</small>
+  </button>
+  <button type="button" class="{{#if (eq aba "outras")}}ativa{{/if}}" data-action="abaDeuses" data-aba="outras">
+    <i class="fa-solid fa-star"></i> Outras divindades <small>{{outras.length}}</small>
+  </button>
+</div>
+
+{{#if (eq aba "panteao")}}
+  <div class="t20g-cc-deuses">
+    {{#each divindades}}
+      <button type="button" class="t20g-cc-deus {{#if ativa}}ativa{{/if}}" data-action="divindade" data-nome="{{nome}}" aria-pressed="{{#if ativa}}true{{else}}false{{/if}}">
+        <b>{{nome}}</b><small>{{dominio}}</small>
+      </button>
+    {{/each}}
+  </div>
+{{else}}
+  <div class="t20g-cc-deuses t20g-cc-deuses--outras">
+    {{#each outras}}
+      <button type="button" class="t20g-cc-deus {{#if ativa}}ativa{{/if}}" data-action="divindade" data-nome="{{nome}}" aria-pressed="{{#if ativa}}true{{else}}false{{/if}}">
+        <b>{{nome}}</b><small>{{#if epiteto}}{{epiteto}} · {{/if}}{{poderes}} poder{{#unless (eq poderes 1)}}es{{/unless}}</small>
+      </button>
+    {{else}}
+      <div class="t20g-vazio">
+        <i class="fa-solid fa-star"></i>
+        <span class="t20g-vazio__texto">Nenhuma divindade menor nos poderes concedidos das fontes ligadas. Elas vêm de suplementos como o Deuses de Arton.</span>
+      </div>
+    {{/each}}
+  </div>
+{{/if}}
+
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-hands-praying"></i> Poderes concedidos</h3>
+  {{#if deus}}<p class="t20g-apoio">A lista ao lado mostra os poderes de {{deus.nome}}.</p>{{/if}}
+  {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zona}}
+</section>
+
+{{> "modules/t20-hayd-gmtools/templates/criacao/partes/magias.hbs" magias}}

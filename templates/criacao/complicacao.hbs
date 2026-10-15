@@ -1,0 +1,18 @@
+<header class="t20g-cc-cab">
+  <span class="t20g-rotulo">Etapa {{numero}} · opcional</span>
+  <h2>Complicação</h2>
+  <p class="t20g-apoio">Regra opcional do Heróis de Arton: você pode pegar um poder de complicação e, em troca,
+    recebe um poder geral à sua escolha. Sem complicação, pule esta etapa.</p>
+</header>
+
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-skull"></i> Complicação</h3>
+  <p class="t20g-apoio">O poder de complicação. Na lista ao lado, a aba Complicações traz todos.</p>
+  {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zona}}
+</section>
+
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-bolt"></i> Poder geral em troca</h3>
+  <p class="t20g-apoio">O poder geral que a complicação te dá. Use a aba Gerais ao lado, dividida por categoria.</p>
+  {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zonaTroca}}
+</section>

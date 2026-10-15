@@ -1,0 +1,30 @@
+<div class="t20g-cc-zona {{#if vazia}}t20g-cc-zona--vazia{{/if}}" data-zona="{{id}}" data-action="focarZona">
+  {{#each itens}}
+    <div class="t20g-cc-zitem {{#if ../compras}}{{#unless gratis}}t20g-cc-zitem--compra{{/unless}}{{/if}}" data-desc="{{uuid}}">
+      {{#if ../compras}}
+        <label class="t20g-cc-recebido" data-tooltip="{{#if gratis}}Recebido no equipamento inicial — não gasta dinheiro. Desmarque se você comprou.{{else}}Comprado com o dinheiro inicial. Marque se você recebeu sem pagar.{{/if}}">
+          <input type="checkbox" data-action="gratis" data-indice="{{i}}" {{checked gratis}}>
+          <span>{{#if gratis}}Recebido{{else}}Comprado{{/if}}</span>
+        </label>
+      {{/if}}
+      <img src="{{img}}" alt="">
+      <a class="t20g-cc-zitem-nome" data-action="abrirItem" data-uuid="{{uuid}}">{{nome}}</a>
+      {{#if ../compras}}
+        <span class="t20g-cc-custo {{#if gratis}}t20g-cc-custo--gratis{{/if}}">{{#if gratis}}—{{else}}{{custo}}{{/if}}</span>
+      {{/if}}
+      {{#if ../itensFisicos}}
+        <span class="t20g-stepper t20g-cc-qtd">
+          <button type="button" data-action="quantidade" data-lista="{{../id}}" data-indice="{{i}}" data-delta="-1" {{#if (eq qtd 1)}}disabled{{/if}} aria-label="Menos"><i class="fa-solid fa-minus"></i></button>
+          <span class="t20g-stepper__valor">{{qtd}}</span>
+          <button type="button" data-action="quantidade" data-lista="{{../id}}" data-indice="{{i}}" data-delta="1" aria-label="Mais"><i class="fa-solid fa-plus"></i></button>
+        </span>
+      {{/if}}
+      <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--fantasma" data-action="remover"
+              data-lista="{{../id}}" data-indice="{{i}}" data-tooltip="Tirar"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  {{/each}}
+  <div class="t20g-cc-zona-dica">
+    <i class="fa-solid fa-inbox"></i>
+    {{#if vazia}}Clique para escolher na lista ao lado — ou arraste para cá{{else}}Clique para ver mais na lista ao lado — ou arraste para cá{{/if}}
+  </div>
+</div>

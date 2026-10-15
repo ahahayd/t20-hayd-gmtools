@@ -1,0 +1,51 @@
+<div class="t20g-cc {{#if ocupado}}t20g-cc--ocupado{{/if}}">
+  <nav class="t20g-cc-etapas" aria-label="Etapas da criação">
+    {{#each etapas}}
+      <button type="button" class="t20g-cc-etapa {{#if ativa}}ativa{{/if}} {{#if feita}}feita{{/if}}"
+              data-action="passo" data-passo="{{id}}" {{#if ativa}}aria-current="step"{{/if}}>
+        <span class="t20g-cc-etapa-marca">{{#if feita}}<i class="fa-solid fa-check"></i>{{else}}{{n}}{{/if}}</span>
+        <span class="t20g-cc-etapa-nome">{{rotulo}}{{#if opcional}}<small>opcional</small>{{/if}}</span>
+      </button>
+    {{/each}}
+  </nav>
+
+  <div class="t20g-cc-corpo {{#if temSugestoes}}t20g-cc-corpo--sugestoes{{/if}}">
+    <section class="t20g-cc-principal t20g-rola">
+      {{#if (eq passo "atributos")}}{{> "modules/t20-hayd-gmtools/templates/criacao/atributos.hbs" atributos}}{{/if}}
+      {{#if (eq passo "raca")}}{{> "modules/t20-hayd-gmtools/templates/criacao/raca.hbs" raca}}{{/if}}
+      {{#if (eq passo "classe")}}{{> "modules/t20-hayd-gmtools/templates/criacao/classe.hbs" classe}}{{/if}}
+      {{#if (eq passo "origem")}}{{> "modules/t20-hayd-gmtools/templates/criacao/origem.hbs" origem}}{{/if}}
+      {{#if (eq passo "complicacao")}}{{> "modules/t20-hayd-gmtools/templates/criacao/complicacao.hbs" complicacao}}{{/if}}
+      {{#if (eq passo "divindade")}}{{> "modules/t20-hayd-gmtools/templates/criacao/divindade.hbs" divindade}}{{/if}}
+      {{#if (eq passo "equipamento")}}{{> "modules/t20-hayd-gmtools/templates/criacao/equipamento.hbs" equipamento}}{{/if}}
+      {{#if (eq passo "resumo")}}{{> "modules/t20-hayd-gmtools/templates/criacao/resumo.hbs" resumo}}{{/if}}
+    </section>
+    {{#if temSugestoes}}
+      {{> "modules/t20-hayd-gmtools/templates/criacao/partes/sugestoes.hbs" (lookup (lookup this passo) "sugestoes")}}
+    {{/if}}
+  </div>
+
+  <footer class="t20g-cc-rodape">
+    <div class="t20g-cc-rodape-ficha">
+      {{#each rodape.atributos}}
+        <span class="t20g-cc-rodape-atr"><small>{{abr}}</small><b>{{total}}</b></span>
+      {{/each}}
+      {{#if rodape.identidade}}<span class="t20g-cc-rodape-id">{{rodape.identidade}}</span>{{/if}}
+    </div>
+    <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--pequeno" data-action="recomecar"
+            data-tooltip="Descartar o que foi escolhido no assistente"><i class="fa-solid fa-rotate-left"></i> Recomeçar</button>
+    {{#unless primeiro}}
+      <button type="button" class="t20g-btn" data-action="anterior"><i class="fa-solid fa-arrow-left"></i> Voltar</button>
+    {{/unless}}
+    {{#if ultimo}}
+      <button type="button" class="t20g-btn t20g-btn--primario t20g-cc-criar {{#if bloqueio}}t20g-cc-criar--bloqueado{{/if}}" data-action="concluir" {{#if ocupado}}disabled{{/if}}
+              {{#if bloqueio}}aria-disabled="true" data-tooltip="{{bloqueio}}"{{/if}}>
+        {{#if ocupado}}<i class="fa-solid fa-spinner fa-spin"></i> Gravando…{{else}}<i class="fa-solid fa-wand-magic-sparkles"></i> Criar personagem{{/if}}
+      </button>
+    {{else}}
+      <button type="button" class="t20g-btn t20g-btn--primario" data-action="proximo">
+        {{proximoRotulo}} <i class="fa-solid fa-arrow-right"></i>
+      </button>
+    {{/if}}
+  </footer>
+</div>

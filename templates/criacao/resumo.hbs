@@ -1,0 +1,155 @@
+<div class="t20g-cc-resumo">
+
+  {{!-- Cabeçalho: retrato, nome e quem é o personagem --}}
+  <header class="t20g-cc-res-heroi">
+    <button type="button" class="t20g-cc-res-retrato" data-action="retrato" data-tooltip="Trocar o retrato">
+      <img src="{{ficha.img}}" alt="">
+      <span><i class="fa-solid fa-camera"></i> Trocar</span>
+    </button>
+    <div class="t20g-cc-res-id">
+      <span class="t20g-rotulo">Personagem de 1º nível</span>
+      <input type="text" class="t20g-cc-res-nome" data-campo="nome" value="{{ficha.nome}}" aria-label="Nome do personagem" placeholder="Nome do personagem">
+      <div class="t20g-cc-res-selos">
+        {{#each selos}}
+          <span class="t20g-cc-res-selo t20g-cc-tom-{{tom}}" data-tooltip="{{rotulo}}">
+            {{#if img}}<img src="{{img}}" alt="">{{else}}<i class="fa-solid {{icone}}"></i>{{/if}}
+            <span>{{texto}}</span>
+          </span>
+        {{else}}
+          <span class="t20g-apoio"><em>Raça, classe e origem aparecem aqui.</em></span>
+        {{/each}}
+      </div>
+    </div>
+  </header>
+
+  {{!-- Atributos --}}
+  <div class="t20g-cc-res-atrs">
+    {{#each atributos}}
+      <div class="t20g-cc-res-atr {{#if tom}}t20g-cc-res-atr--{{tom}}{{/if}}" data-tooltip="{{nome}}">
+        <span class="t20g-cc-res-atr-topo"><i class="fa-solid {{icone}}"></i> {{abr}}</span>
+        <b>{{total}}</b>
+        <small>{{#if conta}}{{conta}}{{else}}&nbsp;{{/if}}</small>
+      </div>
+    {{/each}}
+  </div>
+
+  {{!-- O que falta (ou que está tudo pronto) --}}
+  {{#if pendencias.length}}
+    <div class="t20g-cc-res-pend {{#if bloqueio}}t20g-cc-res-pend--bloqueio{{/if}}">
+      <span class="t20g-cc-res-pend-titulo"><i class="fa-solid fa-triangle-exclamation"></i> {{pendencias.length}} pendência(s) — clique para ir à etapa</span>
+      <ul>
+        {{#each pendencias}}
+          <li class="{{#if bloqueia}}t20g-cc-res-bloqueia{{/if}}"><a data-action="passo" data-passo="{{passo}}">{{#if bloqueia}}<i class="fa-solid fa-ban"></i> {{/if}}{{texto}}</a></li>
+        {{/each}}
+      </ul>
+    </div>
+  {{else}}
+    <p class="t20g-cc-res-pronto"><i class="fa-solid fa-circle-check"></i> Tudo pronto. Clique em <b>Criar personagem</b> para gravar na ficha.</p>
+  {{/if}}
+
+  <div class="t20g-cc-res-colunas">
+    {{!-- Coluna 1: poderes e magias --}}
+    <div class="t20g-cc-res-coluna">
+      <section class="t20g-painel t20g-cc-res-bloco">
+        <h4 class="t20g-cc-res-titulo"><i class="fa-solid fa-bolt"></i> Poderes e habilidades <b>{{totalPoderes}}</b></h4>
+        {{#each gruposPoderes}}
+          <div class="t20g-cc-res-grupo t20g-cc-tom-{{tom}}">
+            <span class="t20g-cc-res-grupo-rotulo"><i class="fa-solid {{icone}}"></i> {{rotulo}}</span>
+            <ul class="t20g-cc-res-lista">
+              {{#each itens}}
+                <li data-desc="{{uuid}}">
+                  <img src="{{img}}" alt="">
+                  <a data-action="abrirItem" data-uuid="{{uuid}}">{{nome}}</a>
+                  {{#if extra}}<small class="t20g-cc-res-extra">{{extra}}</small>{{/if}}
+                </li>
+              {{/each}}
+            </ul>
+          </div>
+        {{else}}
+          <p class="t20g-apoio">Nenhum poder escolhido.</p>
+        {{/each}}
+      </section>
+
+      <section class="t20g-painel t20g-cc-res-bloco">
+        <h4 class="t20g-cc-res-titulo"><i class="fa-solid fa-wand-sparkles"></i> Magias <b>{{magias.length}}</b></h4>
+        {{#if magias.length}}
+          <ul class="t20g-cc-res-lista">
+            {{#each magias}}
+              <li data-desc="{{uuid}}" class="t20g-cc-tom-{{tom}}">
+                <img src="{{img}}" alt="">
+                <span class="t20g-cc-res-magia">
+                  <a data-action="abrirItem" data-uuid="{{uuid}}">{{nome}}</a>
+                  {{#if detalhe}}<small>{{detalhe}}</small>{{/if}}
+                </span>
+                {{#if circulo}}<span class="t20g-cc-res-circulo" data-tooltip="Círculo">{{circulo}}</span>{{/if}}
+                <span class="t20g-cc-res-ponto" data-tooltip="Vem de: {{rotulo}}"></span>
+              </li>
+            {{/each}}
+          </ul>
+        {{else}}
+          <p class="t20g-apoio">Nenhuma magia.</p>
+        {{/if}}
+      </section>
+    </div>
+
+    {{!-- Coluna 2: perícias e proficiências --}}
+    <div class="t20g-cc-res-coluna">
+      <section class="t20g-painel t20g-cc-res-bloco">
+        <h4 class="t20g-cc-res-titulo"><i class="fa-solid fa-list-check"></i> Perícias treinadas <b>{{pericias.length}}</b></h4>
+        {{#if pericias.length}}
+          <div class="t20g-cc-res-pericias">
+            {{#each pericias}}<span class="t20g-cc-res-pericia t20g-cc-tom-{{tom}}" data-tooltip="Vem de: {{de}}">{{rotulo}}</span>{{/each}}
+          </div>
+          <p class="t20g-cc-res-legenda">
+            <span class="t20g-cc-tom-raca"><i class="fa-solid fa-circle"></i> Raça</span>
+            <span class="t20g-cc-tom-classe"><i class="fa-solid fa-circle"></i> Classe</span>
+            <span class="t20g-cc-tom-origem"><i class="fa-solid fa-circle"></i> Origem</span>
+          </p>
+        {{else}}
+          <p class="t20g-apoio">Nenhuma marcada.</p>
+        {{/if}}
+      </section>
+
+      <section class="t20g-painel t20g-cc-res-bloco">
+        <h4 class="t20g-cc-res-titulo"><i class="fa-solid fa-shield"></i> Proficiências <b>{{proficiencias.length}}</b></h4>
+        {{#if proficiencias.length}}
+          <div class="t20g-cc-res-pericias">{{#each proficiencias}}<span class="t20g-cc-res-pericia">{{this}}</span>{{/each}}</div>
+        {{else}}
+          <p class="t20g-apoio">Nenhuma marcada.</p>
+        {{/if}}
+      </section>
+    </div>
+  </div>
+
+  {{!-- Equipamento: tudo que entra na mochila --}}
+  <section class="t20g-painel t20g-cc-res-bloco">
+    <h4 class="t20g-cc-res-titulo"><i class="fa-solid fa-sack"></i> Equipamento <b>{{equipamento.length}}</b></h4>
+    {{#if equipamento.length}}
+      <table class="t20g-cc-res-tabela">
+        <thead><tr><th></th><th>Item</th><th>Qtd.</th><th>Espaços</th><th>Situação</th></tr></thead>
+        <tbody>
+          {{#each equipamento}}
+            <tr data-desc="{{uuid}}">
+              <td class="t20g-cc-res-tabela-img"><img src="{{img}}" alt=""></td>
+              <td><a data-action="abrirItem" data-uuid="{{uuid}}">{{nome}}</a></td>
+              <td class="t20g-cc-res-num">{{qtd}}</td>
+              <td class="t20g-cc-res-num">{{espacos}}</td>
+              <td><span class="t20g-cc-res-situacao t20g-cc-res-situacao--{{situacao}}">{{#if preco}}{{preco}}{{else}}{{situacao}}{{/if}}</span></td>
+            </tr>
+          {{/each}}
+        </tbody>
+      </table>
+    {{else}}
+      <p class="t20g-apoio">Nenhum item.</p>
+    {{/if}}
+    <div class="t20g-cc-res-rodape-equip">
+      <span><i class="fa-solid fa-weight-hanging"></i> {{espacosTotal}} espaços</span>
+      {{#if dinheiro.gasto}}<span><i class="fa-solid fa-cart-shopping"></i> Gasto {{dinheiro.gasto}}</span>{{/if}}
+      <span class="t20g-cc-res-moedas {{#if dinheiro.negativo}}t20g-cc-res-moedas--neg{{/if}}"><i class="fa-solid fa-coins"></i> {{#if dinheiro.negativo}}Passou do dinheiro{{else}}Fica com {{dinheiro.sobra}}{{/if}}</span>
+    </div>
+  </section>
+
+  {{#if substitui}}
+    <p class="t20g-apoio t20g-cc-res-aviso"><i class="fa-solid fa-circle-info"></i> A ficha já tem {{substitui}}: ao criar, ela será trocada pela escolhida aqui.</p>
+  {{/if}}
+</div>

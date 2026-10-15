@@ -1,0 +1,81 @@
+<section class="t20g-cc-secao {{#if (eq n 1)}}{{else}}t20g-cc-secao--primeira{{/if}} t20g-nv-obtido t20g-nv-obtido--{{patamar.id}}">
+  <header class="t20g-nv-obtido-cab">
+    <div>
+      <span class="t20g-rotulo">Nível alcançado</span>
+      <h2>Obtido no {{n}}º nível</h2>
+    </div>
+    <div class="t20g-nv-obtido-selos">
+      {{#if classe}}<span class="t20g-nv-obtido-selo"><img src="{{classe.img}}" alt=""> {{classe.nome}}{{#if classe.nivel}} {{classe.nivel}}{{/if}}{{#if vincular.vinculada}}<button type="button" class="t20g-nv-obtido-selo-tirar" data-action="desvincularClasse" data-tooltip="Trocar a classe deste nível" aria-label="Trocar a classe deste nível"><i class="fa-solid fa-xmark"></i></button>{{/if}}</span>{{/if}}
+      {{#if patamar.novo}}<span class="t20g-nv-obtido-selo t20g-nv-obtido-selo--patamar" data-tooltip="{{patamar.texto}}"><i class="fa-solid {{patamar.icone}}"></i> Novo patamar: {{patamar.nome}}</span>{{/if}}
+    </div>
+  </header>
+
+  {{#if (and vincular (not vincular.vinculada))}}
+    <section class="t20g-nv-vincular">
+      <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-link"></i> Em que classe foi este nível?</h3>
+      <p class="t20g-apoio">Este nível não diz de que classe veio. Escolha para a lateral e o planejamento contarem certo.</p>
+      <div class="t20g-nv-classes t20g-nv-classes--compactas">
+        {{#each vincular.opcoes}}
+          <button type="button" class="t20g-nv-classe" data-action="vincularClasse" data-nome="{{nome}}" {{#if cheia}}disabled data-tooltip="Os {{total}} níveis de {{nome}} já estão vinculados"{{/if}}>
+            <img src="{{img}}" alt="">
+            <span><b>{{nome}}</b><small>{{ja}} de {{total}} vinculados</small></span>
+          </button>
+        {{/each}}
+      </div>
+    </section>
+  {{/if}}
+
+  {{#if ui}}
+    {{#if vazio}}
+      <div class="t20g-vazio t20g-nv-obtido-vazio">
+        <i class="fa-solid fa-feather"></i>
+        <span class="t20g-vazio__texto">Nada anotado neste nível. Se algo da ficha veio daqui, ponha no nível pela lista abaixo.</span>
+      </div>
+    {{else}}
+      <div class="t20g-nv-obtido-grade">
+        {{#each grupos}}
+          <section class="t20g-nv-grupo t20g-nv-grupo--{{id}}">
+            <h4 class="t20g-nv-grupo-titulo"><i class="fa-solid {{icone}}"></i> {{titulo}}</h4>
+            <ul class="t20g-nv-grupo-lista">
+              {{#each itens}}
+                <li data-desc="{{uuid}}">
+                  <img src="{{img}}" alt="">
+                  <span class="t20g-nv-grupo-texto"><a data-action="abrirItem" data-uuid="{{uuid}}">{{nome}}</a>{{#unless (eq ../id "habilidades")}}{{#if sub}}<small>{{sub}}</small>{{/if}}{{/unless}}</span>
+                  <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--fantasma t20g-nv-grupo-tirar" data-action="tirarAnotacao" data-item="{{id}}" data-tooltip="Não veio deste nível"><i class="fa-solid fa-xmark"></i></button>
+                </li>
+              {{/each}}
+            </ul>
+          </section>
+        {{/each}}
+        {{#each etiquetas}}
+          <section class="t20g-nv-grupo t20g-nv-grupo--{{id}}">
+            <h4 class="t20g-nv-grupo-titulo"><i class="fa-solid {{icone}}"></i> {{titulo}}</h4>
+            <div class="t20g-nv-grupo-etiquetas">{{#each itens}}<span class="t20g-nv-etiqueta">{{this}}</span>{{/each}}</div>
+          </section>
+        {{/each}}
+      </div>
+    {{/if}}
+
+    {{#if semNivel.length}}
+      <details class="t20g-nv-sem-nivel-caixa" {{#if semNivelAberto}}open{{/if}}>
+        <summary>
+          <i class="fa-solid fa-chevron-right t20g-nv-sem-nivel-seta"></i>
+          <span>Itens da ficha sem nível anotado</span>
+          <span class="t20g-chip">{{semNivel.length}}</span>
+        </summary>
+        <p class="t20g-apoio">Poderes e magias que ainda não dizem de que nível vieram. Clique em <i class="fa-solid fa-arrow-up"></i> para dizer que vieram do {{n}}º nível — a Ficha Hayd organiza por isso.</p>
+        <ul class="t20g-cc-res-lista t20g-nv-itens t20g-nv-sem-nivel">
+          {{#each semNivel}}
+            <li data-desc="{{uuid}}">
+              <img src="{{img}}" alt="">
+              <span class="t20g-cc-res-magia"><a data-action="abrirItem" data-uuid="{{uuid}}">{{nome}}</a><small>{{tipo}}{{#if categoria}} · {{categoria}}{{/if}}</small></span>
+              <button type="button" class="t20g-btn t20g-btn--pequeno" data-action="anotarNivel" data-item="{{id}}"><i class="fa-solid fa-arrow-up"></i> {{../n}}º nível</button>
+            </li>
+          {{/each}}
+        </ul>
+      </details>
+    {{/if}}
+  {{else}}
+    <p class="t20g-apoio"><i class="fa-solid fa-circle-info"></i> Para anotar de que nível veio cada poder, ative o módulo <b>T20 Hayd UI</b>.</p>
+  {{/if}}
+</section>

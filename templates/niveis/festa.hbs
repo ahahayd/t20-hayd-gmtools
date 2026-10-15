@@ -1,0 +1,17 @@
+<div class="t20g-nv-festa t20g-nv-festa--{{patamar.id}} {{#if novoPatamar}}t20g-nv-festa--patamar{{/if}}" role="status" aria-live="polite">
+  <div class="t20g-nv-festa-raios" aria-hidden="true"></div>
+  <div class="t20g-nv-festa-conteudo">
+    <div class="t20g-nv-festa-retrato"><img src="{{img}}" alt=""></div>
+    <span class="t20g-nv-festa-rotulo">{{nome}} chegou ao</span>
+    <span class="t20g-nv-festa-nivel">{{n}}º nível</span>
+    {{#if de}}<span class="t20g-nv-festa-varios"><i class="fa-solid fa-angles-up"></i> {{subiu}} níveis de uma vez · do {{de}}º ao {{n}}º</span>{{/if}}
+    <span class="t20g-nv-festa-classe"><img src="{{classe.img}}" alt=""> {{classe.nome}} {{classe.nivel}}</span>
+    {{#if novoPatamar}}
+      <div class="t20g-nv-festa-patamar">
+        <span><i class="fa-solid {{novoPatamar.icone}}"></i> Novo patamar</span>
+        <b>{{novoPatamar.nome}}</b>
+      </div>
+    {{/if}}
+    <small class="t20g-nv-festa-dica">clique para continuar</small>
+  </div>
+</div>

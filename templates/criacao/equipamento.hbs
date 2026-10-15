@@ -1,0 +1,116 @@
+<header class="t20g-cc-cab">
+  <span class="t20g-rotulo">Etapa {{numero}}</span>
+  <h2>Anote seu equipamento</h2>
+  <p class="t20g-apoio">Personagens de 1º nível começam com os itens da origem
+    e os itens abaixo, mais T$ para comprar o que quiser ou guardar para a aventura.</p>
+</header>
+
+<section class="t20g-cc-secao t20g-cc-secao--primeira">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-shield"></i> Suas proficiências</h3>
+  <p class="t20g-apoio">Marque o que sua classe, raça e poderes te dão — vai para a ficha e define o equipamento inicial.</p>
+  <div class="t20g-cc-profs">
+    {{#each profs}}
+      <button type="button" class="t20g-cc-prof {{#if marcada}}marcada{{/if}}" data-action="proficiencia" data-prof="{{id}}" aria-pressed="{{#if marcada}}true{{else}}false{{/if}}">
+        <i class="fa-solid {{#if marcada}}fa-square-check{{else}}fa-square{{/if}}"></i> {{rotulo}}
+      </button>
+    {{/each}}
+  </div>
+</section>
+
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-campground"></i> Equipamento inicial</h3>
+  <p class="t20g-apoio">Do Livro Básico: entra na lista já como <b>recebido</b>, sem gastar dinheiro. O <b>ataque desarmado</b> entra na ficha sozinho.</p>
+  <div class="t20g-cc-vagas">
+    {{#each vagas}}
+      <div class="t20g-cc-vaga {{#if ativa}}t20g-cc-vaga--ativa{{/if}}" {{#if escolha}}data-zona="vaga-{{id}}"{{/if}}>
+        <span class="t20g-cc-vaga-rotulo">
+          {{rotulo}}
+          {{#if ajuda}}<i class="fa-solid fa-circle-question t20g-cc-vaga-ajuda" data-tooltip="{{ajuda}}" data-tooltip-direction="UP"></i>{{/if}}
+        </span>
+        {{#if nota}}
+          <span class="t20g-apoio"><i class="fa-solid fa-circle-info"></i> {{nota}}</span>
+        {{else if botao}}
+          <button type="button" class="t20g-btn t20g-btn--pequeno {{#if feito}}t20g-cc-vaga-feita{{/if}}" data-action="{{acao}}">
+            {{#if feito}}<i class="fa-solid fa-check"></i> Na lista{{else}}<i class="fa-solid fa-plus"></i> Pegar{{/if}}
+          </button>
+        {{else if item}}
+          <span class="t20g-cc-vaga-item" data-desc="{{item.uuid}}">
+            <img src="{{item.img}}" alt="">
+            <a data-action="abrirItem" data-uuid="{{item.uuid}}">{{item.nome}}</a>
+            {{#if item.aviso}}<i class="fa-solid fa-triangle-exclamation t20g-cc-vaga-aviso" data-tooltip="{{item.aviso}}" data-tooltip-direction="UP" aria-label="{{item.aviso}}"></i>{{/if}}
+            <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--fantasma" data-action="escolherVaga" data-vaga="{{id}}" data-tooltip="Trocar"><i class="fa-solid fa-arrows-rotate"></i></button>
+            <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--fantasma" data-action="tirarVaga" data-vaga="{{id}}" data-tooltip="Tirar"><i class="fa-solid fa-xmark"></i></button>
+          </span>
+        {{else}}
+          <button type="button" class="t20g-cc-vaga-vazia" data-action="escolherVaga" data-vaga="{{id}}">
+            {{#if ativa}}
+              <i class="fa-solid fa-arrow-right"></i> Escolha na lista ao lado — ou arraste para cá
+            {{else}}
+              <i class="fa-solid fa-hand-pointer"></i> Clique para escolher na lista, ou arraste para cá
+            {{/if}}
+          </button>
+        {{/if}}
+      </div>
+    {{/each}}
+  </div>
+</section>
+
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-scroll"></i> Da origem{{#if daOrigem.nome}}: {{daOrigem.nome}}{{/if}}
+    <button type="button" class="t20g-btn t20g-btn--pequeno t20g-btn--fantasma t20g-cc-titulo-acao" data-action="passo" data-passo="origem">
+      <i class="fa-solid fa-pen"></i> Editar na Origem
+    </button>
+  </h3>
+  {{#if daOrigem.itens.length}}
+    <div class="t20g-cc-da-origem">
+      {{#each daOrigem.itens}}
+        <a class="t20g-cc-da-origem-item" data-action="abrirItem" data-uuid="{{uuid}}" data-desc="{{uuid}}">
+          <img src="{{img}}" alt=""><span>{{nome}}{{#if qtd}} ×{{qtd}}{{/if}}</span>
+        </a>
+      {{/each}}
+    </div>
+  {{else}}
+    <p class="t20g-apoio">Nenhum item da origem anotado ainda.</p>
+  {{/if}}
+  {{#if daOrigem.dinheiro}}<p class="t20g-apoio t20g-cc-da-origem-dinheiro"><i class="fa-solid fa-coins"></i> Mais {{daOrigem.dinheiro}}, já somados ao dinheiro inicial abaixo.</p>{{/if}}
+</section>
+
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-coins"></i> Dinheiro
+    <label class="t20g-cc-comprar" data-tooltip="Ligado, o que você põe na lista como comprado sai do dinheiro inicial.">
+      <input type="checkbox" data-action="comprar" {{checked comprar}}> Posso comprar
+    </label>
+  </h3>
+  <div class="t20g-cc-dinheiro">
+    <label class="t20g-cc-dinheiro-campo">
+      <span class="t20g-rotulo">Inicial</span>
+      <span class="t20g-fileira">
+        <input type="number" min="0" step="1" class="t20g-campo" data-campo="dinheiro" value="{{dinheiro}}" placeholder="0">
+        <span class="t20g-apoio">T$</span>
+        {{#if formula}}
+          <button type="button" class="t20g-btn t20g-btn--pequeno" data-action="rolarDinheiro"><i class="fa-solid fa-dice"></i> Rolar {{formula}}</button>
+        {{/if}}
+      </span>
+      {{#if saldo.daOrigem}}<span class="t20g-apoio"><i class="fa-solid fa-scroll"></i> + {{saldo.daOrigem}} da origem</span>{{/if}}
+    </label>
+    {{#if comprar}}
+      <div class="t20g-cc-saldo {{#if saldo.negativo}}t20g-cc-saldo--negativo{{/if}}">
+        <span {{#if saldo.daOrigem}}data-tooltip="Rolado T$ {{dinheiro}} + {{saldo.daOrigem}} da origem"{{/if}}><small>Inicial</small><b>{{saldo.inicial}}</b></span>
+        <span class="t20g-cc-saldo-op">−</span>
+        <span><small>Compras</small><b>{{saldo.gasto}}</b></span>
+        <span class="t20g-cc-saldo-op">=</span>
+        <span class="t20g-cc-saldo-sobra"><small>Fica com</small><b>{{saldo.sobra}}</b></span>
+      </div>
+    {{/if}}
+  </div>
+  <p class="t20g-apoio t20g-cc-moedas-nota"><i class="fa-solid fa-circle-info"></i> T$ é o tibar de prata; o que sobrar quebrado vira tibares de cobre (TC), com T$ 1 = 10 TC. T$ 6,8, por exemplo, é T$ 6 e 8 TC — e vai assim para a ficha.</p>
+  {{#if saldo.negativo}}
+    <p class="t20g-cc-saldo-aviso"><i class="fa-solid fa-triangle-exclamation"></i> As compras passam do dinheiro inicial. Tire algum item ou marque-o como recebido — enquanto isso, não dá para criar o personagem.</p>
+  {{/if}}
+</section>
+
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-sack"></i> Equipamento</h3>
+  {{#if comprar}}<p class="t20g-apoio">O que vem da lista ao lado entra como <b>comprado</b>. Marque <b>Recebido</b> no que você ganhou sem pagar.</p>{{/if}}
+  {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zona}}
+</section>

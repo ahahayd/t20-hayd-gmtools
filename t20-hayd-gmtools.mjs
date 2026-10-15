@@ -25,6 +25,8 @@ import './t20-hayd-tesouros.mjs';
 // Ficha do Grupo, estoque compartilhado e transferências (ex-t20-hayd-management).
 // Mesmo motivo do import acima.
 import './t20-hayd-management.mjs';
+// Assistente de Criação de Personagem. Mesmo motivo do import acima.
+import './t20-hayd-criacao.mjs';
 
 const MODULE_ID = 't20-hayd-gmtools';
 
@@ -1514,7 +1516,8 @@ const CATEGORIAS_CONFIG = [
   { rotulo: 'CatAutomacoes',  icone: 'fa-wand-sparkles',  chaves: ['automacoesEnabled', 'abrirDiarioAutomacoes'] },
   { rotulo: 'CatTesouros',    icone: 'fa-sack-dollar',    chaves: ['tesourosGeradorMenu', 'tesourosVinculosMenu', 'tesourosLivrosMenu', 'tesourosHomebrewMenu'] },
   { rotulo: 'CatParty',       icone: 'fa-users',          chaves: ['partyManager', 'partySheetEnabled', 'visibility', 'requireConfirmation', 'chatMode', 'lojaCompat'] },
-  { rotulo: 'CatAtributos',   icone: 'fa-dice-d6',        chaves: ['atributosMetodoPadrao', 'atributosPontos', 'atributosMultiNegativos', 'atributosCustosMenu', 'atributosConversaoMenu'] },
+  // Os atributos iniciais são a primeira etapa do assistente: uma categoria só.
+  { rotulo: 'CatCriacao',     icone: 'fa-wand-magic-sparkles', chaves: ['criacaoAtivo', 'criacaoAoCriar', 'criacaoDinheiroInicial', 'criacaoFontesMenu', 'atributosMetodoPadrao', 'atributosPontos', 'atributosMultiNegativos', 'atributosCustosMenu', 'atributosConversaoMenu', 'niveisAtivo'] },
   { rotulo: 'CatFerramentas', icone: 'fa-ruler-combined', chaves: ['reguaEfeitos', 'mensagensDano', 'previewDano'] },
   { rotulo: 'CatCorrecoes',   icone: 'fa-screwdriver-wrench', chaves: ['custoPmTotal'] }
 ];

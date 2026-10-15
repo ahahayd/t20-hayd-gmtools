@@ -1,0 +1,38 @@
+<div class="t20g-cc-resumo">
+  <header class="t20g-cc-res-heroi">
+    <div class="t20g-nv-retrato"><img src="{{img}}" alt=""></div>
+    <div class="t20g-cc-res-id">
+      <span class="t20g-rotulo">Resumo da ficha</span>
+      <h2 class="t20g-nv-nome">{{nome}}</h2>
+      <div class="t20g-cc-res-selos">
+        {{#if raca}}<span class="t20g-cc-res-selo t20g-cc-tom-raca" data-tooltip="Raça"><img src="{{raca.img}}" alt=""><span>{{raca.nome}}</span></span>{{/if}}
+        {{#each classes}}<span class="t20g-cc-res-selo t20g-cc-tom-classe" data-tooltip="Classe"><img src="{{img}}" alt=""><span>{{nome}} {{niveis}}</span></span>{{/each}}
+        {{#if origem}}<span class="t20g-cc-res-selo t20g-cc-tom-origem" data-tooltip="Origem"><i class="fa-solid fa-scroll"></i><span>{{origem}}</span></span>{{/if}}
+        {{#if divindade}}<span class="t20g-cc-res-selo t20g-cc-tom-divindade" data-tooltip="Devoto de"><i class="fa-solid fa-sun"></i><span>{{divindade}}</span></span>{{/if}}
+      </div>
+    </div>
+  </header>
+
+  <div class="t20g-cc-res-atrs">
+    {{#each atributos}}
+      <div class="t20g-cc-res-atr {{#if tom}}t20g-cc-res-atr--{{tom}}{{/if}}" data-tooltip="{{nome}}">
+        <span class="t20g-cc-res-atr-topo"><i class="fa-solid {{icone}}"></i> {{abr}}</span>
+        <b>{{total}}</b>
+        <small>&nbsp;</small>
+      </div>
+    {{/each}}
+  </div>
+
+  <div class="t20g-nv-recursos">
+    {{#each recursos}}
+      <div class="t20g-nv-recurso t20g-nv-recurso--{{tom}}"><small>{{rotulo}}</small><b>{{valor}}</b></div>
+    {{/each}}
+  </div>
+
+  <section class="t20g-painel t20g-cc-res-bloco">
+    <h4 class="t20g-cc-res-titulo"><i class="fa-solid fa-list-check"></i> Perícias treinadas <b>{{pericias.length}}</b></h4>
+    {{#if pericias.length}}
+      <div class="t20g-cc-res-pericias">{{#each pericias}}<span class="t20g-cc-res-pericia">{{this}}</span>{{/each}}</div>
+    {{else}}<p class="t20g-apoio">Nenhuma.</p>{{/if}}
+  </section>
+</div>

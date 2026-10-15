@@ -2,7 +2,7 @@
 
 # T20 Hayd GMTools
 
-Ferramentas de Mestre para o sistema **Tormenta20**: O módulo tem como objetivo entregar diversas ferramentas e automações para auxiliar na hora de jogo, algumas de suas funções incluem: ocultar dos jogadores os detalhes das rolagens e habilidades das criaturas do Mestre, permite rerolar ou inserir resultados manualmente pelo chat, gera e distribui tesouros pelas tabelas dos livros, reúne o grupo numa ficha compartilhada com estoque e dinheiro em comum, oferece uma régua opcional para efeitos que ignora diagonais e adiciona um assistente completo de definição de atributos iniciais dos personagens.
+Ferramentas de Mestre para o sistema **Tormenta20**: O módulo tem como objetivo entregar diversas ferramentas e automações para auxiliar na hora de jogo, algumas de suas funções incluem: ocultar dos jogadores os detalhes das rolagens e habilidades das criaturas do Mestre, permite rerolar ou inserir resultados manualmente pelo chat, gera e distribui tesouros pelas tabelas dos livros, reúne o grupo numa ficha compartilhada com estoque e dinheiro em comum, oferece uma régua opcional para efeitos que ignora diagonais, adiciona um assistente completo de definição de atributos iniciais e um assistente de criação de personagem que conduz por raça, classe, origem, divindade, magias e equipamento até a ficha pronta.
 
 ## Requisitos
 
@@ -185,6 +185,38 @@ Um botão nas configurações do personagem abre o assistente de atributos inici
 
 *Cada método traz a página do livro e um resumo da regra; o padrão escolhido pelo Mestre vem destacado.*
 
+### Assistente de Criação de Personagem
+
+Ao criar um Personagem de Jogador, abre uma janela que conduz pelas etapas do Livro Básico, uma por vez: **Atributos** (com os mesmos métodos da definição de atributos), **Raça**, **Classe**, **Origem**, **Complicação** e **Divindade** (opcionais), **Equipamento** e um **Resumo** no fim. Só no botão *Criar personagem* tudo vai para a ficha — raça e classe como itens do sistema, atributos base e raciais, perícias treinadas, proficiências, origem, divindade, poderes, magias, itens e o dinheiro que sobrou, com PV e PM cheios.
+
+- **Raça e classe** são escolhidas em cartões com os modificadores e os PV/PM por nível. Os atributos à escolha da raça (o +1 em três atributos do humano, por exemplo) são marcados ali mesmo, e os poderes que a raça concede já entram prontos. Com a variante **Raças Abertas** ligada no mundo, cada modificador da raça (o +2, +1 e −1 do anão) é colocado no atributo que o jogador quiser, um por atributo. Na classe, um botão adiciona de uma vez todas as habilidades de 1º nível.
+- **Perícias** são marcadas em cada etapa. Na classe, o assistente lê o texto do livro: as perícias fixas entram marcadas, as do "ou" pedem uma escolha, as opções da classe ficam destacadas, e a contagem mostra quantas faltam — já somando as perícias da Inteligência. Uma perícia ganha em outra etapa aparece travada.
+- **Poderes, magias e itens** podem ser arrastados de qualquer lugar (barra de compêndios, aba Itens, a própria lista do assistente) para a etapa certa. Ao lado, cada etapa sugere o que cabe ali: os poderes da raça, os poderes gerais por categoria (Destino, Combate, Tormenta, Magia, Grupo, Geral), as habilidades de 1º nível da classe, os poderes de classe (com a classe escolhível, para classes variantes), o poder da origem escolhida, os concedidos da divindade. A aba **Todos** tem filtro por tipo e subtipo, e a lista carrega de 30 em 30 conforme rola. Passar o mouse mostra a descrição.
+- **Magias** entram na raça, na classe, na origem ou na divindade — onde forem ganhas. Na classe, o assistente diz quantas ela conhece no 1º nível e já filtra as do círculo e tipo certos.
+- **Complicação** (regra opcional do Heróis de Arton): um poder de complicação e, em troca, um poder geral à escolha, com as mesmas categorias de poderes gerais da raça.
+- **Origem e divindade** são texto livre, com sugestões das origens dos livros e dos vinte deuses do Panteão. Os concedidos aparecem tanto pelo domínio ("Guerra") quanto pelo nome do deus ("Arsenal"), como os suplementos escrevem, e os deuses menores dos suplementos ("Neruíte, a Deusa do Sono") ficam na aba **Outras divindades**.
+- **Equipamento:** o jogador marca as proficiências (que vão para a ficha) e escolhe o equipamento inicial do livro — o kit de viagem, uma arma simples, uma marcial se tiver proficiência, a armadura (ou brunea; arcanistas começam sem) e o escudo leve. Esses entram como **recebidos**. Com **Posso comprar** ligado, o resto sai do dinheiro inicial (T$ 4d6 por padrão): a conta aparece na hora e, se passar do dinheiro, fica vermelha e a criação não é concluída.
+- O que foi montado fica salvo no ator: fechar a janela não perde nada, e Mestre e jogador podem preencher juntos. Enquanto a ficha não tem raça nem classe, o cabeçalho mostra o botão **Criar personagem**.
+
+![Assistente de Criação na etapa Classe: Arcanista com as perícias da classe marcadas, as habilidades de 1º nível e duas de três magias escolhidas; à direita, a aba Magias já filtrada para magias arcanas de 1º círculo](docs/assistente-de-criacao.png)
+
+*Etapas no topo, a escolha no meio e, à direita, o que cabe na etapa — pronto para arrastar.*
+
+O Mestre escolhe em *Fontes do Assistente de Criação* quais compêndios (do sistema, de módulos como os suplementos, e do mundo) e se os itens do mundo entram nas listas. Com o **T20 Hayd UI**, cada poder e magia criado já leva a anotação de origem (raça, origem, devoção, 1º nível) da Ficha Hayd.
+
+O assistente e o planejador são de **impacto baixo**: só trabalham com a janela aberta. Fora dela, o que roda é uma checagem ao criar um ator e outra ao abrir ou redesenhar uma ficha (para trocar entre os botões *Criar personagem* e *Níveis*), na casa de milésimos de milissegundo. O Mestre desliga cada um no mundo pelas chaves *Assistente de Criação de Personagem* e *Planejador de Níveis*, na categoria Criação das configurações.
+
+### Planejador de Níveis
+
+O botão **Níveis** no cabeçalho da ficha abre uma janela com o mesmo jeito do assistente, com os níveis de 1 a 20 na lateral. O 1º nível mostra um resumo da ficha, e os seguintes servem para planejar e subir de nível:
+
+- **Classe do nível:** um cartão para cada classe da ficha (com o nível de classe que ela vai ganhar) e um **+** para entrar numa classe nova (multiclasse). Na lista ao lado, as habilidades daquele nível da classe ficam destacadas — nada entra sozinho, porque algumas classes (como o arcanista) escolhem entre elas.
+- **Poderes, magias, perícias e proficiências** do nível, com as mesmas listas, filtros e arrastar-e-soltar do assistente. Para classes que lançam magias, a lista de magias já abre no tipo da classe (arcanas ou divinas) e nos círculos que ela lança naquele nível, e a janela avisa quantas magias a classe aprende e quando chega a um círculo novo.
+- **Habilidades que melhoram com o nível** são ajustadas sozinhas quando dá — o *Ataque Furtivo* ganha +1d6 nos níveis certos. Quando o assistente não consegue mudar o valor, ele avisa para conferir à mão.
+- Dá para planejar vários níveis à frente: a lateral mostra a classe planejada em cada um, e o plano fica salvo no ator. *Subir para o Nº nível* aplica o próximo nível, ajusta PV e PM e anuncia no chat. Se todos os níveis até um nível à frente já têm classe planejada, o botão vira *Subir até o Nº nível* e aplica todos de uma vez, um de cada vez e na ordem.
+- A lateral separa os níveis pelos **patamares de jogo** do livro — Iniciante (1º–4º), Veterano (5º–10º), Campeão (11º–16º) e Lenda (17º–20º) —, cada um com a sua cor e mais lendário que o anterior. Subir de nível abre uma comemoração na janela; o nível que abre um patamar novo é avisado no plano e ganha uma comemoração maior, também anunciada no chat.
+- Nos níveis já alcançados, a janela lista o que foi anotado em cada nível e os poderes e magias da ficha **sem nível anotado**, com um botão para pôr cada um no nível certo. Assim, personagens que já existiam também ficam organizados por nível na Ficha Hayd (precisa do **T20 Hayd UI**). Um nível alcançado sem classe (de uma ficha antiga, ou subido fora do planejador) pede para o jogador dizer em que classe foi; uma classe com todos os níveis já vinculados fica travada.
+
 ### Configurações
 
 Em *Configurar → Configurações → T20 Hayd GMTools*, as opções ficam agrupadas por assunto:
@@ -196,7 +228,7 @@ Em *Configurar → Configurações → T20 Hayd GMTools*, as opções ficam agru
 | Automações de itens | Liga o botão *Automação* nas fichas de item |
 | Gerador de tesouros | Vínculos, livros e homebrew das tabelas |
 | Ficha do Grupo | Liga a ficha, visibilidade de vida/mana, confirmação de transferências e avisos no chat |
-| Atributos iniciais | Método padrão da campanha, pontos sugeridos e as tabelas de custo/conversão personalizadas |
+| Assistente de Criação | Quando o assistente aparece (ao criar, só pelo botão ou desligado), a fórmula do dinheiro inicial e as fontes de raças, classes, poderes, magias e itens; e os atributos iniciais: método padrão da campanha, pontos sugeridos e as tabelas de custo/conversão personalizadas |
 | Ferramentas de mesa | A **régua para efeitos**, a **prévia da rolagem** e as **mensagens de dano com Desfazer** |
 | Correções do sistema | A **correção do custo de mana** |
 

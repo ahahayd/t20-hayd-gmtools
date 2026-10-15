@@ -1,0 +1,36 @@
+<div class="t20g-cf">
+  <p class="t20g-apoio t20g-cf-intro">
+    Escolha de onde o Assistente de Criação tira raças, classes, poderes, magias e itens.
+    Desligar um compêndio só o tira das listas do assistente — arrastar um item dele para a
+    janela continua funcionando.
+  </p>
+
+  <label class="t20g-cf-linha t20g-cf-mundo">
+    <input type="checkbox" name="mundo" {{checked mundo}}>
+    <span class="t20g-cf-nome">
+      <b><i class="fa-solid fa-suitcase"></i> Itens do mundo</b>
+      <span class="t20g-apoio">Raças, classes e poderes criados na aba Itens.</span>
+    </span>
+  </label>
+
+  {{#each grupos}}
+    <section class="t20g-cf-grupo">
+      <h3 class="t20g-rotulo"><i class="fa-solid {{icone}}"></i> {{titulo}}
+        {{#if dica}}<span class="t20g-cf-dica">— {{dica}}</span>{{/if}}</h3>
+      <div class="t20g-cf-lista">
+        {{#each itens}}
+          <label class="t20g-cf-linha">
+            <input type="checkbox" data-pack="{{id}}" {{checked ligado}}>
+            <span class="t20g-cf-nome">
+              <b>{{rotulo}}</b>
+              {{#if pacote}}<span class="t20g-apoio">{{pacote}}</span>{{/if}}
+            </span>
+            <span class="t20g-cf-chips">
+              {{#each chips}}<span class="t20g-chip" data-tooltip="{{n}} {{rotulo}}"><i class="fa-solid {{icone}}"></i> {{n}}</span>{{/each}}
+            </span>
+          </label>
+        {{/each}}
+      </div>
+    </section>
+  {{/each}}
+</div>

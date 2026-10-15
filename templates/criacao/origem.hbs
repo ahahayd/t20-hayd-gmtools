@@ -1,0 +1,48 @@
+<header class="t20g-cc-cab">
+  <span class="t20g-rotulo">Etapa {{numero}}</span>
+  <h2>Escolha sua origem</h2>
+  <p class="t20g-apoio">O que você fazia antes de ser aventureiro? A origem dá dois benefícios da lista dela —
+    perícias ou poderes — e os itens com que você começa.</p>
+</header>
+
+<div class="t20g-cc-nome-campo">
+  <i class="fa-solid fa-scroll"></i>
+  <input type="text" class="t20g-campo" data-campo="origem" value="{{nome}}" list="t20g-cc-origens-lista"
+         placeholder="Ex.: Acólito, Soldado… ou escreva a sua" autocomplete="off">
+  <datalist id="t20g-cc-origens-lista">{{#each nomes}}<option value="{{this}}"></option>{{/each}}</datalist>
+  {{#if conhecida}}<span class="t20g-chip t20g-chip--sucesso"><i class="fa-solid fa-book"></i> do livro</span>{{/if}}
+</div>
+
+{{#if populares.length}}
+  <div class="t20g-cc-atalhos">
+    {{#each populares}}
+      <button type="button" class="t20g-cc-atalho" data-action="origemSugerida" data-nome="{{this}}">{{this}}</button>
+    {{/each}}
+  </div>
+{{/if}}
+
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-bolt"></i> Poderes da origem</h3>
+  {{#if conhecida}}<p class="t20g-apoio">O poder exclusivo de {{conhecida}} está no topo da lista ao lado.</p>{{/if}}
+  {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zona}}
+</section>
+
+{{> "modules/t20-hayd-gmtools/templates/criacao/partes/magias.hbs" magias}}
+
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-list-check"></i> Perícias da origem
+    {{#if pericias.total}}<span class="t20g-chip">{{pericias.total}}</span>{{/if}}</h3>
+  {{> "modules/t20-hayd-gmtools/templates/criacao/partes/pericias.hbs" pericias}}
+</section>
+
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-sack"></i> Itens da origem</h3>
+  <p class="t20g-apoio">Todo personagem recebe os itens da sua origem. Use a aba Itens da lista ao lado ou arraste da barra de compêndios.</p>
+  {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zonaItens}}
+  <label class="t20g-cc-origem-dinheiro">
+    <i class="fa-solid fa-coins"></i>
+    <span>Dinheiro da origem</span>
+    <input type="number" min="0" step="1" class="t20g-campo" data-campo="origemDinheiro" value="{{dinheiro}}" placeholder="0">
+    <span class="t20g-apoio">T$ — soma ao dinheiro inicial e pode ser gasto no equipamento.</span>
+  </label>
+</section>

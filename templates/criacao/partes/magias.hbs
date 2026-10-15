@@ -1,0 +1,11 @@
+<section class="t20g-cc-secao">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-wand-sparkles"></i> Magias
+    {{#if contagem}}<span class="t20g-chip {{#if contagem.completo}}t20g-chip--sucesso{{else}}t20g-chip--aviso{{/if}}">{{contagem.feitas}} de {{contagem.de}}</span>{{/if}}
+  </h3>
+  {{#if info}}
+    <p class="t20g-apoio"><i class="fa-solid fa-book-open"></i> <b>{{info.nome}}:</b> você começa com <b>{{info.iniciais}}</b> magias {{info.tipoTexto}} de 1º círculo. A aba <i class="fa-solid fa-wand-sparkles"></i> Magias ao lado já vem filtrada.</p>
+  {{else if dica}}
+    <p class="t20g-apoio">{{dica}}</p>
+  {{/if}}
+  {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zona}}
+</section>

@@ -1,0 +1,123 @@
+<header class="t20g-cc-cab">
+  <span class="t20g-rotulo">{{#if proximo}}Próximo nível{{else}}Planejamento{{/if}}</span>
+  <h2>{{n}}º nível{{#if classe}} · {{classe.nome}} {{classe.nivel}}{{/if}}</h2>
+  {{#if novoPatamar}}
+    <div class="t20g-nv-novo-patamar t20g-nv-novo-patamar--{{novoPatamar.id}}">
+      <i class="fa-solid {{novoPatamar.icone}}"></i>
+      <div><span>Novo patamar</span><b>{{novoPatamar.nome}}</b><p>{{novoPatamar.texto}}</p></div>
+    </div>
+  {{/if}}
+  {{#if bloqueado}}<p class="t20g-apoio t20g-nv-aviso-bloqueado"><i class="fa-solid fa-triangle-exclamation"></i> Há níveis antes deste sem classe escolhida — a conta dos níveis de classe considera só os planejados.</p>{{/if}}
+</header>
+
+<section class="t20g-cc-secao t20g-cc-secao--primeira">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-shield-halved"></i> Classe que recebe o nível</h3>
+  <div class="t20g-nv-classes">
+    {{#each opcoesClasse}}
+      <button type="button" class="t20g-nv-classe {{#if ativa}}ativa{{/if}}" data-action="classeExistente" data-nome="{{nome}}" aria-pressed="{{#if ativa}}true{{else}}false{{/if}}">
+        <img src="{{img}}" alt="">
+        <span><b>{{nome}}</b><small>{{de}}º → {{para}}º</small></span>
+      </button>
+    {{/each}}
+    {{#if (and classe classe.nova)}}
+      <button type="button" class="t20g-nv-classe ativa" data-action="tirarClasse" data-tooltip="Tirar a classe nova">
+        <img src="{{classe.img}}" alt="">
+        <span><b>{{classe.nome}}</b><small>nova · 1º</small></span>
+      </button>
+    {{/if}}
+    <button type="button" class="t20g-nv-classe t20g-nv-classe--mais {{#if escolhendoClasse}}ativa{{/if}}" data-action="novaClasse" data-tooltip="Pegar o nível numa classe nova (multiclasse)">
+      <i class="fa-solid fa-plus"></i><span><b>Outra classe</b><small>multiclasse</small></span>
+    </button>
+  </div>
+  {{#if escolhendoClasse}}
+    <div class="t20g-cc-grade t20g-nv-grade" data-zona="classe">
+      {{#each gradeClasses}}
+        <button type="button" class="t20g-cc-card" data-action="escolherClasse" data-uuid="{{uuid}}" data-nome="{{nome}}">
+          <img src="{{img}}" alt="" loading="lazy">
+          <span class="t20g-cc-card-nome">{{nome}}</span>
+          {{#if fonte}}<small class="t20g-cc-fonte">{{fonte}}</small>{{/if}}
+        </button>
+      {{/each}}
+    </div>
+  {{/if}}
+</section>
+
+{{#if classe}}
+  {{#if classe.nova}}
+    <p class="t20g-apoio t20g-nv-aviso"><i class="fa-solid fa-circle-info"></i> Multiclasse: ao entrar numa classe nova você recebe as habilidades de 1º nível dela, mas não os PV, as perícias e as proficiências iniciais — confira com o Mestre o que vale na mesa.</p>
+  {{/if}}
+
+  <section class="t20g-cc-secao">
+    <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-star"></i> Habilidades de {{classe.nome}} ({{L}}º nível)</h3>
+    <p class="t20g-apoio">Coloque aqui as habilidades que você ganha neste nível. Na lista ao lado, as do {{L}}º nível de {{classe.nome}} ficam destacadas no topo — quando a classe pede uma escolha (como o arcanista), pegue só a sua.</p>
+    {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zonaHab}}
+  </section>
+
+  {{#if escalas.length}}
+    <section class="t20g-cc-secao">
+      <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-arrow-trend-up"></i> Habilidades que melhoram com o nível</h3>
+      <ul class="t20g-nv-escalas">
+        {{#each escalas}}
+          <li class="{{#if auto}}t20g-nv-escala--auto{{else if igual}}t20g-nv-escala--igual{{else}}t20g-nv-escala--manual{{/if}}" data-desc="{{uuid}}">
+            <img src="{{img}}" alt="">
+            <span class="t20g-nv-escala-texto">
+              <b>{{nome}}</b>
+              <small>{{trecho}}</small>
+            </span>
+            {{#if auto}}
+              <span class="t20g-chip t20g-chip--sucesso" data-tooltip="Ajustado sozinho ao subir de nível"><i class="fa-solid fa-wand-magic-sparkles"></i> {{auto}}</span>
+            {{else if igual}}
+              <span class="t20g-chip">sem mudança neste nível</span>
+            {{else}}
+              <span class="t20g-chip t20g-chip--aviso" data-tooltip="O assistente não consegue mudar este valor sozinho"><i class="fa-solid fa-triangle-exclamation"></i> confira à mão</span>
+            {{/if}}
+          </li>
+        {{/each}}
+      </ul>
+    </section>
+  {{/if}}
+
+  <section class="t20g-cc-secao">
+    <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-bolt"></i> Poderes</h3>
+    <p class="t20g-apoio">Em geral, cada nível de classe a partir do 2º dá um poder da classe (que pode ser trocado por um poder geral). Confira a tabela da sua classe.</p>
+    {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zonaPod}}
+  </section>
+
+  <section class="t20g-cc-secao">
+    <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-wand-sparkles"></i> Magias</h3>
+    {{#if infoMagias}}
+      <p class="t20g-apoio">
+        {{#if (eq infoMagias.novas 1)}}{{classe.nome}} aprende <b>uma magia</b> neste nível{{else if (eq infoMagias.novas 0)}}{{classe.nome}} não aprende magia neste nível (só nos níveis pares){{else}}Solte aqui as magias que você aprende neste nível{{/if}}
+        — {{infoMagias.tipoTexto}}, até o <b>{{infoMagias.circulo}}º círculo</b>. Clique na área abaixo e a lista já vem filtrada; um poder que dê magias também entra aqui.
+      </p>
+      {{#if infoMagias.novoCirculo}}
+        <p class="t20g-cc-res-pronto"><i class="fa-solid fa-star"></i> Novo círculo: a partir deste nível, {{classe.nome}} lança magias de <b>{{infoMagias.circulo}}º círculo</b>.</p>
+      {{/if}}
+    {{else}}
+      <p class="t20g-apoio">Se um poder te dá magias neste nível, solte-as aqui.</p>
+    {{/if}}
+    {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zonaMag}}
+  </section>
+
+  <section class="t20g-cc-secao">
+    <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-list-check"></i> Perícias
+      {{#if pericias.total}}<span class="t20g-chip">{{pericias.total}}</span>{{/if}}</h3>
+    <p class="t20g-apoio">Perícias que você passa a ter neste nível (por um poder ou por aumento de Inteligência). As já treinadas ficam travadas.</p>
+    {{> "modules/t20-hayd-gmtools/templates/criacao/partes/pericias.hbs" pericias}}
+  </section>
+
+  <section class="t20g-cc-secao">
+    <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-shield"></i> Proficiências</h3>
+    <div class="t20g-cc-profs">
+      {{#each profs}}
+        {{#if tem}}
+          <span class="t20g-cc-prof t20g-nv-prof-tem" data-tooltip="Já na ficha"><i class="fa-solid fa-lock"></i> {{rotulo}}</span>
+        {{else}}
+          <button type="button" class="t20g-cc-prof {{#if marcada}}marcada{{/if}}" data-action="proficiencia" data-prof="{{id}}" aria-pressed="{{#if marcada}}true{{else}}false{{/if}}">
+            <i class="fa-solid {{#if marcada}}fa-square-check{{else}}fa-square{{/if}}"></i> {{rotulo}}
+          </button>
+        {{/if}}
+      {{/each}}
+    </div>
+  </section>
+{{/if}}

@@ -1,0 +1,25 @@
+<div class="t20g-cc-pericias" data-pericias="{{etapa}}">
+  <div class="t20g-cc-per-grade">
+    {{#each gerais}}
+      <button type="button" class="t20g-cc-per {{#if marcada}}marcada{{/if}} {{#if bloqueada}}bloqueada{{/if}} {{#if fixa}}fixa{{/if}} {{#if grupo}}grupo{{/if}} {{#if opcao}}opcao{{/if}} {{#if apagada}}apagada{{/if}}"
+              data-action="pericia" data-pericia="{{k}}" aria-pressed="{{#if marcada}}true{{else}}false{{/if}}"
+              {{#if bloqueada}}aria-disabled="true" data-tooltip="Já treinada pela etapa {{deOnde}}"{{else if fixa}}data-tooltip="Perícia da classe"{{else if grupo}}data-tooltip="Uma entre as da classe (ou)"{{/if}}>
+        <i class="fa-solid {{#if marcada}}fa-square-check{{else if bloqueada}}fa-lock{{else}}fa-square{{/if}}"></i>
+        <span>{{rotulo}}</span><small>{{abr}}</small>
+      </button>
+    {{/each}}
+  </div>
+  <details class="t20g-cc-oficios" {{#if oficiosAbertos}}open{{/if}}>
+    <summary>Ofícios</summary>
+    <div class="t20g-cc-per-grade">
+      {{#each oficios}}
+        <button type="button" class="t20g-cc-per {{#if marcada}}marcada{{/if}} {{#if bloqueada}}bloqueada{{/if}} {{#if grupo}}grupo{{/if}} {{#if opcao}}opcao{{/if}} {{#if apagada}}apagada{{/if}}"
+                data-action="pericia" data-pericia="{{k}}" aria-pressed="{{#if marcada}}true{{else}}false{{/if}}"
+                {{#if bloqueada}}aria-disabled="true" data-tooltip="Já treinada pela etapa {{deOnde}}"{{/if}}>
+          <i class="fa-solid {{#if marcada}}fa-square-check{{else if bloqueada}}fa-lock{{else}}fa-square{{/if}}"></i>
+          <span>{{rotulo}}</span><small>{{abr}}</small>
+        </button>
+      {{/each}}
+    </div>
+  </details>
+</div>

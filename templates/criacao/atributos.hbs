@@ -1,0 +1,41 @@
+<header class="t20g-cc-cab">
+  <span class="t20g-rotulo">Etapa {{numero}}</span>
+  <h2>Defina seus atributos</h2>
+  <p class="t20g-apoio">Força, Destreza, Constituição, Inteligência, Sabedoria e Carisma são as principais
+    características do personagem e afetam quase tudo o que ele faz. Escolha um método — a janela dele abre
+    por cima desta e, ao terminar, os valores voltam para cá.</p>
+</header>
+
+<div class="t20g-cc-atr">
+  <div class="t20g-cc-metodos">
+    {{#each metodos}}
+      <button type="button" class="t20g-cc-metodo {{#if padrao}}t20g-cc-metodo--padrao{{/if}} {{#if usado}}t20g-cc-metodo--usado{{/if}}"
+              data-action="metodo" data-metodo="{{key}}">
+        <span class="t20g-cc-metodo-topo">
+          <b>{{nome}}</b>
+          {{#if padrao}}<span class="t20g-chip t20g-chip--accent"><i class="fa-solid fa-star"></i> Padrão da mesa</span>{{/if}}
+          {{#if usado}}<span class="t20g-chip t20g-chip--sucesso"><i class="fa-solid fa-check"></i> Usado</span>{{/if}}
+        </span>
+        <span class="t20g-apoio">{{desc}}</span>
+        <small class="t20g-cc-fonte">{{fonte}}</small>
+      </button>
+    {{/each}}
+  </div>
+
+  <div class="t20g-painel t20g-cc-atr-painel">
+    <div class="t20g-painel__topo"><i class="fa-solid fa-chart-simple"></i><span class="t20g-titulo">Seus atributos</span></div>
+    <div class="t20g-cc-atr-tab">
+      <span class="t20g-rotulo"></span><span class="t20g-rotulo">Base</span><span class="t20g-rotulo">Raça</span><span class="t20g-rotulo">Total</span>
+      {{#each tabela}}
+        <span class="t20g-cc-atr-nome"><i class="fa-solid {{icone}}"></i> {{nome}}</span>
+        <span class="t20g-cc-atr-num">{{base}}</span>
+        <span class="t20g-cc-atr-num t20g-cc-atr-racial">{{racial}}</span>
+        <span class="t20g-cc-atr-total {{#if negativo}}t20g-cc-neg{{/if}}">{{total}}</span>
+      {{/each}}
+    </div>
+    <p class="t20g-apoio t20g-cc-atr-nota">
+      {{#if definido}}<i class="fa-solid fa-circle-check"></i> {{resumo}}{{else}}<i class="fa-regular fa-circle"></i> Ainda sem valores — escolha um método ao lado.{{/if}}
+      {{#unless temRaca}}<br>O bônus da raça entra na coluna Raça quando você a escolher.{{/unless}}
+    </p>
+  </div>
+</div>

@@ -1,0 +1,75 @@
+{{#if escolher}}
+  <header class="t20g-cc-cab">
+    <span class="t20g-rotulo">Etapa {{numero}}</span>
+    <h2>Escolha sua classe</h2>
+    <p class="t20g-apoio">Enquanto a raça diz como você nasceu, a classe é como uma profissão: define suas
+      habilidades, seus pontos de vida e de mana e as perícias em que você é treinado.</p>
+  </header>
+  <div class="t20g-cc-grade-busca">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="t20g-campo" data-busca="grade" value="{{busca}}" placeholder="Buscar classe…" autocomplete="off">
+    <span class="t20g-apoio">ou arraste uma classe de qualquer compêndio</span>
+  </div>
+  <div class="t20g-cc-grade" data-zona="classe">
+    {{#each grade}}
+      <button type="button" class="t20g-cc-card" data-action="escolherClasse" data-uuid="{{uuid}}" data-nome="{{nome}}">
+        <img src="{{img}}" alt="" loading="lazy">
+        <span class="t20g-cc-card-nome">{{nome}}</span>
+        <span class="t20g-cc-mods">{{#each chips}}<span class="t20g-cc-mod">{{texto}}</span>{{/each}}</span>
+        {{#if fonte}}<small class="t20g-cc-fonte">{{fonte}}</small>{{/if}}
+      </button>
+    {{else}}
+      <div class="t20g-vazio t20g-cc-vazio-grade">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span class="t20g-vazio__titulo">Nenhuma classe nas fontes ligadas</span>
+        <span class="t20g-vazio__texto">O Mestre escolhe as fontes em Configurações → T20 Hayd GMTools → Fontes do Assistente. Arrastar uma classe para cá também funciona.</span>
+      </div>
+    {{/each}}
+  </div>
+{{else}}
+  <div class="t20g-cc-escolhido" data-zona="classe">
+    <img src="{{sel.img}}" alt="">
+    <div class="t20g-cc-escolhido-texto">
+      <span class="t20g-rotulo">Classe</span>
+      <h2>{{sel.nome}}</h2>
+      <span class="t20g-cc-mods">
+        <span class="t20g-cc-mod t20g-cc-mod--pv"><i class="fa-solid fa-heart"></i> {{sel.pv}} PV por nível</span>
+        <span class="t20g-cc-mod t20g-cc-mod--pm"><i class="fa-solid fa-droplet"></i> {{sel.pm}} PM por nível</span>
+      </span>
+    </div>
+    <div class="t20g-cc-escolhido-acoes">
+      <button type="button" class="t20g-btn t20g-btn--pequeno" data-action="abrirItem" data-uuid="{{sel.uuid}}"><i class="fa-solid fa-book-open"></i> Ver</button>
+      <button type="button" class="t20g-btn t20g-btn--pequeno" data-action="trocarClasse"><i class="fa-solid fa-arrows-rotate"></i> Trocar</button>
+    </div>
+  </div>
+
+  <section class="t20g-cc-secao">
+    <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-list-check"></i> Perícias da classe
+      {{#if contagem}}<span class="t20g-chip {{#if contagem.completo}}t20g-chip--sucesso{{else}}t20g-chip--aviso{{/if}}"
+        {{#if contagem.int}}data-tooltip="{{contagem.escolha}} da classe + {{contagem.int}} pela Inteligência"{{/if}}>{{contagem.feitas}} de {{contagem.escolha}}{{#if contagem.int}} + {{contagem.int}} Int{{/if}} à escolha</span>{{/if}}
+    </h3>
+    {{#if inatas}}<p class="t20g-cc-citacao">{{inatas}}</p>{{/if}}
+    {{#each ou}}
+      <p class="t20g-apoio t20g-cc-ou {{#if ok}}t20g-cc-ou--ok{{/if}}"><i class="fa-solid {{#if ok}}fa-circle-check{{else}}fa-code-branch{{/if}}"></i> Escolha {{texto}}.</p>
+    {{/each}}
+    {{#if contagem.int}}
+      <p class="t20g-apoio"><i class="fa-solid fa-brain"></i> Sua Inteligência {{contagem.int}} dá mais {{contagem.int}} perícia(s) treinada(s) à sua escolha — marque-as aqui também.</p>
+    {{/if}}
+    {{#if regra}}
+      <p class="t20g-apoio t20g-cc-legenda">
+        <span class="t20g-cc-leg t20g-cc-leg--fixa"></span> da classe
+        <span class="t20g-cc-leg t20g-cc-leg--opcao"></span> opções da classe
+        <span class="t20g-cc-leg t20g-cc-leg--apagada"></span> fora da lista
+      </p>
+    {{/if}}
+    {{> "modules/t20-hayd-gmtools/templates/criacao/partes/pericias.hbs" pericias}}
+  </section>
+
+  <section class="t20g-cc-secao">
+    <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-bolt"></i> Habilidades de 1º nível</h3>
+    <p class="t20g-apoio">Arraste as habilidades que a classe dá no 1º nível. A lista ao lado já mostra as habilidades de {{sel.nome}}.</p>
+    {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zona}}
+  </section>
+
+  {{> "modules/t20-hayd-gmtools/templates/criacao/partes/magias.hbs" magias}}
+{{/if}}

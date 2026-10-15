@@ -1,0 +1,66 @@
+<div class="t20g-cc t20g-nv {{#if ocupado}}t20g-cc--ocupado{{/if}}">
+  <div class="t20g-nv-corpo {{#if temSugestoes}}t20g-nv-corpo--sugestoes{{/if}}">
+    <nav class="t20g-nv-lateral" aria-label="Níveis">
+      {{#each patamares}}
+      <section class="t20g-nv-patamar t20g-nv-patamar--{{id}} {{#if alcancado}}alcancado{{/if}} {{#if atual}}atual{{/if}}">
+        <header class="t20g-nv-patamar-cab" data-tooltip="{{texto}}" data-tooltip-direction="RIGHT">
+          <i class="fa-solid {{icone}}"></i>
+          <span class="t20g-nv-patamar-nome">{{nome}}</span>
+          <small>{{de}}º–{{ate}}º</small>
+        </header>
+      {{#each niveis}}
+        <button type="button" class="t20g-nv-degrau t20g-nv-degrau--{{estado}} {{#if ativo}}ativo{{/if}}" data-action="nivel" data-nivel="{{n}}"
+                {{#if ativo}}aria-current="step"{{/if}}>
+          <span class="t20g-nv-degrau-n">{{n}}</span>
+          <span class="t20g-nv-degrau-texto">
+            {{#if classe}}
+              <img src="{{classe.img}}" alt=""><span>{{classe.nome}} {{classe.nivel}}</span>
+            {{else if (eq estado "alcancado")}}
+              <span class="t20g-nv-degrau-sub">{{#if (eq n 1)}}Resumo{{else}}Alcançado{{/if}}</span>
+            {{else if (eq estado "proximo")}}
+              <span class="t20g-nv-degrau-sub">Próximo</span>
+            {{else}}
+              <span class="t20g-nv-degrau-sub t20g-nv-degrau-vazio">—</span>
+            {{/if}}
+          </span>
+          {{#if itens}}<small class="t20g-nv-degrau-conta">{{itens}}</small>{{/if}}
+          {{#if (eq estado "alcancado")}}<i class="fa-solid fa-check t20g-nv-degrau-ok"></i>{{/if}}
+        </button>
+      {{/each}}
+      </section>
+      {{/each}}
+    </nav>
+
+    <section class="t20g-cc-principal t20g-rola">
+      {{#if resumo}}{{> "modules/t20-hayd-gmtools/templates/niveis/resumo.hbs" resumo}}{{/if}}
+      {{#if alcancado}}{{> "modules/t20-hayd-gmtools/templates/niveis/alcancado.hbs" alcancado}}{{/if}}
+      {{#if plano}}{{> "modules/t20-hayd-gmtools/templates/niveis/plano.hbs" plano}}{{/if}}
+    </section>
+
+    {{#if temSugestoes}}
+      {{> "modules/t20-hayd-gmtools/templates/criacao/partes/sugestoes.hbs" sugestoes}}
+    {{/if}}
+  </div>
+
+  <footer class="t20g-cc-rodape">
+    <div class="t20g-cc-rodape-ficha">
+      <span class="t20g-nv-rodape-nivel"><i class="fa-solid fa-stairs"></i> Nível atual <b>{{atual}}</b></span>
+    </div>
+    {{#if plano}}
+      <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--pequeno" data-action="limparNivel" data-tooltip="Descartar o plano deste nível">
+        <i class="fa-solid fa-eraser"></i> Limpar nível</button>
+      {{#if plano.proximo}}
+        <button type="button" class="t20g-btn t20g-btn--primario t20g-cc-criar" data-action="subir" {{#unless plano.classe}}disabled{{/unless}} {{#if ocupado}}disabled{{/if}}>
+          {{#if ocupado}}<i class="fa-solid fa-spinner fa-spin"></i> Gravando…{{else}}<i class="fa-solid fa-stairs"></i> Subir para o {{plano.n}}º nível{{/if}}
+        </button>
+      {{else if plano.subirAte}}
+        <button type="button" class="t20g-btn t20g-btn--primario t20g-cc-criar" data-action="subir" {{#if ocupado}}disabled{{/if}}
+                data-tooltip="Aplica do {{plano.deNivel}}º ao {{plano.n}}º nível, um de cada vez, com o plano de cada um">
+          {{#if ocupado}}<i class="fa-solid fa-spinner fa-spin"></i> Gravando…{{else}}<i class="fa-solid fa-angles-up"></i> Subir até o {{plano.n}}º nível <span class="t20g-nv-rodape-qtd">+{{plano.subirAte}}</span>{{/if}}
+        </button>
+      {{else}}
+        <span class="t20g-apoio t20g-nv-rodape-dica"><i class="fa-solid fa-circle-info"></i> Escolha a classe de todos os níveis até aqui para subir de uma vez.</span>
+      {{/if}}
+    {{/if}}
+  </footer>
+</div>

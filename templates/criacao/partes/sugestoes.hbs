@@ -1,0 +1,52 @@
+<aside class="t20g-cc-sugestoes">
+  <div class="t20g-cc-sug-abas">
+    <div class="t20g-cc-sug-principais {{#if compacta}}t20g-cc-sug-principais--compacta{{/if}}" role="tablist">
+      {{#each principais}}
+        <button type="button" role="tab" class="{{#if ativa}}ativa{{/if}}" data-action="aba" data-aba="{{id}}"
+                aria-selected="{{#if ativa}}true{{else}}false{{/if}}" data-tooltip="{{titulo}}">
+          {{#if icone}}<i class="fa-solid {{icone}}"></i>{{/if}}<span>{{rotulo}}</span>
+        </button>
+      {{/each}}
+    </div>
+    {{#if subabas}}
+      <div class="t20g-cc-sug-subabas" role="tablist">
+        {{#each subabas}}
+          <button type="button" role="tab" class="{{#if ativa}}ativa{{/if}}" data-action="aba" data-aba="{{id}}"
+                  aria-selected="{{#if ativa}}true{{else}}false{{/if}}">{{rotulo}}</button>
+        {{/each}}
+      </div>
+    {{/if}}
+  </div>
+  {{#if filtros.length}}
+    <div class="t20g-cc-sug-filtros">
+      {{#each filtros}}
+        <label>
+          <span>{{rotulo}}</span>
+          <select class="t20g-campo" data-filtro="{{id}}">
+            {{#each opcoes}}<option value="{{v}}" {{#if sel}}selected{{/if}}>{{r}}</option>{{/each}}
+          </select>
+        </label>
+      {{/each}}
+    </div>
+  {{/if}}
+  <div class="t20g-cc-sug-busca">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="t20g-campo" data-busca="sugestoes" value="{{busca}}" placeholder="Buscar…" autocomplete="off">
+  </div>
+  {{#if dica}}<p class="t20g-apoio t20g-cc-sug-dica">{{dica}}</p>{{/if}}
+  {{#if acao}}
+    <button type="button" class="t20g-btn t20g-btn--pequeno t20g-cc-sug-acao" data-action="{{acao.id}}">
+      <i class="fa-solid {{acao.icone}}"></i> {{acao.rotulo}}
+    </button>
+  {{/if}}
+  {{#if niveis}}
+    <label class="t20g-cc-sug-niveis">
+      <input type="checkbox" data-action="niveis" {{checked niveis.mostrar}}> Mostrar habilidades de níveis maiores
+    </label>
+  {{/if}}
+  <ul class="t20g-cc-sug-lista t20g-rola"></ul>
+  <p class="t20g-cc-sug-rodape">
+    <i class="fa-solid fa-hand-pointer"></i> Arraste para a esquerda, clique em <i class="fa-solid fa-plus"></i> ou dê dois cliques.
+    Itens da barra de compêndios também podem ser arrastados.
+  </p>
+</aside>

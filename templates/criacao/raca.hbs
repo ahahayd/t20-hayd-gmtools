@@ -1,0 +1,108 @@
+{{#if escolher}}
+  <header class="t20g-cc-cab">
+    <span class="t20g-rotulo">Etapa {{numero}}</span>
+    <h2>Escolha sua raça</h2>
+    <p class="t20g-apoio">Cada raça modifica seus atributos e fornece habilidades próprias.</p>
+  </header>
+  <div class="t20g-cc-grade-busca">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <input type="search" class="t20g-campo" data-busca="grade" value="{{busca}}" placeholder="Buscar raça…" autocomplete="off">
+    <span class="t20g-apoio">ou arraste uma raça de qualquer compêndio</span>
+  </div>
+  <div class="t20g-cc-grade" data-zona="raca">
+    {{#each grade}}
+      <button type="button" class="t20g-cc-card" data-action="escolherRaca" data-uuid="{{uuid}}" data-nome="{{nome}}">
+        <img src="{{img}}" alt="" loading="lazy">
+        <span class="t20g-cc-card-nome">{{nome}}</span>
+        <span class="t20g-cc-mods">{{#each chips}}<span class="t20g-cc-mod {{#if negativo}}t20g-cc-mod--neg{{/if}} {{#if dinamico}}t20g-cc-mod--din{{/if}}">{{texto}}</span>{{/each}}</span>
+        {{#if fonte}}<small class="t20g-cc-fonte">{{fonte}}</small>{{/if}}
+      </button>
+    {{else}}
+      <div class="t20g-vazio t20g-cc-vazio-grade">
+        <i class="fa-solid fa-person-circle-question"></i>
+        <span class="t20g-vazio__titulo">Nenhuma raça nas fontes ligadas</span>
+        <span class="t20g-vazio__texto">O Mestre escolhe as fontes em Configurações → T20 Hayd GMTools → Fontes do Assistente. Arrastar uma raça para cá também funciona.</span>
+      </div>
+    {{/each}}
+  </div>
+{{else}}
+  <div class="t20g-cc-escolhido" data-zona="raca">
+    <img src="{{sel.img}}" alt="">
+    <div class="t20g-cc-escolhido-texto">
+      <span class="t20g-rotulo">Raça</span>
+      <h2>{{sel.nome}}</h2>
+      <span class="t20g-cc-mods">{{#each sel.chips}}<span class="t20g-cc-mod {{#if negativo}}t20g-cc-mod--neg{{/if}}">{{texto}}</span>{{/each}}</span>
+    </div>
+    <div class="t20g-cc-escolhido-acoes">
+      <button type="button" class="t20g-btn t20g-btn--pequeno" data-action="abrirItem" data-uuid="{{sel.uuid}}"><i class="fa-solid fa-book-open"></i> Ver</button>
+      <button type="button" class="t20g-btn t20g-btn--pequeno" data-action="trocarRaca"><i class="fa-solid fa-arrows-rotate"></i> Trocar</button>
+    </div>
+  </div>
+
+  {{#if aberta}}
+    <section class="t20g-cc-secao">
+      <h3 class="t20g-cc-secao-titulo">
+        <i class="fa-solid fa-shuffle"></i> Raças Abertas
+        <span class="t20g-chip {{#if aberta.completo}}t20g-chip--sucesso{{else}}t20g-chip--aviso{{/if}}">{{#if aberta.completo}}tudo no lugar{{else}}falta colocar{{/if}}</span>
+      </h3>
+      <p class="t20g-apoio">A mesa usa a variante Raças Abertas: cada modificador da raça vai para o atributo que você
+        quiser, mas só um modificador por atributo. Clique para colocar; clicar de novo tira.</p>
+      <div class="t20g-cc-abertas">
+        {{#each aberta.pecas}}
+          <div class="t20g-cc-aberta-linha">
+            <span class="t20g-cc-aberta-peca {{#if negativo}}t20g-cc-aberta-peca--neg{{/if}}">{{texto}}</span>
+            {{#each celulas}}
+              <button type="button" class="t20g-cc-aberta-celula {{#if marcado}}marcado{{/if}} {{#if ocupado}}ocupado{{/if}}"
+                      data-action="aberto" data-indice="{{../i}}" data-attr="{{k}}" data-tooltip="{{nome}}"
+                      aria-pressed="{{#if marcado}}true{{else}}false{{/if}}">{{abr}}</button>
+            {{/each}}
+          </div>
+        {{/each}}
+      </div>
+    </section>
+  {{/if}}
+
+  {{#if din}}
+    <section class="t20g-cc-secao">
+      <h3 class="t20g-cc-secao-titulo">
+        <i class="fa-solid fa-sliders"></i> Atributos da raça
+        {{#if din.quantos}}<span class="t20g-chip {{#if din.completo}}t20g-chip--sucesso{{else}}t20g-chip--aviso{{/if}}">{{din.marcados}} de {{din.quantos}}</span>{{/if}}
+      </h3>
+      <p class="t20g-apoio">{{din.descricao}}</p>
+      <div class="t20g-cc-din">
+        {{#each din.opcoes}}
+          {{#if ../din.livre}}
+            <span class="t20g-cc-din-livre">
+              <b>{{nome}}</b>
+              <span class="t20g-stepper">
+                <button type="button" data-action="dinamicoPasso" data-attr="{{k}}" data-delta="-1" aria-label="Menos"><i class="fa-solid fa-minus"></i></button>
+                <span class="t20g-stepper__valor">{{valorTexto}}</span>
+                <button type="button" data-action="dinamicoPasso" data-attr="{{k}}" data-delta="1" aria-label="Mais"><i class="fa-solid fa-plus"></i></button>
+              </span>
+            </span>
+          {{else}}
+            <button type="button" class="t20g-cc-din-opcao {{#if marcado}}marcado{{/if}} {{#if cheio}}cheio{{/if}}"
+                    data-action="dinamico" data-attr="{{k}}" aria-pressed="{{#if marcado}}true{{else}}false{{/if}}">
+              <span class="t20g-cc-din-bonus">{{bonus}}</span> {{nome}}
+            </button>
+          {{/if}}
+        {{/each}}
+      </div>
+    </section>
+  {{/if}}
+
+  <section class="t20g-cc-secao">
+    <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-bolt"></i> Habilidades da raça</h3>
+    <p class="t20g-apoio">As que a raça concede já estão aqui. Se uma delas der outro poder (como Versátil, que pode trocar uma perícia por um poder geral), arraste-o também.</p>
+    {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zona}}
+  </section>
+
+  {{> "modules/t20-hayd-gmtools/templates/criacao/partes/magias.hbs" magias}}
+
+  <section class="t20g-cc-secao">
+    <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-list-check"></i> Perícias da raça
+      {{#if pericias.total}}<span class="t20g-chip">{{pericias.total}}</span>{{/if}}</h3>
+    <p class="t20g-apoio">Marque as perícias que vêm da raça ou das habilidades dela.</p>
+    {{> "modules/t20-hayd-gmtools/templates/criacao/partes/pericias.hbs" pericias}}
+  </section>
+{{/if}}

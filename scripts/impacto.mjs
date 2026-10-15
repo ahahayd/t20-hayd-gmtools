@@ -45,10 +45,13 @@ export const SEM_ETIQUETA_DE_IMPACTO = new Set([
   'tesourosHomebrewMenu',
   'atributosCustosMenu',
   'atributosConversaoMenu',
+  'criacaoFontesMenu',
   // Preferências de comportamento/conteúdo
   'atributosMetodoPadrao',
   'atributosPontos',
   'atributosMultiNegativos',
+  'criacaoAoCriar',
+  'criacaoDinheiroInicial',
   'abrirDiarioAutomacoes',
   'visibility',
   'requireConfirmation',
@@ -78,6 +81,8 @@ export const FUNCOES = [
   { chave: 'partySheetEnabled', nivel: 'medio' },
   { chave: 'mensagensDano', nivel: 'baixo' },
   { chave: 'reguaEfeitos', nivel: 'baixo' },
+  { chave: 'criacaoAtivo', nivel: 'baixo' },
+  { chave: 'niveisAtivo', nivel: 'baixo' },
   { chave: 'custoPmTotal', nivel: 'baixo' },
   { chave: 'jogadoresReroll', nivel: 'baixo' },
   { chave: 'jogadoresManual', nivel: 'baixo' }
