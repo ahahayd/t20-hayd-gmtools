@@ -15,7 +15,7 @@
 import { MODULE_ID, carregarCatalogo, TIPOS_EQUIPAMENTO } from './fontes.mjs';
 import {
   DIVINDADES, divindadePorNome, concedidoPelaDivindade, lerPericiasDaClasse, regraDaRaca,
-  nivelDaHabilidade, lerMagiasIniciais, contarEscolhasDaClasse, normalizar, subtipoDe,
+  nivelDaHabilidade, lerMagiasIniciais, magiasAdicionaisIniciais, contarEscolhasDaClasse, normalizar, subtipoDe,
   outrasDivindades, CATEGORIAS_GERAIS, categoriaGeral, saldoDoEquipamento, chaveDeNome,
   modificadoresAbertos, racialAberto, formatarTibares, formatarMoedas
 } from './regras.mjs';
@@ -276,6 +276,8 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
   #mostrarNiveis = false;
   /** O que a habilidade "Magias (Classe)" diz: { tipo, iniciais, nome } */
   #infoMagias = null;
+  /** uuid → magias a mais no 1º nível (o Caminho do Arcanista: Mago dá +1). */
+  #magiasExtras = new Map();
   #salvarDepois = null;
   #ocupado = false;
   #sugestoesAtuais = [];
@@ -481,9 +483,9 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
     } else if (!e.complicacao.poderes.length && e.complicacao.troca.length) {
       p.push({ passo: 'complicacao', texto: 'Complicação: falta o poder de complicação (o poder geral só vem em troca dela).' });
     }
-    const info = this.#infoMagias;
-    if (info?.iniciais && e.classe.magias.length < info.iniciais) {
-      p.push({ passo: 'classe', texto: `Magias da classe: ${e.classe.magias.length} de ${info.iniciais}.` });
+    const iniciais = this.#magiasIniciais();
+    if (iniciais && e.classe.magias.length < iniciais.total) {
+      p.push({ passo: 'classe', texto: `Magias da classe: ${e.classe.magias.length} de ${iniciais.total}.` });
     }
     const saldo = this.#saldo();
     if (saldo.sobra < 0) {
@@ -815,6 +817,7 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
   async #lerClasse() {
     const sel = this.#estado.classe.sel;
     this.#niveis.clear();
+    this.#magiasExtras.clear();
     this.#infoMagias = null;
     if (!sel) return;
     this.#catalogo ??= await carregarCatalogo();
@@ -824,6 +827,8 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
         const doc = await fromUuid(h.uuid);
         const desc = doc?.system?.description?.value ?? '';
         this.#niveis.set(h.uuid, nivelDaHabilidade(desc));
+        const extras = magiasAdicionaisIniciais(desc);
+        if (extras) this.#magiasExtras.set(h.uuid, extras);
         if (/^magias\b/.test(normalizar(h.nome)) && !this.#infoMagias) {
           const info = lerMagiasIniciais(desc);
           if (info.tipo || info.iniciais) this.#infoMagias = { ...info, nome: h.nome, uuid: h.uuid };
@@ -831,6 +836,16 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
       } catch { /* habilidade ilegível: fica como 1º nível */ }
     }));
     this.#infoMagias ??= { tipo: null, iniciais: null };
+  }
+
+  /** Magias no 1º nível: base da habilidade "Magias" + extras das habilidades escolhidas (o caminho). */
+  #magiasIniciais() {
+    const base = this.#infoMagias?.iniciais ?? 0;
+    if (!base) return null;
+    const extras = this.#estado.classe.poderes
+      .filter(r => this.#magiasExtras.get(r.uuid))
+      .map(r => ({ nome: r.nome, n: this.#magiasExtras.get(r.uuid) }));
+    return { base, extras, total: base + extras.reduce((t, x) => t + x.n, 0) };
   }
 
   async #ctxClasse() {
@@ -858,6 +873,7 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
     const daClasse = (p) => subtipoDe(p.subtipo, sel.nome);
     const info = this.#infoMagias;
     const tipoMagia = info?.tipo ?? '';
+    const iniciais = this.#magiasIniciais();
     return {
       sel,
       regra: !!regra,
@@ -867,9 +883,9 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
       zona: this.#zona('classePoderes'),
       magias: {
         zona: this.#zona('classeMagias'),
-        info: info?.iniciais ? { ...info, tipoTexto: tipoMagia === 'arc' ? 'arcanas' : tipoMagia === 'div' ? 'divinas' : '' } : null,
-        contagem: info?.iniciais
-          ? { feitas: e.classe.magias.length, de: info.iniciais, completo: e.classe.magias.length >= info.iniciais }
+        info: iniciais ? { ...info, ...iniciais, tipoTexto: tipoMagia === 'arc' ? 'arcanas' : tipoMagia === 'div' ? 'divinas' : '' } : null,
+        contagem: iniciais
+          ? { feitas: e.classe.magias.length, de: iniciais.total, completo: e.classe.magias.length >= iniciais.total }
           : null,
         dica: info?.iniciais ? null : `${sel.nome} não lança magias no 1º nível — deixe vazio, ou solte aqui uma magia que algum poder te dê.`
       },

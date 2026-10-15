@@ -3,7 +3,7 @@
     {{#if contagem}}<span class="t20g-chip {{#if contagem.completo}}t20g-chip--sucesso{{else}}t20g-chip--aviso{{/if}}">{{contagem.feitas}} de {{contagem.de}}</span>{{/if}}
   </h3>
   {{#if info}}
-    <p class="t20g-apoio"><i class="fa-solid fa-book-open"></i> <b>{{info.nome}}:</b> você começa com <b>{{info.iniciais}}</b> magias {{info.tipoTexto}} de 1º círculo. A aba <i class="fa-solid fa-wand-sparkles"></i> Magias ao lado já vem filtrada.</p>
+    <p class="t20g-apoio"><i class="fa-solid fa-book-open"></i> <b>{{info.nome}}:</b> você começa com <b>{{info.base}}</b> magias {{info.tipoTexto}} de 1º círculo{{#each info.extras}}, <b>+{{n}}</b> de {{nome}}{{/each}}{{#if info.extras.length}} — <b>{{info.total}}</b> no total{{/if}}.</p>
   {{else if dica}}
     <p class="t20g-apoio">{{dica}}</p>
   {{/if}}

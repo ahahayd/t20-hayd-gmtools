@@ -64,6 +64,18 @@ export function lerMagiasIniciais(descricao) {
   return { tipo, iniciais };
 }
 
+/**
+ * Magias a mais no 1º nível que uma habilidade escolhida dá — o Caminho do
+ * Arcanista: Mago "começa com uma magia adicional (para um total de 4)". A
+ * habilidade "Magias" diz a base; o caminho, o que soma. Sem a frase, 0.
+ */
+export function magiasAdicionaisIniciais(descricao) {
+  const t = normalizar(textoPlano(descricao));
+  const m = t.match(/comeca com (\d+|uma|duas|tres|quatro) magias? adiciona(?:l|is)/);
+  if (!m) return 0;
+  return /^\d+$/.test(m[1]) ? Number(m[1]) : (NUMEROS[m[1]] ?? 0);
+}
+
 /** Minúsculas, sem acento e sem a hifenização de quebra de linha do PDF
  *  ("Re- flexos" → "reflexos"). */
 export function normalizar(texto) {

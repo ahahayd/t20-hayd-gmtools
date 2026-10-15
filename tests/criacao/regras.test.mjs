@@ -4,8 +4,7 @@ import {
   DIVINDADES, lerPericiasDaClasse, lerAtributosDinamicos, nivelDaHabilidade, lerMagiasIniciais,
   contarEscolhasDaClasse, divindadePorNome, concedidoPelaDivindade, normalizar, textoPlano, regraDaRaca, subtipoDe,
   referenciasDeConcedido, outrasDivindades, categoriaGeral, saldoDoEquipamento, modificadoresAbertos, racialAberto,
-  formatarTibares, dividirEmMoedas, formatarMoedas
-} from '../../scripts/criacao/regras.mjs';
+  formatarTibares, dividirEmMoedas, formatarMoedas, magiasAdicionaisIniciais } from '../../scripts/criacao/regras.mjs';
 
 // Rótulos como o sistema os entrega depois de traduzir (CONFIG.T20.pericias).
 const ROTULOS = {
@@ -225,4 +224,12 @@ test('dinheiro mostrado em moedas: tibares e tibares de cobre', () => {
   assert.equal(formatarMoedas(0), 'T$ 0');
   assert.equal(formatarMoedas(1250.5), 'T$ 1.250 e 5 TC');
   assert.equal(formatarMoedas(-3.1), '−T$ 3 e 1 TC');
+});
+
+test('magias a mais do caminho: o Mago começa com uma adicional', () => {
+  const mago = '<p>Voc&ecirc; come&ccedil;a com uma magia adicional (para um total de 4) e, sempre que ganha acesso a um novo c&iacute;rculo de magias, aprende uma magia adicional daquele c&iacute;rculo.</p>';
+  assert.equal(magiasAdicionaisIniciais(mago), 1);
+  assert.equal(magiasAdicionaisIniciais('<p>Voc&ecirc; come&ccedil;a com duas magias adicionais.</p>'), 2);
+  assert.equal(magiasAdicionaisIniciais('<p>Voc&ecirc; come&ccedil;a com 2 magias adicionais.</p>'), 2);
+  assert.equal(magiasAdicionaisIniciais('<p>Seu atributo-chave para magias &eacute; Carisma.</p>'), 0);
 });
