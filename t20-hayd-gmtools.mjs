@@ -21,6 +21,8 @@ import { atalhoDeMenu } from './scripts/atalho-menu.mjs';
 import { ehV14, itemDeMenu } from './scripts/versao.mjs';
 // Preview de dano na janela de uso, com maximizar/minimizar. Mesmo motivo acima.
 import './t20-hayd-preview-dano.mjs';
+// Fontes da rolagem (de onde veio cada número). Mesmo motivo acima.
+import { abrirFontes, podeVerFontes } from './t20-hayd-fontes.mjs';
 // Gerador de Tesouros (Tabela 8-1 e associadas). Mesmo motivo do import acima.
 import './t20-hayd-tesouros.mjs';
 // Ficha do Grupo, estoque compartilhado e transferências (ex-t20-hayd-management).
@@ -869,6 +871,20 @@ function addContextMenuOptions(options) {
   const msgDo = li => game.messages.get((li?.[0] ?? li)?.dataset?.messageId);
 
   options.push(...[
+    // De onde veio cada número da rolagem. Quem não vê a fórmula (metagame)
+    // também não vê as fontes.
+    {
+      name: 'T20HaydGMTools.FonteMenu',
+      icon: '<i class="fas fa-magnifying-glass-chart"></i>',
+      condition: li => {
+        const msg = msgDo(li);
+        return !!msg && podeVerFontes(msg, shouldHideFormula(msg));
+      },
+      callback: li => {
+        const msg = msgDo(li);
+        if (msg) abrirFontes(li, msg);
+      }
+    },
     // Mostrar/esconder fórmula — apenas Mestre, em rolagens de criaturas do GM.
     {
       name: 'T20HaydGMTools.ShowFormula',
@@ -1525,7 +1541,7 @@ Hooks.on('getChatMessageContextOptions', (...args) => {
  */
 const CATEGORIAS_CONFIG = [
   { rotulo: 'CatMetagame',    icone: 'fa-mask',           chaves: ['metagameMenu'] },
-  { rotulo: 'CatRolagens',    icone: 'fa-dice-d20',       chaves: ['jogadoresReroll', 'jogadoresManual'] },
+  { rotulo: 'CatRolagens',    icone: 'fa-dice-d20',       chaves: ['jogadoresReroll', 'jogadoresManual', 'fontesRolagem'] },
   { rotulo: 'CatAutomacoes',  icone: 'fa-wand-sparkles',  chaves: ['automacoesEnabled', 'abrirDiarioAutomacoes'] },
   { rotulo: 'CatTesouros',    icone: 'fa-sack-dollar',    chaves: ['tesourosGeradorMenu', 'tesourosVinculosMenu', 'tesourosLivrosMenu', 'tesourosHomebrewMenu'] },
   { rotulo: 'CatParty',       icone: 'fa-users',          chaves: ['partyManager', 'partySheetEnabled', 'visibility', 'requireConfirmation', 'chatMode', 'lojaCompat'] },

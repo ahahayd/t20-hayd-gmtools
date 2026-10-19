@@ -2274,6 +2274,7 @@ a.header-button.t20g-atr-header {
 }
 .t20g-minmax-max { --t20g-minmax-cor: rgba(46, 125, 50, 0.65); }
 .t20g-minmax-min { --t20g-minmax-cor: rgba(74, 111, 165, 0.65); }
+.t20g-minmax-escolha { --t20g-minmax-cor: rgba(156, 110, 30, 0.7); }
 
 .t20g-minmax-aviso {
   display: flex;
@@ -2590,3 +2591,38 @@ a.header-button.t20g-atr-header {
 .t20g-esc-chat ul { margin: 4px 0 0; padding-inline-start: 18px; }
 .t20g-esc-chat p { margin: 0 0 4px; }
 .t20g-esc-janela button[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+/* --- Fontes da rolagem ---------------------------------------------------- */
+
+/* Número da prévia com tooltip de fonte. */
+.t20g-fonte-termo {
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+}
+
+.t20g-fontes-rolagem + .t20g-fontes-rolagem { margin-top: 10px; }
+.t20g-fontes-rolagem h4 { margin: 0 0 4px; }
+table.t20g-fontes {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  font-size: 0.92em;
+}
+table.t20g-fontes th,
+table.t20g-fontes td {
+  padding: 3px 6px;
+  text-align: left;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.25);
+}
+table.t20g-fontes th:last-child,
+table.t20g-fontes td:last-child {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+table.t20g-fontes thead th { font-weight: 600; opacity: 0.75; }
+table.t20g-fontes tfoot td { font-weight: 700; border-bottom: none; }
+table.t20g-fontes .t20g-fontes-detalhe td { opacity: 0.75; font-size: 0.92em; }
+table.t20g-fontes .t20g-fontes-detalhe td:first-child { padding-left: 20px; }
+table.t20g-fontes .t20g-fontes-sem td:first-child { font-style: italic; opacity: 0.7; }
+.t20g-fontes-dados { opacity: 0.65; }

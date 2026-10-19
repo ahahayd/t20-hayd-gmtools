@@ -32,6 +32,7 @@ import {
 import { engenhocas } from './scripts/automacoes/engenhocas/index.mjs';
 import { automacoesAtivas } from './scripts/automacoes/runtime.mjs';
 import { ehV14 } from './scripts/versao.mjs';
+import { formulaComFontes, registrarPericia } from './t20-hayd-fontes.mjs';
 
 const MODULE_ID = 't20-hayd-gmtools';
 const SETTING = 'previewDano';
@@ -130,7 +131,7 @@ function colherDano(clone) {
   for (const rolagem of clone.system.rolls.filter((r) => r.type === 'dano')) {
     const roll = clone.system.rolled?.[rolagem.name];
     if (!roll) continue;
-    linhas.push({ nome: rolagem.name, formula: roll.formula, total: roll.total });
+    linhas.push({ nome: rolagem.name, formula: roll.formula, total: roll.total, roll });
   }
   return linhas;
 }
@@ -175,7 +176,11 @@ async function calcularPreviewPericia(item, form) {
     }, rConfig);
 
     const roll = await game.tormenta20.dice.d20Roll(rollConfig);
-    return roll ? { teste: { formula: roll.formula } } : null;
+    if (!roll) return null;
+    // O ataque e o dano ganham as fontes no próprio rollAttack/rollDamage;
+    // a perícia da prévia não passa pelo displayCard, então é aqui.
+    try { registrarPericia(roll, copia, ator, config); } catch { /* prévia sem fontes */ }
+    return { teste: { formula: roll.formula, roll } };
   });
 }
 
@@ -220,6 +225,7 @@ async function calcularPreview(item, form) {
       if (roll) {
         ataque = {
           formula: roll.formula,
+          roll,
           margem: textoDaMargem(clone.system.criticoM),
           multiplicador: Number(clone.system.criticoX) || 2
         };
@@ -279,6 +285,21 @@ function montarModos() {
   return bloco;
 }
 
+/**
+ * Escolher 0, 10 ou 20: o teste não rola o d20, usa o valor escolhido. O
+ * `d20Roll` do sistema só troca a primeira parcela quando ela tem "d20"; com
+ * um número no lugar, ela entra como está.
+ */
+const ESCOLHAS = ['0', '10', '20'];
+
+function montarEscolhas() {
+  const bloco = document.createElement('div');
+  bloco.className = 't20g-preview-modos';
+  bloco.innerHTML = ESCOLHAS.map((valor) => `<label title="${esc(t('PreviewEscolherDica', { valor }))}">
+      <input type="checkbox" data-t20g-escolher="${valor}"> ${esc(t('PreviewEscolher', { valor }))}</label>`).join('');
+  return bloco;
+}
+
 function montarPainel() {
   const painel = document.createElement('details');
   painel.className = 't20g-preview';
@@ -288,6 +309,24 @@ function montarPainel() {
     </summary>
     <input type="hidden" name="minmax" value="">`;
   return painel;
+}
+
+/** Fórmula com um tooltip de fonte em cada número (ver t20-hayd-fontes). */
+function formulaDe(dados) {
+  return dados?.roll ? formulaComFontes(dados.roll) : (dados?.formula ?? t('PreviewDanoVazio'));
+}
+
+function nosDasLinhas(linhas, modo) {
+  if (!linhas?.length) return t('PreviewDanoVazio');
+  const frag = document.createDocumentFragment();
+  const varias = linhas.length > 1;
+  linhas.forEach((linha, i) => {
+    if (i) frag.append('  ·  ');
+    if (varias) frag.append(`${linha.nome}: `);
+    frag.append(linha.roll ? formulaComFontes(linha.roll) : linha.formula);
+    if (modo) frag.append(` = ${linha.total}`);
+  });
+  return frag;
 }
 
 function textoDasLinhas(linhas, modo) {
@@ -300,19 +339,19 @@ function textoDasLinhas(linhas, modo) {
   }).join('  ·  ');
 }
 
-function escrever(linha, texto, mostrar) {
+function escrever(linha, conteudo, mostrar) {
   if (!linha) return;
   linha.classList.toggle('t20g-oculto', !mostrar);
   const campo = linha.querySelector('.t20g-preview-formula');
-  if (campo) campo.textContent = texto;
+  if (campo) campo.replaceChildren(conteudo);
 }
 
 function pintar(painel, linhas, dados) {
   if (linhas.teste) {
-    escrever(linhas.teste, dados?.teste?.formula ?? t('PreviewDanoVazio'), !!dados?.teste);
+    escrever(linhas.teste, formulaDe(dados?.teste), !!dados?.teste);
   }
   if (linhas.acerto) {
-    escrever(linhas.acerto, dados?.ataque?.formula ?? t('PreviewDanoVazio'), !!dados?.ataque);
+    escrever(linhas.acerto, formulaDe(dados?.ataque), !!dados?.ataque);
     const extra = linhas.acerto.querySelector('.t20g-preview-extra');
     if (extra) {
       extra.textContent = dados?.ataque
@@ -324,10 +363,10 @@ function pintar(painel, linhas, dados) {
     }
   }
   if (linhas.dano) {
-    escrever(linhas.dano, textoDasLinhas(dados?.dano, dados?.modo), !!dados?.dano?.length);
+    escrever(linhas.dano, nosDasLinhas(dados?.dano, dados?.modo), !!dados?.dano?.length);
   }
   if (linhas.critico) {
-    escrever(linhas.critico, textoDasLinhas(dados?.critico, dados?.modo), !!dados?.critico?.length);
+    escrever(linhas.critico, nosDasLinhas(dados?.critico, dados?.modo), !!dados?.critico?.length);
   }
 
   // Recolhido, o resumo já entrega o essencial: o dano (ou o acerto, quando a
@@ -350,7 +389,8 @@ Hooks.on('renderAbilityUseDialog', (app, html) => {
   if (!form || !ancora || form.querySelector('.t20g-preview')) return;
 
   const painel = montarPainel();
-  // Perícia tem uma rolagem só; maximizar/minimizar é coisa de dano.
+  // Perícia tem uma rolagem só; maximizar/minimizar é coisa de dano, e
+  // escolher 0/10/20 é coisa de teste.
   const linhas = pericia
     ? { teste: montarLinha('teste', t('PreviewTesteRotulo')) }
     : {
@@ -364,6 +404,7 @@ Hooks.on('renderAbilityUseDialog', (app, html) => {
     linhas.acerto.appendChild(extra);
   }
   linhas.dano?.appendChild(montarModos());
+  linhas.teste?.appendChild(montarEscolhas());
   for (const linha of Object.values(linhas)) painel.appendChild(linha);
   ancora.after(painel);
   const escondido = painel.querySelector('input[name=minmax]');
@@ -401,6 +442,20 @@ Hooks.on('renderAbilityUseDialog', (app, html) => {
     });
   }
 
+  // A parcela do d20 é trocada no próprio objeto da perícia: é o mesmo
+  // `parts` que o rollPericia entrega ao d20Roll depois que a janela fecha.
+  const d20Original = pericia ? item.parts[0] : null;
+  for (const caixinha of painel.querySelectorAll('[data-t20g-escolher]')) {
+    caixinha.addEventListener('change', () => {
+      const valor = caixinha.checked ? caixinha.dataset.t20gEscolher : '';
+      for (const outra of painel.querySelectorAll('[data-t20g-escolher]')) {
+        outra.checked = outra.dataset.t20gEscolher === valor;
+      }
+      item.parts[0] = valor || d20Original;
+      agendar();
+    });
+  }
+
   atualizar();
 });
 
@@ -431,6 +486,21 @@ Hooks.once('setup', () => {
     return original.call(this, args);
   };
   proto._t20gPreviewDano = true;
+
+  // Escolher 0/10/20: o teste vai para o chat com a marca na própria Roll,
+  // que o Foundry salva junto da mensagem.
+  const ator = CONFIG.Actor?.documentClass?.prototype;
+  if (!ator || ator._t20gEscolhido || typeof ator.displayCard !== 'function') return;
+  const cartao = ator.displayCard;
+  ator.displayCard = function (args = {}) {
+    const itemData = args?.options?.itemData;
+    const primeira = String(itemData?.parts?.[0] ?? '');
+    if (itemData?.type === 'pericia' && itemData.rolled?.options && ESCOLHAS.includes(primeira)) {
+      itemData.rolled.options.t20gEscolhido = primeira;
+    }
+    return cartao.call(this, args);
+  };
+  ator._t20gEscolhido = true;
 });
 
 Hooks.on('preCreateChatMessage', (message) => {
@@ -440,6 +510,22 @@ Hooks.on('preCreateChatMessage', (message) => {
   if (Date.now() - quando >= VALIDADE_MS) return;
   if (!String(message.content ?? '').includes('chat-card item-card')) return;
   message.updateSource({ [`flags.${MODULE_ID}.${FLAG}`]: modo });
+});
+
+Hooks.on('renderChatMessageHTML', (message, html) => {
+  const escolhido = message.rolls?.find((r) => r?.options?.t20gEscolhido)?.options.t20gEscolhido;
+  if (!escolhido) return;
+  const raiz = html?.querySelector ? html : html?.[0];
+  const card = raiz?.querySelector?.('.chat-card') ?? raiz?.querySelector?.('.message-content');
+  if (!card || card.querySelector('.t20g-minmax-aviso')) return;
+  card.classList.add('t20g-minmax', 't20g-minmax-escolha');
+  const aviso = document.createElement('div');
+  aviso.className = 't20g-minmax-aviso';
+  aviso.dataset.tooltip = t('TesteEscolhidoDica', { valor: escolhido });
+  aviso.innerHTML = `<i class="fa-solid fa-hand-pointer"></i> ${esc(t('TesteEscolhido', { valor: escolhido }))}`;
+  const primeiraRolagem = card.querySelector('.roll, .dice-roll');
+  if (primeiraRolagem) primeiraRolagem.before(aviso);
+  else card.appendChild(aviso);
 });
 
 Hooks.on('renderChatMessageHTML', (message, html) => {
