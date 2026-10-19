@@ -6,8 +6,8 @@ Ferramentas de Mestre para o sistema **Tormenta20**: O módulo tem como objetivo
 
 ## Requisitos
 
-- FoundryVTT **v13**
-- Sistema **Tormenta20**
+- FoundryVTT **v13** ou **v14**
+- Sistema **Tormenta20** (1.5 no Foundry v13, 1.6 no Foundry v14)
 
 ## Instalação
 

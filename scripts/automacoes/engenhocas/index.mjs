@@ -5,6 +5,7 @@ import {
   souResponsavelPeloAtor
 } from '../runtime.mjs';
 import { APARATOS, nomeAparato } from './catalogo.mjs';
+import { ehV14, apagarChave, paraOSistema, opcoesDeRoll, modoDaJanela, eventoComJanela, eventoSemJanela } from '../../versao.mjs';
 import { abrirConversorDeEngenhocas } from './conversor.mjs';
 import {
   bonusPorDado,
@@ -66,13 +67,11 @@ export function estadoDaEngenhoca(item) {
 /**
  * O item real por trás de um clone de `Item.roll()`.
  *
- * O roll() nativo do T20 faz `this.clone({ keepId: true })` — só que
- * `clone(dados, contexto)` recebe DOIS parâmetros, e o sistema passa
- * `{keepId:true}` como DADO (o primeiro), não como CONTEXTO (o segundo, onde
- * `keepId` é de fato lido). `keepId` nunca chega a valer `true`, e o clone
- * SEMPRE perde o `_id` — bug do próprio sistema, reproduzível em qualquer
- * `Item.roll()`, não só engenhoca. Por isso nunca dá para achar o item real
- * fazendo `ator.items.get(clone.id)`: `clone.id` é sempre `undefined`.
+ * v13 (Tormenta20 1.5): o roll() nativo clona o item SEM `_id` (passa
+ * `{keepId:true}` como dado, não como contexto), então `ator.items.get(clone.id)`
+ * nunca acha nada. v14 (1.6): o clone tem o id, mas continua sendo outra
+ * instância — gravar nele não atualiza o item que a ficha mostra. A busca
+ * pelo item real segue por `chaveItem`, que funciona nas duas versões.
  *
  * `ligarFluxo()` guarda o item real aqui, pela mesma chave de `chaveItem`,
  * no instante em que ainda o tem (antes do roll() nativo criar o clone).
@@ -370,7 +369,7 @@ async function acaoPainel(ator, botao) {
   if (acao === 'converter') return abrirConversorDeEngenhocas(ator);
   const item = ator.items.get(botao.dataset.itemId);
   if (!item || !ehEngenhoca(item)) return;
-  if (acao === 'ativar') return item.roll();
+  if (acao === 'ativar') return item.roll(opcoesDeRoll());
   if (acao === 'aparatos') return abrirAparatos(item);
   const estado = estadoDaEngenhoca(item);
   if (acao === 'consertar') {
@@ -580,16 +579,19 @@ async function rolarAtivacao(item, periciaId, cd, estado) {
 
   try {
     if (periciaId === 'enge' && !temAparato(estado, 'giroscopio') && pda) {
-      [efeitoPda] = await ator.createEmbeddedDocuments('ActiveEffect', [{
-        name: `Engenhoca: Penalidade de Armadura (${pda})`,
+      // v14: o título do efeito de uso é o nome do item e o que ele faz vai
+      // na descrição (padrão do Tormenta20 1.6).
+      [efeitoPda] = await ator.createEmbeddedDocuments('ActiveEffect', [paraOSistema({
+        name: ehV14() ? item.name : `Engenhoca: Penalidade de Armadura (${pda})`,
         img: 'icons/svg/downgrade.svg',
+        ...(ehV14() ? { description: `<p>Penalidade de armadura: +${pda} no teste de ativação.</p>` } : {}),
         disabled: false,
         changes: [{ key: 'roll', mode: 2, value: String(pda), priority: 20 }],
         flags: {
           tormenta20: { onuse: true, skill: true, custo: '0', items: rotulo },
           [MODULE_ID]: { engenhocaPda: true }
         }
-      }]);
+      })]);
     }
 
     const dados = {
@@ -606,6 +608,20 @@ async function rolarAtivacao(item, periciaId, cd, estado) {
       isOwned: true,
       effects: []
     };
+    // v14: a janela lê a lista pronta de efeitos aplicáveis, que
+    // ActorT20#rollPericia monta assim antes de abri-la. No v13 a própria
+    // janela monta a lista.
+    if (ehV14()) {
+      dados.applicableOnUseEffects = [];
+      for (const [caminho, doc] of ator.traverseEmbeddedDocuments()) {
+        if (doc.documentName !== 'ActiveEffect' || !doc.system?.onuse) continue;
+        if (doc.isTemporary && caminho !== 'effects') continue;
+        const { types, names } = doc.system.abilityUse;
+        if (!types.has('skill')) continue;
+        if (names.size && !names.has(rotulo)) continue;
+        dados.applicableOnUseEffects.push(doc);
+      }
+    }
     const Dialogo = game.tormenta20?.applications?.AbilityUseDialog;
     const configuracao = await Dialogo?.create(dados);
     if (!configuracao) return null;
@@ -621,7 +637,7 @@ async function rolarAtivacao(item, periciaId, cd, estado) {
     configuracao.itemData = dados;
     configuracao.effects ??= [];
     dados.rolled = roll;
-    const message = await ator.displayCard({ options: configuracao, rollMode: configuracao.rollMode });
+    const message = await ator.displayCard({ options: configuracao, rollMode: modoDaJanela(configuracao) });
     return { roll, message };
   } finally {
     if (efeitoPda) await efeitoPda.delete().catch(() => null);
@@ -750,7 +766,7 @@ async function desmarcarConjuracaoFalhou(message) {
   card.querySelector(`.${AVISO_CONJURACAO_FALHOU}`)?.remove();
   await message.update({
     content: wrapper.innerHTML,
-    [`flags.${MODULE_ID}.-=${FLAG_CONJURACAO_FALHOU}`]: null
+    ...apagarChave(`flags.${MODULE_ID}.${FLAG_CONJURACAO_FALHOU}`)
   });
 }
 
@@ -893,7 +909,22 @@ export function ligarFluxo() {
       itensReaisPendentes.set(chave, this);
       let resultado;
       try {
-        resultado = await original.call(this, { ...opcoes, configureDialog: true });
+        if (ehV14()) {
+          // v14: roll() ignora `configureDialog` e decide pela tecla Shift do
+          // `event` (e quebra sem ele) — o teste da engenhoca mora na janela,
+          // então ela é sempre pedida. Sem rolagens nem aprimoramentos o
+          // sistema nem abre a janela: a ativação roda antes, por fora.
+          const semJanela = !this.system?.rolls?.length && !(this._allApplicableOnUseEffects?.() ?? []).length;
+          if (semJanela) {
+            const pronta = await prepararAtivacao(this, {});
+            if (!pronta) { itensReaisPendentes.delete(chave); return undefined; }
+            resultado = await original.call(this, { ...opcoes, event: eventoSemJanela() });
+          } else {
+            resultado = await original.call(this, { ...opcoes, configureDialog: true, event: eventoComJanela() });
+          }
+        } else {
+          resultado = await original.call(this, { ...opcoes, configureDialog: true });
+        }
       } catch (err) {
         itensReaisPendentes.delete(chave);
         const curso = conjuracoesEmCurso.get(chave);

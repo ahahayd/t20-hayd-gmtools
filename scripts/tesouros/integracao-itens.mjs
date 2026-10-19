@@ -9,6 +9,7 @@
  * "harmonizado-esoterico") — ver t20-hayd-itens/scripts/catalogo.mjs.
  */
 import { slugify } from './utils.mjs';
+import { ehV14 } from '../versao.mjs';
 
 const ID_ITENS = 't20-hayd-itens';
 
@@ -21,6 +22,71 @@ const SUFIXOS_POR_CATEGORIA = {
 
 export function itensSuperioresAtivo() {
   return game.modules.get(ID_ITENS)?.active === true;
+}
+
+/**
+ * v14 (Tormenta20 1.6.5): melhorias, encantos e materiais viraram efeitos do
+ * compêndio do mundo "Melhorias e Encantos", listados em
+ * `CONFIG.upgradeEffects`. Basta pôr o uuid em `system.upgrades.<tipo>` e o
+ * próprio sistema cria o efeito no item. No v13 isso não existe.
+ */
+export function upgradesNativosDisponiveis() {
+  return ehV14() && Array.isArray(CONFIG.upgradeEffects) && CONFIG.upgradeEffects.length > 0;
+}
+
+/** Há como aplicar melhorias/encantos de verdade (módulo ou sistema)? */
+export function aplicacaoAutomaticaDisponivel() {
+  return itensSuperioresAtivo() || upgradesNativosDisponiveis();
+}
+
+/** Tipos de item do sistema (`upgrade.itemType`) aceitos em cada categoria do tesouro. */
+const TIPOS_NATIVOS = {
+  arma: ['weapon'],
+  'armadura-escudo': ['armor', 'shield'],
+  esoterico: ['esoteric']
+};
+
+/** Entrada nativa (de `CONFIG.upgradeEffects`) com este nome, tipo e categoria. */
+function upgradeNativo(nome, tipo, categoria) {
+  const alvo = slugify(nome);
+  const aceitos = TIPOS_NATIVOS[categoria] ?? [];
+  return (CONFIG.upgradeEffects ?? []).find((u) => u.type === tipo
+    && slugify(u.name) === alvo
+    && (!aceitos.length || [...(u.itemType ?? [])].some((t) => aceitos.includes(t)))) ?? null;
+}
+
+/**
+ * v14: aplica pelo recurso nativo do sistema. Uma atualização só, com todas
+ * as listas: o sistema cria e apaga os efeitos comparando cada lista enviada.
+ */
+async function aplicarNativo(item, { melhorias, encantos, categoria }) {
+  const aplicadas = [];
+  const naoAplicadas = [];
+  const atuais = item.system?.upgrades;
+  if (!atuais || !item.isOwner) return { aplicadas, naoAplicadas: [...melhorias, ...encantos] };
+
+  const listas = {};
+  const incluir = (tipo, uuid) => {
+    listas[tipo] ??= new Set(atuais[tipo] ?? []);
+    listas[tipo].add(uuid);
+  };
+  const tentar = (entrada, tipo) => {
+    const ehMaterial = entrada.materialEspecial && entrada.material;
+    const nativo = ehMaterial
+      ? upgradeNativo(entrada.material.nome, 'material', categoria)
+      : upgradeNativo(entrada.nome, tipo, categoria);
+    if (!nativo) return naoAplicadas.push(entrada);
+    incluir(ehMaterial ? 'material' : tipo, nativo.uuid);
+    aplicadas.push({ ...entrada, uuidNativo: nativo.uuid });
+  };
+  for (const entrada of melhorias) tentar(entrada, 'improvement');
+  for (const entrada of encantos) tentar(entrada, 'enchantment');
+
+  if (Object.keys(listas).length) {
+    const upd = Object.fromEntries(Object.entries(listas).map(([tipo, uuids]) => ['system.upgrades.' + tipo, [...uuids]]));
+    await item.update(upd);
+  }
+  return { aplicadas, naoAplicadas };
 }
 
 function apiItens() {
@@ -50,7 +116,11 @@ export function resolverChaveItens(nomeOuChave, categoria) {
  */
 export async function aplicarEntradasNoItem(item, { melhorias = [], encantos = [], categoria } = {}) {
   const entradas = [...melhorias, ...encantos];
-  if (!itensSuperioresAtivo() || !entradas.length) return { aplicadas: [], naoAplicadas: entradas };
+  if (!entradas.length) return { aplicadas: [], naoAplicadas: entradas };
+  if (!itensSuperioresAtivo()) {
+    if (upgradesNativosDisponiveis()) return aplicarNativo(item, { melhorias, encantos, categoria });
+    return { aplicadas: [], naoAplicadas: entradas };
+  }
 
   const api = apiItens();
   const aplicadas = [];

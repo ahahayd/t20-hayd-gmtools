@@ -6,6 +6,7 @@
  */
 import { MODULE_ID } from '../runtime.mjs';
 import { efeitoEmDia } from '../efeitos.mjs';
+import { ehV14, paraOSistema } from '../../versao.mjs';
 import { tokensNaAura } from './alcance.mjs';
 import {
   aurasDoAtor, raioDaAura, modificadorDeCura
@@ -79,11 +80,16 @@ function dadosDoEfeito(item, def, valor, fonteId) {
     name: `${item.name} (${def.aura.rotuloValor?.(valor) ?? `+${valor}`})`,
     img: item.img,
     disabled: false,
-    // Sem `duration` o T20 trata o efeito como passivo e não mostra ícone no
-    // token. O número não conta nada: quem tira o efeito é a geometria
-    // (sincronizarAura, ao sair da área ou perder linha de visão) — é só
-    // grande o bastante para nunca zerar sozinho numa sessão real.
-    duration: { rounds: 999 },
+    // Ícone no token. Quem tira o efeito é sempre a geometria (sincronizarAura,
+    // ao sair da área ou perder linha de visão).
+    // v14: o ícone vem de `showIcon`; uma duração fictícia entraria no
+    // registro de expiração do núcleo.
+    // v13: sem `duration` o T20 trata o efeito como passivo e não mostra
+    // ícone; o número só precisa ser grande o bastante para nunca zerar
+    // sozinho numa sessão real.
+    ...(ehV14()
+      ? { showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS, duration: { value: null, expiry: null } }
+      : { duration: { rounds: 999 } }),
     changes: def.aura.changes(valor),
     flags: {
       tormenta20: { onuse: false, custo: '0' },
@@ -129,13 +135,13 @@ export async function sincronizarAura(fonte, { item, def, estado }) {
   for (const uuid of criar) {
     const ator = alvos.find((t) => t.actor?.uuid === uuid)?.actor;
     if (!ator) continue;
-    await ator.createEmbeddedDocuments('ActiveEffect', [{ ...dados, origin: item.uuid }]);
+    await ator.createEmbeddedDocuments('ActiveEffect', [paraOSistema({ ...dados, origin: item.uuid })]);
   }
 
   // Acompanha o valor de quem já tinha (o Carisma da fonte pode ter mudado)
   for (const { ator, efeito } of existentes) {
     if (remover.includes(ator.uuid)) continue;
-    if (!efeitoEmDia(efeito, dados)) await efeito.update(dados);
+    if (!efeitoEmDia(efeito, dados)) await efeito.update(paraOSistema(dados));
   }
 
   return desejados.length;

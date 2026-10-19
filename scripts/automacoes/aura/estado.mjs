@@ -8,6 +8,7 @@
 import { MODULE_ID } from '../runtime.mjs';
 import { definicaoDe } from '../estado.mjs';
 import { aurasAtivas, raioEfetivo, normalizarEstado } from './regras.mjs';
+import { apagarChave } from '../../versao.mjs';
 
 /** Flag no ATOR fonte: `{ [itemId]: estado }`. */
 export const FLAG_AURAS = 'auras';
@@ -66,7 +67,7 @@ async function gravar(ator, itemId, estado) {
   }
   // setFlag faz MERGE: apagar a chave do objeto não a remove no banco.
   delete tudo[itemId];
-  await ator.update({ [`flags.${MODULE_ID}.${FLAG_AURAS}.-=${itemId}`]: null });
+  await ator.update(apagarChave(`flags.${MODULE_ID}.${FLAG_AURAS}.${itemId}`));
 }
 
 /** Liga a aura. O efeito nos aliados é gravado pelo Mestre, ao ver a flag. */

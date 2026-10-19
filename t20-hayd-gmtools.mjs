@@ -18,6 +18,7 @@ import './t20-hayd-mensagens-dano.mjs';
 import './t20-hayd-presets.mjs';
 import { IMPACTO_CHAVES, nivelDaConfiguracao, temEtiquetaDeImpacto } from './scripts/impacto.mjs';
 import { atalhoDeMenu } from './scripts/atalho-menu.mjs';
+import { ehV14, itemDeMenu } from './scripts/versao.mjs';
 // Preview de dano na janela de uso, com maximizar/minimizar. Mesmo motivo acima.
 import './t20-hayd-preview-dano.mjs';
 // Gerador de Tesouros (Tabela 8-1 e associadas). Mesmo motivo do import acima.
@@ -358,6 +359,15 @@ function hideCardSecrets(container, message, opts) {
   chatCard.querySelectorAll('.card-content, .card-upgrades').forEach(el => {
     el.style.display = 'none';
   });
+
+  // v14 (Tormenta20 1.6): o cartão ganhou um rodapé com as condições citadas
+  // na descrição (@STATUS[...], com link e botão de aplicar). Ele entrega o
+  // que a descrição oculta diria, então some junto. No v13 não existe.
+  if (ehV14()) {
+    chatCard.querySelectorAll('footer').forEach(el => {
+      if (el.querySelector('.apply-effect') || el.textContent.includes("@STATUS[")) el.style.display = 'none';
+    });
+  }
 
   // Bloqueia o clique em .item-name que dispara _onChatCardToggleContent no sistema,
   // que faz content.style.display = "block" revelando a descrição.
@@ -851,11 +861,14 @@ function podeInserir(message) {
  */
 function addContextMenuOptions(options) {
   // Evita duplicar se chamado mais de uma vez
-  if (options.some(o => o.name === 'T20HaydGMTools.ShowFormula')) return;
+  if (options.some(o => (o.label ?? o.name) === 'T20HaydGMTools.ShowFormula')) return;
 
-  const msgDo = li => game.messages.get(li.dataset?.messageId);
+  // As entradas são escritas no formato do v13 (condition/callback);
+  // itemDeMenu converte para o do v14 (visible/onClick). `li` chega como
+  // elemento ou como jQuery, conforme a versão.
+  const msgDo = li => game.messages.get((li?.[0] ?? li)?.dataset?.messageId);
 
-  options.push(
+  options.push(...[
     // Mostrar/esconder fórmula — apenas Mestre, em rolagens de criaturas do GM.
     {
       name: 'T20HaydGMTools.ShowFormula',
@@ -1006,7 +1019,7 @@ function addContextMenuOptions(options) {
         if (dano !== -1) inserirResultadoManual(msg, dano);
       }
     }
-  );
+  ].map(itemDeMenu));
 }
 
 /**

@@ -31,6 +31,7 @@ import {
 } from './scripts/preview-dano.mjs';
 import { engenhocas } from './scripts/automacoes/engenhocas/index.mjs';
 import { automacoesAtivas } from './scripts/automacoes/runtime.mjs';
+import { ehV14 } from './scripts/versao.mjs';
 
 const MODULE_ID = 't20-hayd-gmtools';
 const SETTING = 'previewDano';
@@ -184,6 +185,13 @@ async function calcularPreview(item, form) {
   // As automações (Engenhoqueiro, Golpe Pessoal) também embrulham o
   // AbilityUseDialog: sem esta marca, cada recálculo ativaria o poder de novo.
   clone._t20gPreview = true;
+  // v14 (Tormenta20 1.6): roll() prepara o clone e a lista de efeitos
+  // aplicáveis antes de abrir a janela; sem a lista a janela nem monta. A
+  // mesma lista da janela aberta mantém os ids que o formulário usa.
+  if (ehV14()) {
+    clone.prepareFinalAttributes();
+    clone.applicableOnUseEffects = item.applicableOnUseEffects ?? clone._allApplicableOnUseEffects();
+  }
 
   return rolarEmSilencio(async () => {
     const config = await configurarComOSistema(clone, form);

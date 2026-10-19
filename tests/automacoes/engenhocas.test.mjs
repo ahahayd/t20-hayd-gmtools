@@ -250,7 +250,8 @@ test('mensagem da ativação registra CD alvo e resultado e o reset pode ser rev
   assert.match(fonte, /CDs antes e depois do reset diário/);
   assert.match(fonte, /Consertar engenhoca/);
   assert.match(fonte, /data-eng-painel-acao="ativar"/);
-  assert.match(fonte, /if \(acao === 'ativar'\) return item\.roll\(\)/);
+  // v13: configureDialog; v14: o roll() quebra sem `event` — opcoesDeRoll escolhe.
+  assert.match(fonte, /if \(acao === 'ativar'\) return item\.roll\(opcoesDeRoll\(\)\)/);
 });
 
 test('a penalidade de armadura só sai da base quando o efeito que a devolve entra', () => {

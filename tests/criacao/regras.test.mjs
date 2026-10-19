@@ -84,6 +84,7 @@ test('atributos dinâmicos da raça', () => {
 test('nível da habilidade de classe pela descrição', () => {
   assert.equal(nivelDaHabilidade('<p>No 20&ordm; n&iacute;vel, seu dom&iacute;nio...</p>'), 20);
   assert.equal(nivelDaHabilidade('Você lança magias através de estudo.'), 1);
+  assert.equal(nivelDaHabilidade('<p>A partir do 3ª nível, sua rijeza muscular...</p>'), 3);
   assert.equal(nivelDaHabilidade('A partir do 5º nível, você...'), 5);
 });
 

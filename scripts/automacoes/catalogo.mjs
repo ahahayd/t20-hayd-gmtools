@@ -1,3 +1,5 @@
+import { ehV14 } from '../versao.mjs';
+
 /*
  * `apagarEfeitos: true` — a automação substitui por completo a mecânica do
  * poder, então os Efeitos Ativos que vêm no próprio item (passivos e de uso do
@@ -388,7 +390,10 @@ function montarCombinacoes() {
         sufixo: 'contra-ataque',
         nome: 'Esquiva Técnica: +5 no ataque',
         custo: 0,
-        alvos: { attack: true, power: true },
+        // v14: o efeito mora no próprio poder; "power" o faria aparecer ao
+        // rolar qualquer outro poder. v13: o efeito fica na ficha do ator.
+        // Getter: o catálogo é montado antes de a versão ser conhecida.
+        get alvos() { return ehV14() ? { attack: true } : { attack: true, power: true }; },
         changes: () => [{ key: 'ataque', mode: 2, value: '5', priority: 20 }]
       }]
     },

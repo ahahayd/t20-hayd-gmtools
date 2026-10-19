@@ -1,4 +1,5 @@
 import { MODULE_ID, automacoesAtivas, souResponsavelPeloAtor } from './runtime.mjs';
+import { ehV14 } from '../versao.mjs';
 
 /** Reconhece o cartão criado pelo botão nativo "Terminar Cena" do T20. */
 export function ehMensagemDeCenaEncerrada(message) {
@@ -285,8 +286,26 @@ export function registrarHooksAutomacoes(s) {
       console.error(`${MODULE_ID} | Falha ao corrigir dano retroativo`, err));
   });
 
+  // v14 (Tormenta20 1.6): o botão "Encerrar cena" (lista de jogadores)
+  // expira os efeitos de cena, apaga o combate se houver e posta uma mensagem
+  // `.scene-ended`. Sem combate, só a mensagem avisa que a cena acabou; com
+  // combate, o deleteCombat já sugeriu e a mensagem não repete. O v13 não tem
+  // esse botão.
+  let ultimoFimDeCombate = 0;
+  if (ehV14()) {
+    Hooks.on('createChatMessage', (mensagem) => {
+      if (!automacoesAtivas() || !String(mensagem?.content ?? '').includes('scene-ended')) return;
+      if (Date.now() - ultimoFimDeCombate < 15000) return;
+      s.sugerirZerarContadores(game.i18n.localize('T20HaydGMTools.FimCenaSistema'))
+        .catch((err) => console.error(`${MODULE_ID} | Falha ao sugerir zerar contadores`, err));
+      s.engenhocas.resetarSupressores().catch((err) =>
+        console.error(`${MODULE_ID} | Falha ao resetar supressores`, err));
+    });
+  }
+
   Hooks.on('deleteCombat', (combate) => {
     if (!automacoesAtivas()) return;
+    ultimoFimDeCombate = Date.now();
     s.sugerirZerarContadores(
       game.i18n.localize('T20HaydGMTools.FimCenaCombate'),
       { combateId: combate?.id, rodada: Number(combate?.round) || 0 }
@@ -314,6 +333,9 @@ export function registrarHooksAutomacoes(s) {
       || foundry.utils.hasProperty(mudancas, `flags.${MODULE_ID}.-=automacao`);
     if (item.type === 'poder' && mudouAutomacao) item.actor?.sheet?.render(false);
     if (!automacoesAtivas()) return;
+    // Ligar ou desligar Aura Poderosa (ou a própria aura) muda o raio agora,
+    // não só no próximo movimento de alguém na cena.
+    if (mudouAutomacao && item.actor) aoMexerNaCena();
 
     // Roda em TODOS os clientes: a contagem é visível para a mesa inteira, e
     // sem isto os espectadores ficariam com o valor congelado no cartão.

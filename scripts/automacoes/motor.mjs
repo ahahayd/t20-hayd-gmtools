@@ -28,7 +28,11 @@ import {
   rotuloTipo
 } from './estado.mjs';
 import { registrarHooksAutomacoes } from './hooks.mjs';
-import { efeitoPorChave, efeitosPorChave, efeitoEmDia } from './efeitos.mjs';
+import {
+  efeitoPorChave, efeitosPorChave, efeitoEmDia, textoDasMudancas, descricaoDeUso,
+  criarEfeitoDoPoder, efeitosLegadosNoAtor
+} from './efeitos.mjs';
+import { ehV14, paraOSistema, mudancasV14, opcoesDeRoll, apagarChave } from '../versao.mjs';
 import { criarBotao } from './ui.mjs';
 import { aura as auras } from './aura/index.mjs';
 import { engenhocas } from './engenhocas/index.mjs';
@@ -85,17 +89,28 @@ const FLAG_ORIGEM = 'automacaoOrigem';
  * contador.alvos        → flags tormenta20 que definem onde o efeito aparece
  *                         (attack = rolagens de arma, power = poderes, ...)
  */
-/** Efeito de uso que este item mantém na ficha do ator (ou undefined). */
+/**
+ * Efeito de uso que este item mantém (ou undefined): dentro do próprio poder
+ * no v14, na ficha do ator no v13.
+ */
 function efeitoDoItem(item) {
-  return item.actor?.effects?.find((ef) => ef.getFlag(MODULE_ID, FLAG_ORIGEM) === item.id);
+  const lista = ehV14() ? item.effects : item.actor?.effects;
+  return lista?.find((ef) => ef.getFlag(MODULE_ID, FLAG_ORIGEM) === item.id);
 }
 
-/** Todos os efeitos mantidos por um item — o principal e os extras. */
+/**
+ * Todos os efeitos mantidos por um item — o principal e os extras. No v14
+ * moram no poder e, se sobrou algum do formato antigo, também na ficha.
+ */
 function efeitosDoItem(ator, itemId) {
-  return (ator?.effects ?? []).filter((ef) => {
+  const daChave = (ef) => {
     const chave = ef.getFlag(MODULE_ID, FLAG_ORIGEM);
     return chave === itemId || (typeof chave === 'string' && chave.startsWith(`${itemId}:`));
-  });
+  };
+  const lista = ehV14()
+    ? [...(ator?.items?.get(itemId)?.effects ?? []), ...(ator?.effects ?? [])]
+    : [...(ator?.effects ?? [])];
+  return lista.filter(daChave);
 }
 
 /**
@@ -121,9 +136,14 @@ async function sincronizarEfeito(item) {
     return;
   }
 
+  // v14 (padrão do Tormenta20 1.6): título = nome do poder; a descrição diz
+  // o que o efeito faz (é ela que aparece na janela de uso e no chat).
   const dados = {
-    name: `${item.name}: +${valor}`,
+    name: ehV14() ? item.name : `${item.name}: +${valor}`,
     img: item.img,
+    ...(ehV14() ? {
+      description: descricaoDeUso(`${def.contador.rotulo ?? 'Contador'} +${valor}:`, `${textoDasMudancas(def.contador.changes(valor))}.`)
+    } : {}),
     disabled: false,
     changes: def.contador.changes(valor),
     flags: {
@@ -133,9 +153,9 @@ async function sincronizarEfeito(item) {
   };
 
   if (efeito) {
-    if (!efeitoEmDia(efeito, dados)) await efeito.update(dados);
+    if (!efeitoEmDia(efeito, dados)) await efeito.update(paraOSistema(dados));
   } else {
-    await ator.createEmbeddedDocuments('ActiveEffect', [{ ...dados, origin: item.uuid }]);
+    await criarEfeitoDoPoder(item, dados);
   }
 }
 
@@ -382,7 +402,8 @@ async function sugerirApagarEfeitosOriginais(item, def) {
   const nomeSeguro = (t) => foundry.utils.escapeHTML?.(String(t ?? '')) ?? String(t ?? '');
   const lista = efeitos
     .map((ef) => {
-      const onuse = ef.getFlag?.('tormenta20', 'onuse');
+      // v14: "de uso" mora em system.onuse; v13: flag tormenta20.onuse.
+      const onuse = ehV14() ? ef.system?.onuse : ef.getFlag?.('tormenta20', 'onuse');
       const tag = onuse
         ? game.i18n.localize('T20HaydGMTools.AutoApagarTagUso')
         : game.i18n.localize('T20HaydGMTools.AutoApagarTagPassivo');
@@ -734,7 +755,7 @@ async function gravarHistorico(ator, chaveAlvo, historico) {
   }
   delete tudo[chaveAlvo];
   await ator.update({
-    [`flags.${MODULE_ID}.${FLAG_COMBINACOES}.-=${chaveAlvo}`]: null
+    ...apagarChave(`flags.${MODULE_ID}.${FLAG_COMBINACOES}.${chaveAlvo}`)
   });
 }
 
@@ -848,21 +869,30 @@ async function _sincronizarCombinacoes(ator) {
     const specs = [
       {
         chave: item.id,
-        // Em bônus de dados, o nome mostra os dados que a contagem concede
+        // Em bônus de dados, o texto mostra os dados que a contagem concede
         // (ex.: "contagem +2: 2d6") — senão o "+2" é lido como dano fixo.
-        nome: `${item.name} (${valor > 0 ? `contagem +${valor}` : 'contagem 0'}`
+        // v14: título = nome do poder e esse texto vai na descrição.
+        nome: ehV14() ? item.name : `${item.name} (${valor > 0 ? `contagem +${valor}` : 'contagem 0'}`
           + `${def.combinacao.retroativo?.dados && valor > 0
             ? `: ${valor}d${def.combinacao.retroativo.dados}` : ''}${contra})`,
+        descricao: ehV14() ? descricaoDeUso(
+          `Contagem ${valor > 0 ? `+${valor}` : '0'}${def.combinacao.retroativo?.dados && valor > 0
+            ? ` (${valor}d${def.combinacao.retroativo.dados})` : ''}${contra}:`,
+          `${textoDasMudancas(def.combinacao.changes(valor)) || 'sem bônus'}.`
+        ) : undefined,
         custo: String(def.combinacao.custo),
-        alvos: { attack: true, power: true, ...(def.combinacao.alvosExtra ?? {}) },
+        // v14: o efeito mora no poder; "power" o faria aparecer ao rolar
+        // qualquer outro poder. v13: o efeito fica na ficha do ator.
+        alvos: { attack: true, ...(ehV14() ? {} : { power: true }), ...(def.combinacao.alvosExtra ?? {}) },
         itens: def.combinacao.itens,
         changes: def.combinacao.changes(valor)
       },
       ...(def.combinacao.efeitosExtra ?? []).map((extra) => ({
         chave: `${item.id}:${extra.sufixo}`,
-        nome: extra.nome,
+        nome: ehV14() ? item.name : extra.nome,
+        descricao: ehV14() ? descricaoDeUso(`${extra.nome}.`) : undefined,
         custo: String(extra.custo ?? 0),
-        alvos: extra.alvos ?? { attack: true, power: true },
+        alvos: extra.alvos ?? (ehV14() ? { attack: true } : { attack: true, power: true }),
         itens: extra.itens,
         changes: extra.changes(valor)
       }))
@@ -873,6 +903,7 @@ async function _sincronizarCombinacoes(ator) {
       const dados = {
         name: spec.nome,
         img: item.img,
+        ...(spec.descricao !== undefined ? { description: spec.descricao } : {}),
         disabled: true, // suspenso: só é marcado quando o jogador escolher
         changes: spec.changes,
         flags: {
@@ -887,9 +918,9 @@ async function _sincronizarCombinacoes(ator) {
       };
 
       if (efeito) {
-        if (!efeitoEmDia(efeito, dados)) await efeito.update(dados);
+        if (!efeitoEmDia(efeito, dados)) await efeito.update(paraOSistema(dados));
       } else {
-        await ator.createEmbeddedDocuments('ActiveEffect', [{ ...dados, origin: item.uuid }]);
+        await criarEfeitoDoPoder(item, dados);
       }
     }
   }
@@ -1250,6 +1281,17 @@ async function reescreverHtmlDaRolagem(conteudo, dadosRoll, indice, antigo, novo
     if (saida.includes(rotuloAntigo)) {
       saida = saida.replaceAll(rotuloAntigo, `(contagem +${novo})`);
     }
+    // v14: o cartão mostra a descrição do efeito de uso
+    // ("Contagem +2 (2d6): +2d6 no dano."), não o título.
+    if (ehV14()) {
+      const velho = `Contagem +${antigo}`;
+      if (saida.includes(velho)) {
+        saida = saida
+          .replaceAll(velho, `Contagem +${novo}`)
+          .replace(new RegExp(`\\(${antigo}d(\\d+)\\)`, 'g'), `(${novo}d$1)`)
+          .replace(new RegExp(`\\+${antigo}(d\\d+)? no dano`, 'g'), (_m, d) => `+${novo}${d ?? ''} no dano`);
+      }
+    }
     return saida;
   } catch (err) {
     console.warn(`${MODULE_ID} | Não foi possível redesenhar a rolagem no cartão`, err);
@@ -1457,7 +1499,7 @@ async function expirarAplicacoesCombinacao(combate, anterior = {}) {
           }
         }
         await origem.update({
-          [`flags.${MODULE_ID}.${FLAG_CONDICOES}.${chave}.-=${itemId}`]: null
+          ...apagarChave(`flags.${MODULE_ID}.${FLAG_CONDICOES}.${chave}.${itemId}`)
         });
       }
     }
@@ -1503,7 +1545,7 @@ async function removerEfeitosDaCombinacao(ator, chaveAlvo) {
       }
     }
     await ator.update({
-      [`flags.${MODULE_ID}.${FLAG_CONDICOES}.-=${chave}`]: null
+      ...apagarChave(`flags.${MODULE_ID}.${FLAG_CONDICOES}.${chave}`)
     });
   }
 
@@ -1622,8 +1664,8 @@ async function aplicarEfeitoCombinacao(item) {
           [MODULE_ID]: { [FLAG_DEBUFF]: marca }
         }
       };
-      if (existente) await existente.update(dados);
-      else await destino.createEmbeddedDocuments('ActiveEffect', [{ ...dados, origin: item.uuid }]);
+      if (existente) await existente.update(paraOSistema(dados));
+      else await destino.createEmbeddedDocuments('ActiveEffect', [paraOSistema({ ...dados, origin: item.uuid })]);
     }
 
     aplicados.push(token?.name ?? destino.name);
@@ -1669,7 +1711,7 @@ async function atualizarDebuffsAplicados(ator, chaveAlvo) {
       const changes = spec.changes(valor);
       if (!changes.length) { await efeito.delete(); continue; }
       const sinal = proprio ? '+' : '−';
-      await efeito.update({ name: `${item.name} (${sinal}${valor})`, changes });
+      await efeito.update({ name: `${item.name} (${sinal}${valor})`, ...(ehV14() ? { 'system.changes': mudancasV14(changes) } : { changes }) });
     }
   }
 }
@@ -1709,7 +1751,7 @@ async function reaplicarEfeitosCombinacao(ator) {
       if (!changes.length) await efeito.delete();
       else {
         const sinal = marca.alvo ? '−' : '+';
-        await efeito.update({ name: `${item.name} (${sinal}${valor})`, changes });
+        await efeito.update({ name: `${item.name} (${sinal}${valor})`, ...(ehV14() ? { 'system.changes': mudancasV14(changes) } : { changes }) });
       }
       refeitos++;
     }
@@ -2073,7 +2115,7 @@ async function gravarEstudo(ator, chaveAlvo, registro) {
   // setFlag faz MERGE: apagar a chave do objeto não a remove no banco.
   delete tudo[chaveAlvo];
   await ator.update({
-    [`flags.${MODULE_ID}.${FLAG_ESTUDO}.-=${chaveAlvo}`]: null
+    ...apagarChave(`flags.${MODULE_ID}.${FLAG_ESTUDO}.${chaveAlvo}`)
   });
 }
 
@@ -2150,8 +2192,9 @@ async function _sincronizarEstudo(ator) {
     }
 
     const dados = {
-      name: `${item.name} (+${bonusDoEstudo(valor)}${contra})`,
+      name: ehV14() ? item.name : `${item.name} (+${bonusDoEstudo(valor)}${contra})`,
       img: item.img,
+      ...(ehV14() ? { description: descricaoDeUso(`Estudo +${bonusDoEstudo(valor)}${contra}:`, `${textoDasMudancas(changes)}.`) } : {}),
       disabled: false,
       changes,
       flags: {
@@ -2161,9 +2204,9 @@ async function _sincronizarEstudo(ator) {
     };
 
     if (efeito) {
-      if (!efeitoEmDia(efeito, dados)) await efeito.update(dados);
+      if (!efeitoEmDia(efeito, dados)) await efeito.update(paraOSistema(dados));
     } else {
-      await ator.createEmbeddedDocuments('ActiveEffect', [{ ...dados, origin: item.uuid }]);
+      await criarEfeitoDoPoder(item, dados);
     }
   }
 }
@@ -2430,6 +2473,20 @@ function resumoDoGolpe(item, cfg) {
     ${magia}`;
 }
 
+/**
+ * v14: o golpe numa linha, para a descrição do efeito de uso — o cartão do
+ * chat do Tormenta20 1.6 lê a descrição como texto corrido, e uma lista ali
+ * sairia com os itens colados.
+ */
+function linhaDoGolpe(cfg) {
+  const partes = efeitosEscolhidos(cfg).map((ef) => {
+    const detalhe = detalheDoEfeito(cfg, ef, gpQuantidade(cfg, ef));
+    return `${ef.nome}${detalhe ? ` (${detalhe})` : ''}`;
+  });
+  const { total, reducao } = custoDoGolpe(cfg);
+  return `${partes.length ? partes.join(', ') : 'nenhum efeito escolhido'}; custo ${total} PM${reducao ? ` (redução de ${reducao} aplicada)` : ''}`;
+}
+
 /* --- Efeitos de uso do golpe --------------------------------------------- */
 
 /**
@@ -2467,19 +2524,22 @@ async function sincronizarGolpe(item) {
   // amarrar isso pelo nome do item só atrapalharia na hora de rolar.
   const base = { onuse: true, attack: true, items: '' };
 
+  // v14: título = nome do poder; a descrição começa pelo nome dado ao golpe.
   const dados = {
-    name: nomeDoGolpe(item, cfg),
+    name: ehV14() ? item.name : nomeDoGolpe(item, cfg),
     img: item.img,
     disabled: true, // suspenso: o jogador marca na janela de rolagem
-    description: resumoDoGolpe(item, cfg),
+    description: ehV14()
+      ? descricaoDeUso(`${foundry.utils.escapeHTML(nomeDoGolpe(item, cfg))}:`, `${linhaDoGolpe(cfg)}.`)
+      : resumoDoGolpe(item, cfg),
     changes: changesDoGolpe(item, cfg),
     flags: {
       tormenta20: { ...base, custo: String(total) },
       [MODULE_ID]: { [FLAG_ORIGEM]: item.id }
     }
   };
-  if (principal) await principal.update(dados);
-  else await ator.createEmbeddedDocuments('ActiveEffect', [{ ...dados, origin: item.uuid }]);
+  if (principal) await principal.update(paraOSistema(dados));
+  else await criarEfeitoDoPoder(item, dados);
 
   if (!cfg.sel.carregado) {
     if (extra) await extra.delete();
@@ -2488,18 +2548,20 @@ async function sincronizarGolpe(item) {
 
   // O +1 PM do Carregado já está no custo do golpe, então este efeito é grátis
   const dadosExtra = {
-    name: `${nomeDoGolpe(item, cfg)} — Carregado`,
+    name: ehV14() ? item.name : `${nomeDoGolpe(item, cfg)} — Carregado`,
     img: item.img,
     disabled: true,
-    description: 'Você gastou uma ação padrão para energizar o golpe: +2d8 de dano.',
+    description: ehV14()
+      ? descricaoDeUso(`${foundry.utils.escapeHTML(nomeDoGolpe(item, cfg))} — Carregado:`, 'você gastou uma ação padrão para energizar o golpe, +2d8 de dano.')
+      : 'Você gastou uma ação padrão para energizar o golpe: +2d8 de dano.',
     changes: [{ key: 'dano', mode: 2, value: '2d8', priority: 20 }],
     flags: {
       tormenta20: { ...base, custo: '0' },
       [MODULE_ID]: { [FLAG_ORIGEM]: `${item.id}:${GP_CARREGADO}` }
     }
   };
-  if (extra) await extra.update(dadosExtra);
-  else await ator.createEmbeddedDocuments('ActiveEffect', [{ ...dadosExtra, origin: item.uuid }]);
+  if (extra) await extra.update(paraOSistema(dadosExtra));
+  else await criarEfeitoDoPoder(item, dadosExtra);
 }
 
 /** Ajusta o contador do Sequencial (delta) ou zera (delta === null). */
@@ -2581,7 +2643,9 @@ async function conjurarMagiasDoGolpe(item, configuracao) {
   if (!marcados.size) return;
 
   for (const id of marcados) {
-    const chave = ator.effects.get(id)?.getFlag(MODULE_ID, FLAG_ORIGEM);
+    // O efeito marcado mora no poder (v14) ou na ficha (v13 e formato antigo).
+    const efeito = ator.effects.get(id) ?? ator.items.find((i) => i.effects.has(id))?.effects.get(id);
+    const chave = efeito?.getFlag(MODULE_ID, FLAG_ORIGEM);
     if (typeof chave !== 'string') continue;
 
     const poder = ator.items.get(chave.split(':')[0]);
@@ -2600,7 +2664,7 @@ async function conjurarMagiasDoGolpe(item, configuracao) {
 
     _conjurandoGolpe = true;
     try {
-      await magia.roll();
+      await magia.roll(opcoesDeRoll());
     } catch (err) {
       console.error(`${MODULE_ID} | Falha ao conjurar a magia do Golpe Pessoal`, err);
     } finally {
@@ -4370,6 +4434,36 @@ Hooks.once('init', () => {
 });
 
 /** Cria/atualiza o diário de instruções no mundo (uma vez por sessão, pelo GM ativo). */
+/**
+ * v14, uma vez por mundo: tira da ficha dos atores os efeitos de uso que as
+ * automações criavam ali até o v13 e os recria dentro dos próprios poderes.
+ */
+async function migrarEfeitosParaOsItens() {
+  const versao = game.settings.get(MODULE_ID, 'versaoEfeitosAutomacoes');
+  if (versao >= 2) return;
+  const atores = [...(game.actors ?? [])];
+  for (const cena of game.scenes ?? []) {
+    for (const token of cena.tokens) if (!token.actorLink && token.actor) atores.push(token.actor);
+  }
+  for (const ator of atores) {
+    const legados = efeitosLegadosNoAtor(ator);
+    if (!legados.length) continue;
+    await ator.deleteEmbeddedDocuments('ActiveEffect', legados.map((ef) => ef.id));
+    if (!automacoesAtivas()) continue;
+    for (const item of ator.items) {
+      if (definicaoDe(item)) await sincronizarEfeito(item).catch(() => {});
+    }
+    if (poderesDeEstudo(ator).length) await sincronizarEstudo(ator).catch(() => {});
+  }
+  await game.settings.set(MODULE_ID, 'versaoEfeitosAutomacoes', 2);
+}
+
+Hooks.once('init', () => {
+  game.settings.register(MODULE_ID, 'versaoEfeitosAutomacoes', {
+    scope: 'world', config: false, type: Number, default: 1
+  });
+});
+
 Hooks.once('ready', () => {
   // Fecha a corrida entre mudar a mira e rolar, inclusive sem abrir diálogo.
   ligarSincronizacaoDaMira();
@@ -4408,6 +4502,11 @@ Hooks.once('ready', () => {
         }
       }
     };
+  }
+
+  if (ehV14() && game.user === game.users.activeGM) {
+    migrarEfeitosParaOsItens().catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao mover os efeitos das automações para os poderes`, err));
   }
 
   if (automacoesAtivas() && game.user.isGM && game.user === game.users.activeGM) {

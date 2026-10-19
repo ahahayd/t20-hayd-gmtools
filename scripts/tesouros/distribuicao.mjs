@@ -5,7 +5,7 @@
  */
 import { MOEDAS, rotuloMoeda } from './constantes.mjs';
 import { ICONE_TESOURO_PADRAO } from './dados-icones.mjs';
-import { aplicarEntradasNoItem, itensSuperioresAtivo } from './integracao-itens.mjs';
+import { aplicarEntradasNoItem, aplicacaoAutomaticaDisponivel } from './integracao-itens.mjs';
 
 /* ─── Achatamento da árvore de resultado ───────────────────────────────── */
 
@@ -94,7 +94,8 @@ export async function materializarItem(node) {
     const base = await dadosBaseDoNode(node.item);
     const lista = node.tipo === 'itemSuperior' ? node.melhorias : node.encantos;
     const rotulo = node.tipo === 'itemSuperior' ? 'Melhorias' : 'Encantos';
-    const naoAutomatizadas = itensSuperioresAtivo() ? [] : lista;
+    const automatico = aplicacaoAutomaticaDisponivel();
+    const naoAutomatizadas = automatico ? [] : lista;
 
     base.name = `${base.name} (${node.tipo === 'itemSuperior' ? 'Superior' : 'Mágico'})`;
     base.system ??= {};
@@ -103,11 +104,12 @@ export async function materializarItem(node) {
     foundry.utils.setProperty(base, 'flags.t20-hayd-gmtools.tesouroGerado', {
       tipo: node.tipo, categoria: node.item.categoria, nivel: node.nivel ?? null,
       melhorias: node.melhorias ?? [], encantos: node.encantos ?? [],
-      // Com o t20-hayd-itens ativo a lista NÃO entra na descrição, porque será
+      // Com o t20-hayd-itens ativo (ou, sem ele, pelo recurso nativo do
+      // Tormenta20 1.6.5 no v14) a lista NÃO entra na descrição, porque será
       // aplicada de verdade depois. `pendente` marca que isso ainda não
       // aconteceu — é o que permite aplicar quando o item vira um Document,
       // inclusive saindo do estoque do grupo (que guarda só dado cru).
-      pendente: itensSuperioresAtivo()
+      pendente: automatico
     });
     return base;
   }

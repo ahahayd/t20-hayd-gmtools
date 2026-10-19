@@ -349,7 +349,9 @@ export function regraDaRaca(permitidos, descricao) {
  */
 export function nivelDaHabilidade(descricao) {
   const t = normalizar(textoPlano(descricao));
-  const m = t.match(/^(?:a partir do |no |ao atingir o |no seu )?(\d+)\s*(?:º|o|°)?\s*nivel/);
+  // "3ª nível" aparece no compêndio do sistema (Durão, do Guerreiro): aceita
+  // a ordinal feminina também, senão a habilidade contava como de 1º nível.
+  const m = t.match(/^(?:a partir do |no |ao atingir o |no seu )?(\d+)\s*(?:º|o|°|ª|a)?\s*nivel/);
   return m ? Number(m[1]) : 1;
 }
 

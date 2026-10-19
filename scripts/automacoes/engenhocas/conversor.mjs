@@ -13,6 +13,7 @@
  */
 
 import { MODULE_ID, podeControlar } from '../runtime.mjs';
+import { apagarChave } from '../../versao.mjs';
 
 const FLAG_TIPO_ORIGINAL = 'tipoOriginalDaMagia';
 const TIPO_ENGENHOCA = 'eng';
@@ -135,7 +136,7 @@ function lerMudancas(form, ator) {
     updates.push({
       _id: item.id,
       'system.tipo': registrado || escolhido || TIPO_PADRAO_DE_VOLTA,
-      [`flags.${MODULE_ID}.-=${FLAG_TIPO_ORIGINAL}`]: null
+      ...apagarChave(`flags.${MODULE_ID}.${FLAG_TIPO_ORIGINAL}`)
     });
   }
   return updates;

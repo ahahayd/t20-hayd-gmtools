@@ -8,6 +8,7 @@
  */
 
 import { abrirGeradorTesouros } from './t20-hayd-tesouros.mjs';
+import { ehV14, itemDeMenu } from './scripts/versao.mjs';
 
 // MODULE_ID continua "t20-hayd-management" — é o namespace de settings e
 // flags (de ator/pasta) já salvo em mundos que usavam o módulo separado, e
@@ -1449,11 +1450,12 @@ async function postGmCard(title, img, html) {
     "systems/tormenta20/templates/chat/chat-card.hbs",
     content
   );
-  return ChatMessage.create({
-    user: game.user.id,
-    type: CONST.CHAT_MESSAGE_STYLES.OTHER,
-    content: rendered
-  });
+  // v14: `type` é o subtipo do documento, o estilo vai em `style` e o
+  // autor em `author`. v13: `user` e `type`.
+  const autoria = ehV14()
+    ? { author: game.user.id, style: CONST.CHAT_MESSAGE_STYLES.OTHER }
+    : { user: game.user.id, type: CONST.CHAT_MESSAGE_STYLES.OTHER };
+  return ChatMessage.create({ ...autoria, content: rendered });
 }
 
 function memberChecksHtml(members, prefix = "m") {
@@ -1773,13 +1775,23 @@ async function openPartyRestDialog(folderId) {
   );
 }
 
-/** Modos de rolagem oferecidos ao pedir um teste. */
-const ROLL_MODES = [
+/** Modos de rolagem oferecidos ao pedir um teste (v13: core.rollMode). */
+const ROLL_MODES_V13 = [
   { value: "publicroll", key: "THM.RollPublic" },
   { value: "gmroll", key: "THM.RollGm" },
   { value: "blindroll", key: "THM.RollBlind" },
   { value: "selfroll", key: "THM.RollSelf" }
 ];
+/* v14: o modo de rolagem virou "modo da mensagem" (core.messageMode,
+ * CONFIG.ChatMessage.modes), com outros valores. */
+const ROLL_MODES_V14 = [
+  { value: "public", key: "THM.RollPublic" },
+  { value: "gm", key: "THM.RollGm" },
+  { value: "blind", key: "THM.RollBlind" },
+  { value: "self", key: "THM.RollSelf" }
+];
+const MODO_ANTIGO = { publicroll: "public", gmroll: "gm", blindroll: "blind", selfroll: "self", roll: "public" };
+const modosDeRolagem = () => (ehV14() ? ROLL_MODES_V14 : ROLL_MODES_V13);
 
 /**
  * (Cliente do jogador) Abre a janela de rolagem da perícia pedida pelo
@@ -1797,12 +1809,17 @@ async function handleSkillRequest({ actorId, skill, rollMode, requester }) {
   const usage = game.settings.get("tormenta20", "UsageConfig");
   const event = { shiftKey: usage !== "default" };
 
-  const anterior = game.settings.get("core", "rollMode");
+  // v14: core.messageMode (pedidos com valores antigos são convertidos);
+  // v13: core.rollMode.
+  const chave = ehV14() ? "messageMode" : "rollMode";
+  const modo = ehV14() ? (MODO_ANTIGO[rollMode] ?? rollMode) : rollMode;
+  const valido = ehV14() ? !!CONFIG.ChatMessage.modes?.[modo] : !!modo;
+  const anterior = game.settings.get("core", chave);
   try {
-    if (rollMode) await game.settings.set("core", "rollMode", rollMode);
+    if (valido) await game.settings.set("core", chave, modo);
     await actor.rollPericia(skill, { event, message: true });
   } finally {
-    await game.settings.set("core", "rollMode", anterior);
+    await game.settings.set("core", chave, anterior);
   }
 }
 
@@ -1818,7 +1835,7 @@ async function openSkillRequestDialog(folderId) {
   const perOpts = pericias
     .map((p) => `<option value="${p.key}">${esc(p.label)}</option>`)
     .join("");
-  const modeOpts = ROLL_MODES.map(
+  const modeOpts = modosDeRolagem().map(
     (m) => `<option value="${m.value}">${loc(m.key)}</option>`
   ).join("");
 
@@ -1937,6 +1954,20 @@ function sentidosDoMembro(actor) {
  * não conhece a caixa "Cena" do sistema.
  */
 function duracaoCurta(ef) {
+  // v14 (Tormenta20 1.6): "Cena" e "Sustentado" são `duration.expiry`, e a
+  // duração de combate é um valor só, com a unidade ao lado.
+  if (ehV14()) {
+    const expiracao = ef?.duration?.expiry;
+    if (expiracao === "sceneEnd") return "Cena";
+    if (expiracao === "sustainEnd") return "Sustentado";
+    const valor = Number(ef?.duration?.value) || 0;
+    const unidade = ef?.duration?.units;
+    if (valor && unidade === "rounds") return `${valor} rodada${valor > 1 ? "s" : ""}`;
+    if (valor && unidade === "turns") return `${valor} turno${valor > 1 ? "s" : ""}`;
+    return "";
+  }
+
+  // v13:
   // 1) A caixa "Cena" do efeito ganha de tudo. Ela precisa vir primeiro
   //    porque o sistema grava `duration.rounds = 99` nos efeitos de cena —
   //    sem esta ordem, o chip anunciaria "99 rodadas".
@@ -1964,9 +1995,11 @@ function efeitosDoMembro(actor) {
     // item (um Golpe Divino que você escolhe aplicar naquele ataque), não um
     // estado em jogo. Fica de fora mesmo quando está habilitado na ficha —
     // senão a faixa do cartão vira a lista de opções do personagem.
-    if (ef.getFlag?.("tormenta20", "onuse")) continue;
+    // v14: system.onuse; v13: flag tormenta20.onuse.
+    if (ehV14() ? ef.system?.onuse : ef.getFlag?.("tormenta20", "onuse")) continue;
 
-    const ehCondicao = ef.getFlag?.("tormenta20", "condition") === true || (ef.statuses?.size ?? 0) > 0;
+    const ehCondicao = (ehV14() ? !!ef.system?.status : ef.getFlag?.("tormenta20", "condition") === true)
+      || (ef.statuses?.size ?? 0) > 0;
     // `isTemporary` é o que separa o que está pegando AGORA do que é
     // permanente: só vale para efeito com duração (rodadas, turnos, segundos).
     // Passivo de poder, bônus de item e aumento de atributo ficam todos de
@@ -1980,7 +2013,9 @@ function efeitosDoMembro(actor) {
       nome: ef.name,
       img: ef.img,
       condicao: ehCondicao,
-      duracao: duracaoCurta(ef)
+      // v14: toda condição do compêndio expira no fim da cena; o chip
+      // "Cena" nela não diria nada (Sobrecarregado, Caído…).
+      duracao: ehV14() && ehCondicao && ef.duration?.expiry === "sceneEnd" ? "" : duracaoCurta(ef)
     });
   }
   // Condições primeiro (mudam a cada rodada), temporários depois.
@@ -2209,7 +2244,7 @@ class PartySheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
           condition: () => game.user.isGM,
           callback: (el) => deleteStashItem(this.folderId, entryIdOf(el))
         }
-      ],
+      ].map(itemDeMenu),
       { jQuery: false }
     );
 
@@ -2689,7 +2724,7 @@ function registerTransferUiHooks() {
     if (!actor || !INVENTORY_TYPES.includes(item.type)) return;
     if (!actor.isOwner) return;
     if (!getPartyFolderIdOf(actor)) return;
-    menuItems.push({
+    menuItems.push(itemDeMenu({
       name: loc("THM.SendTo"),
       icon: '<i class="fa-solid fa-paper-plane"></i>',
       callback: () =>
@@ -2701,7 +2736,7 @@ function registerTransferUiHooks() {
             maxQty: Number(item.system.qtd ?? 1) || 1
           }
         })
-    });
+    }));
   });
 
   // Botão de enviar dinheiro ao lado das moedas da ficha

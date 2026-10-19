@@ -79,7 +79,12 @@ function pontosDoToken(token) {
 function distanciaReal(a, b) {
   const grade = canvas?.grid;
   if (!grade?.measurePath) return null;
-  return grade.measurePath([a, b])?.distance ?? null;
+  // A aura é plana: mede só x/y. No v14 a grade é 3D — os espaços ocupados
+  // pelo token trazem `k` e o centro vem com elevação, enquanto os quadrados
+  // testados vêm só de {i, j}; misturar os dois dava distância NaN e a aura
+  // ficava sem área. No v13 o resultado é o mesmo de antes.
+  const d = grade.measurePath([{ x: a.x, y: a.y }, { x: b.x, y: b.y }])?.distance;
+  return Number.isFinite(d) ? d : null;
 }
 
 /**

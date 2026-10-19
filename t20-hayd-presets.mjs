@@ -73,9 +73,25 @@ Hooks.once('init', () => {
   });
 });
 
+/**
+ * Mundo que já usava o módulo antes desta janela existir (ou que vem de
+ * outra versão do Foundry) não é "primeira vez": o Mestre já escolheu o que
+ * liga, e o botão padrão ("Ligar tudo") desfaria essas escolhas num clique.
+ * A foto é tirada no `setup`, antes que o `ready` do módulo grave algo.
+ */
+let jaConfigurado = false;
+Hooks.once('setup', () => {
+  const salvas = game.settings.storage.get('world') ?? [];
+  jaConfigurado = salvas.some((s) => s.key?.startsWith(`${MODULE_ID}.`) && s.key !== `${MODULE_ID}.${SETTING}`);
+});
+
 Hooks.once('ready', async () => {
   if (!game.user.isGM || game.user !== game.users.activeGM) return;
   if (game.settings.get(MODULE_ID, SETTING)) return;
+  if (jaConfigurado) {
+    await game.settings.set(MODULE_ID, SETTING, true);
+    return;
+  }
 
   const escolha = await perguntar();
   // Marca antes de aplicar: se algum `set` falhar, a janela não volta a

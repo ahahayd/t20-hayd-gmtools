@@ -21,6 +21,7 @@
  */
 import { MODULE_ID } from './fontes.mjs';
 import { dividirEmMoedas } from './regras.mjs';
+import { apagarChave } from '../versao.mjs';
 
 const UI_ID = 't20-hayd-ui';
 export const FLAG_RASCUNHO = 'criacaoRascunho';
@@ -135,7 +136,7 @@ export async function aplicarCriacao(actor, est, calculo) {
     'system.detalhes.origem': est.origem.nome?.trim() ?? '',
     'system.detalhes.divindade': est.divindade.nome?.trim() ?? '',
     [`flags.${MODULE_ID}.${FLAG_CONCLUIDA}`]: true,
-    [`flags.${MODULE_ID}.-=${FLAG_RASCUNHO}`]: null
+    ...apagarChave(`flags.${MODULE_ID}.${FLAG_RASCUNHO}`)
   };
   if (est.ficha.img) upd.img = est.ficha.img;
   if (est.raca.sel) upd['system.detalhes.raca'] = est.raca.sel.nome;
