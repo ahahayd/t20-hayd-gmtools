@@ -36,6 +36,7 @@ import { ehV14, paraOSistema, mudancasV14, opcoesDeRoll, apagarChave } from '../
 import { criarBotao } from './ui.mjs';
 import { aura as auras } from './aura/index.mjs';
 import { engenhocas } from './engenhocas/index.mjs';
+import { escriba } from './escriba-arcano.mjs';
 import { ocultarContagemDe } from './segredos.mjs';
 import { sugerirAutomacoes, normalizarNome } from './sugestao.mjs';
 import { abrirDistribuicao } from './seta-infalivel.mjs';
@@ -3552,6 +3553,10 @@ function montarBarra(item, { completo }) {
     const botao = criarBotao(item, 'executar', def.acao.icone ?? 'fa-solid fa-bolt', def.acao.rotulo, { largo: true });
     botao.append(` ${def.acao.rotulo}`);
     linha.appendChild(botao);
+  } else if (def.escriba) {
+    const botao = criarBotao(item, 'escriba', def.icone, null, { largo: true });
+    botao.append(' Aprender magias');
+    linha.appendChild(botao);
   } else if (def.distribuicao) {
     const botao = criarBotao(item, 'distribuir', def.icone, def.distribuicao.rotulo, { largo: true });
     botao.append(` ${def.distribuicao.rotulo}`);
@@ -3585,7 +3590,7 @@ export function injetarControlesAutomacao(message, html) {
   const comControles = ator.items.filter((i) => {
     const def = definicaoDe(i);
     return def?.contador || def?.acao || def?.distribuicao || def?.golpe || def?.aura
-      || def?.engenhoqueiro;
+      || def?.engenhoqueiro || def?.escriba;
   });
   const combinacoes = poderesDeCombinacao(ator);
   const estudos = poderesDeEstudo(ator);
@@ -3616,6 +3621,7 @@ export function injetarControlesAutomacao(message, html) {
     if (def.distribuicao && !ehOProprioItem) continue;
     // Engenhoqueiro só resume as engenhocas — nada a ver com o ataque
     if (def.engenhoqueiro && !ehOProprioItem) continue;
+    if (def.escriba && !ehOProprioItem) continue;
     if (!ehAtaque && !ehOProprioItem) continue;
     card.appendChild(montarBarra(item, { completo: ehOProprioItem }));
   }
@@ -3751,6 +3757,10 @@ export function injetarControlesAutomacao(message, html) {
         await auras.cancelar(ator, item.id);
       } else if (botao.dataset.acao === 'executar') {
         await executarAcao(item);
+        return;
+      }
+      if (botao.dataset.acao === 'escriba') {
+        escriba.abrir(ator);
         return;
       }
       if (botao.dataset.acao === 'distribuir') {
@@ -4486,6 +4496,7 @@ Hooks.once('ready', () => {
         abrirDiario,
         ativas: automacoesAtivas,
         engenhocas,
+        escriba,
         // Fichas de terceiros (a Ficha Hayd, por exemplo) montam o acesso ao
         // painel com o visual delas em vez de receber o <section> injetado.
         contadores: {

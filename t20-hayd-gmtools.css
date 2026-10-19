@@ -2443,3 +2443,150 @@ a.header-button.t20g-atr-header {
   font-weight: 600;
   color: var(--t20g-accent-forte);
 }
+
+/* ─── Escriba Arcano ─────────────────────────────────────────────────────── */
+
+.t20g-esc-janela {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t20g-e3);
+}
+
+.t20g-esc-regra { margin: 0; color: var(--t20g-ink-2); font-size: 0.8125rem; }
+.t20g-esc-regra > i { color: var(--t20g-accent); margin-inline-end: 4px; }
+
+.t20g-esc-filtros { flex-wrap: wrap; gap: var(--t20g-e2); }
+.t20g-esc-filtros input[type="search"] { min-width: 160px; }
+.t20g-esc-filtros select { width: auto; }
+.t20g-esc-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  color: var(--t20g-ink-2);
+}
+
+.t20g-esc-lista {
+  height: 46vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--t20g-s4) transparent;
+}
+
+.t20g-esc-circulo { margin: 0 0 var(--t20g-e4); }
+.t20g-esc-circulo:last-child { margin-bottom: 0; }
+.t20g-esc-circulo > h3 { margin: 0 0 var(--t20g-e2); }
+.t20g-esc-circulo > h3 small { color: var(--t20g-ink-3); font-weight: 400; }
+
+.t20g-esc-grupo {
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+  overflow: hidden;
+}
+
+.t20g-esc-grupo > * + * { border-top: 1px solid var(--t20g-line); }
+
+/* Grade fixa: miniatura | nome | custo | botões — custos e botões alinhados */
+.t20g-esc-item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 84px auto;
+  align-items: center;
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e2) var(--t20g-e3);
+  transition: background-color var(--t20g-transicao);
+}
+
+.t20g-esc-item:hover { background: var(--t20g-s2); }
+.t20g-esc-item.na-lista {
+  background: color-mix(in oklab, var(--t20g-accent) 12%, transparent);
+  box-shadow: inset 3px 0 0 var(--t20g-accent);
+}
+.t20g-esc-item.na-lista .t20g-esc-alternar { color: var(--t20g-accent); }
+
+.t20g-esc-info { min-width: 0; }
+
+.t20g-esc-nome {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e2);
+  min-width: 0;
+}
+
+.t20g-esc-nome > a {
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--t20g-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.t20g-esc-nome > a:hover { color: var(--t20g-accent); }
+
+.t20g-esc-info > small {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--t20g-ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.t20g-esc-custo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+
+.t20g-esc-custo > b { font-size: 0.8125rem; color: var(--t20g-accent-forte); }
+.t20g-esc-custo > small { font-size: 0.6875rem; color: var(--t20g-ink-3); }
+
+.t20g-esc-resumo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "escolhidas escolhidas" "totais botao";
+  align-items: center;
+  gap: var(--t20g-e2) var(--t20g-e4);
+  padding: var(--t20g-e3);
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+}
+
+.t20g-esc-escolhidas {
+  grid-area: escolhidas;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  max-height: 64px;
+  overflow-y: auto;
+}
+
+.t20g-esc-escolhidas .t20g-chip a { margin-inline-start: 4px; cursor: pointer; opacity: 0.7; }
+.t20g-esc-escolhidas .t20g-chip a:hover { opacity: 1; color: var(--t20g-perigo); }
+.t20g-esc-dica { font-size: 0.75rem; color: var(--t20g-ink-3); }
+
+.t20g-esc-totais {
+  grid-area: totais;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--t20g-e4);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.t20g-esc-totais i { color: var(--t20g-accent); }
+.t20g-esc-saldo { color: var(--t20g-ink-3); }
+.t20g-esc-falta { color: var(--t20g-perigo); }
+.t20g-esc-resumo > button { grid-area: botao; }
+
+.t20g-esc-chat ul { margin: 4px 0 0; padding-inline-start: 18px; }
+.t20g-esc-chat p { margin: 0 0 4px; }
+.t20g-esc-janela button[disabled] { opacity: 0.45; cursor: not-allowed; }

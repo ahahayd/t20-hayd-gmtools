@@ -129,6 +129,24 @@ export const AUTOMACOES = {
     engenhoqueiro: true
   },
 
+  'escriba-arcano': {
+    categoria: 'magia',
+    nome: 'Escriba Arcano',
+    fonte: 'Livro Básico',
+    icone: 'fa-solid fa-feather-pointed',
+    tipos: ['poder'],
+    resumo:
+      'Você pode aprender magias copiando os textos de pergaminhos e grimórios de outros magos. '
+      + 'Aprender uma magia dessa forma exige um dia de trabalho e T$ 250 em matérias-primas por '
+      + 'PM necessário para lançar a magia. Pré-requisitos: Mago, treinado em Ofício (escriba).',
+    comoUsar:
+      'Role o poder e use <b>Aprender magias</b> no cartão (na Ficha Hayd, o botão fica na aba '
+      + 'Magias). A janela lista as magias arcanas dos círculos a que você tem acesso e que ainda '
+      + 'não conhece. Aprenda uma de cada vez ou monte uma lista: o dinheiro sai da ficha, com '
+      + 'troco, e o chat registra os dias de trabalho e as magias aprendidas.',
+    escriba: true
+  },
+
   'aura-sagrada': {
     categoria: 'paladino',
     nome: 'Aura Sagrada',
