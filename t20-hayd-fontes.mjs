@@ -22,12 +22,14 @@
  */
 
 import {
-  distribuir, fontePorTermo, linhasDaTabela, rotularExtras, termosComSinal, textoDaFonte
+  distribuir, fontePorTermo, linhasDaTabela, reindexar, rotularExtras, termosComSinal, textoDaFonte,
+  zerosRemoviveis
 } from './scripts/fontes.mjs';
 import { ehV14 } from './scripts/versao.mjs';
 
 const MODULE_ID = 't20-hayd-gmtools';
 const SETTING = 'fontesRolagem';
+const SETTING_ZEROS = 'limparZeros';
 const OPCAO = 't20gFontes';
 const ATRIBUTOS = ['for', 'des', 'con', 'int', 'sab', 'car'];
 
@@ -53,7 +55,8 @@ function termoSimples(termo) {
     resultados: dado
       ? termo.results.filter((r) => r.active !== false && !r.discarded).map((r) => r.result)
       : null,
-    dado: dado || !!termo.dice?.length
+    dado: dado || !!termo.dice?.length,
+    numerico: termo instanceof T.NumericTerm
   };
 }
 
@@ -215,6 +218,12 @@ const opcoesDeRotulo = (bonusJanela) => ({
  * formula, detalhes? }] na ordem em que o sistema as juntou.
  */
 function registrar(roll, parcelas, dados) {
+  prender(roll, parcelas, dados);
+  limparZeros(roll);
+  return roll?.options?.[OPCAO] ?? null;
+}
+
+function prender(roll, parcelas, dados) {
   if (!roll?.terms) return null;
   const contadas = parcelas.map((p) => ({ ...p, termos: contarTermos(p.formula, dados) }));
   if (contadas.some((p) => !Number.isFinite(p.termos))) return null;
@@ -224,6 +233,29 @@ function registrar(roll, parcelas, dados) {
     fonte, ini, fim, ...(detalhes?.length ? { detalhes } : {}), ...(semOrigem ? { semOrigem } : {})
   }));
   return roll.options[OPCAO];
+}
+
+/**
+ * Tira da Roll os "+ 0" que o sistema deixa (ver `zerosRemoviveis`). Muda
+ * só a fórmula mostrada: o total já foi calculado e não muda.
+ */
+export function limparZeros(roll) {
+  if (!roll?.terms || !roll._evaluated) return;
+  try { if (!game.settings.get(MODULE_ID, SETTING_ZEROS)) return; } catch { return; }
+  const simples = roll.terms.map(termoSimples);
+  const apagar = new Set(zerosRemoviveis(simples));
+  if (!apagar.size) return;
+  // Posições dos termos apagados na contagem sem operadores.
+  const apagados = [];
+  let n = 0;
+  simples.forEach((termo, i) => {
+    if (termo.operador) return;
+    if (apagar.has(i)) apagados.push(n);
+    n += 1;
+  });
+  roll.terms = roll.terms.filter((_, i) => !apagar.has(i));
+  roll.resetFormula();
+  if (roll.options[OPCAO]) roll.options[OPCAO] = reindexar(roll.options[OPCAO], apagados);
 }
 
 const parcelaDoDado = (formula) => ({
@@ -420,6 +452,7 @@ Hooks.once('setup', () => {
       semFalhar(() => {
         for (const { r, lista, dados } of antes) {
           if (lista) registrar(this.system.rolled?.[r.name], lista, dados);
+          else limparZeros(this.system.rolled?.[r.name]);
         }
       });
       return saida;
@@ -456,6 +489,7 @@ Hooks.once('setup', () => {
         if (!itemData?.rolled?.terms || itemData.rolled.options?.[OPCAO]) return;
         if (itemData.type === 'pericia') registrarPericia(itemData.rolled, itemData, this, opcoes);
         else if (itemData.type === 'atributo') registrarAtributo(itemData.rolled, itemData, this, opcoes);
+        else limparZeros(itemData.rolled);
       });
       return cartao.call(this, args);
     };
@@ -467,6 +501,14 @@ Hooks.once('init', () => {
   game.settings.register(MODULE_ID, SETTING, {
     name: 'T20HaydGMTools.SettingFontesName',
     hint: 'T20HaydGMTools.SettingFontesHint',
+    scope: 'world',
+    config: true,
+    type: Boolean,
+    default: true
+  });
+  game.settings.register(MODULE_ID, SETTING_ZEROS, {
+    name: 'T20HaydGMTools.SettingLimparZerosName',
+    hint: 'T20HaydGMTools.SettingLimparZerosHint',
     scope: 'world',
     config: true,
     type: Boolean,

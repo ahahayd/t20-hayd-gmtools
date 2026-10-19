@@ -86,7 +86,8 @@ export const FUNCOES = [
   { chave: 'custoPmTotal', nivel: 'baixo' },
   { chave: 'jogadoresReroll', nivel: 'baixo' },
   { chave: 'jogadoresManual', nivel: 'baixo' },
-  { chave: 'fontesRolagem', nivel: 'baixo' }
+  { chave: 'fontesRolagem', nivel: 'baixo' },
+  { chave: 'limparZeros', nivel: 'baixo' }
 ];
 
 const ORDEM = { baixo: 1, medio: 2, alto: 3 };

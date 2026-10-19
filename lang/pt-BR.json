@@ -66,6 +66,8 @@
     "TesteEscolhidoDica": "O d20 não foi rolado: o resultado do dado foi escolhido como {valor}",
     "SettingFontesName": "Fontes da rolagem",
     "SettingFontesHint": "Clique direito numa rolagem do chat → \"Fontes da rolagem\" mostra de onde veio cada número (perícia, atributo, treino, efeitos, aprimoramentos, campo Bônus). Na prévia da rolagem, passar o mouse num número mostra a mesma informação.",
+    "SettingLimparZerosName": "Tirar o \"+ 0\" das rolagens",
+    "SettingLimparZerosHint": "O sistema deixa um \"+ 0\" no fim dos testes e ataques (o @bonus vazio) e, em algumas armas, outro no meio. Ligado, esses zeros saem da fórmula mostrada; o total não muda.",
     "FonteMenu": "Fontes da rolagem",
     "FonteTitulo": "Fontes da rolagem",
     "FonteFechar": "Fechar",

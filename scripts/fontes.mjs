@@ -170,3 +170,36 @@ export function rotularExtras(extras, candidatos, { bonusJanela, rotuloJanela, r
     return { fonte: rotuloEfeito, formula, semOrigem: true };
   });
 }
+
+/**
+ * Termos "+ 0" que só poluem a fórmula. O d20Roll do sistema sempre põe
+ * "@bonus" no fim, e sem `bonus` nos dados o Foundry troca por 0 (o
+ * damageRoll tira esse @bonus; o d20Roll esqueceu). Armas com bônus de
+ * ataque "0" deixam outro no meio.
+ *
+ * Recebe os termos simplificados (com operadores) e devolve as posições a
+ * apagar: o 0 e o operador logo antes dele. O primeiro termo nunca sai —
+ * o sistema lê o d20 em `terms[0]`.
+ */
+export function zerosRemoviveis(termos) {
+  const apagar = [];
+  let primeiro = true;
+  (termos ?? []).forEach((termo, i) => {
+    if (termo?.operador) return;
+    if (!primeiro && termo?.numerico && Number(termo.total) === 0 && termos[i - 1]?.operador) {
+      apagar.push(i - 1, i);
+    }
+    primeiro = false;
+  });
+  return apagar;
+}
+
+/**
+ * Faixas depois de apagar termos. `apagados`: posições na contagem SEM
+ * operadores (a mesma de `ini`/`fim`).
+ */
+export function reindexar(faixas, apagados) {
+  if (!faixas) return faixas;
+  const antes = (pos) => apagados.filter((p) => p < pos).length;
+  return faixas.map((f) => ({ ...f, ini: f.ini - antes(f.ini), fim: f.fim - antes(f.fim) }));
+}

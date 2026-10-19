@@ -1548,7 +1548,7 @@ const CATEGORIAS_CONFIG = [
   // Os atributos iniciais são a primeira etapa do assistente: uma categoria só.
   { rotulo: 'CatCriacao',     icone: 'fa-wand-magic-sparkles', chaves: ['criacaoAtivo', 'criacaoAoCriar', 'criacaoDinheiroInicial', 'criacaoFontesMenu', 'atributosMetodoPadrao', 'atributosPontos', 'atributosMultiNegativos', 'atributosCustosMenu', 'atributosConversaoMenu', 'niveisAtivo'] },
   { rotulo: 'CatFerramentas', icone: 'fa-ruler-combined', chaves: ['reguaEfeitos', 'mensagensDano', 'previewDano'] },
-  { rotulo: 'CatCorrecoes',   icone: 'fa-screwdriver-wrench', chaves: ['custoPmTotal'] }
+  { rotulo: 'CatCorrecoes',   icone: 'fa-screwdriver-wrench', chaves: ['custoPmTotal', 'limparZeros'] }
 ];
 
 /**

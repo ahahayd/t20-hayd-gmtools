@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  distribuir, fecharDetalhes, fontePorTermo, linhasDaTabela, rotularExtras, termosComSinal, textoDaFonte
+  distribuir, fecharDetalhes, fontePorTermo, linhasDaTabela, reindexar, rotularExtras, termosComSinal, textoDaFonte,
+  zerosRemoviveis
 } from '../scripts/fontes.mjs';
 
 // 1d20 + 8 + 6 - 1 + 0
@@ -85,4 +86,31 @@ test('parcelas extras: efeito pelo valor, campo da janela por último', () => {
 test('cada efeito dá nome a uma parcela só', () => {
   const r = rotularExtras(['2', '2'], [{ fonte: 'Bênção', valor: 2 }], { rotuloJanela: 'J', rotuloEfeito: 'E' });
   assert.deepEqual(r.map((x) => x.fonte), ['Bênção', 'E']);
+});
+
+test('zeros: sai o 0 e o operador antes dele, nunca o primeiro termo', () => {
+  // 1d20 + 13 + 0 + 4 + 0
+  const termos = [
+    { expressao: '1d20', total: 12, dado: true }, { operador: '+' },
+    { expressao: '13', total: 13, numerico: true }, { operador: '+' },
+    { expressao: '0', total: 0, numerico: true }, { operador: '+' },
+    { expressao: '4', total: 4, numerico: true }, { operador: '+' },
+    { expressao: '0', total: 0, numerico: true }
+  ];
+  assert.deepEqual(zerosRemoviveis(termos), [3, 4, 7, 8]);
+  // "0" sozinho (Escolher 0) fica: é o resultado do dado.
+  assert.deepEqual(zerosRemoviveis([{ expressao: '0', total: 0, numerico: true }, { operador: '+' }, { expressao: '5', total: 5, numerico: true }]), []);
+  // Dado que rolou 0 não é constante: fica.
+  assert.deepEqual(zerosRemoviveis([{ expressao: '1d4', total: 3, dado: true }, { operador: '+' }, { expressao: '(1d1-1)', total: 0 }]), []);
+});
+
+test('zeros: as faixas de fonte andam junto', () => {
+  // termos sem operador: d20, 13, 0, 4, 0 → apagados os de posição 2 e 4
+  const faixas = [
+    { fonte: 'Dado', ini: 0, fim: 1 }, { fonte: 'Perícia', ini: 1, fim: 2 }, { fonte: 'Arma', ini: 2, fim: 3 },
+    { fonte: 'Poder', ini: 3, fim: 4 }, { fonte: 'Bônus', ini: 4, fim: 5 }
+  ];
+  const novas = reindexar(faixas, [2, 4]);
+  assert.deepEqual(novas.map((f) => [f.fonte, f.ini, f.fim]),
+    [['Dado', 0, 1], ['Perícia', 1, 2], ['Arma', 2, 2], ['Poder', 2, 3], ['Bônus', 3, 3]]);
 });
