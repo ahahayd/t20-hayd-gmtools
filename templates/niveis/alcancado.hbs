@@ -25,11 +25,13 @@
     </section>
   {{/if}}
 
+  {{#if ganhos}}{{> "modules/t20-hayd-gmtools/templates/niveis/ganhos.hbs" ganhos}}{{/if}}
+
   {{#if ui}}
     {{#if vazio}}
-      <div class="t20g-vazio t20g-nv-obtido-vazio">
+      <div class="t20g-vazio t20g-nv-obtido-vazio {{#if ganhos}}t20g-nv-obtido-vazio--compacto{{/if}}">
         <i class="fa-solid fa-feather"></i>
-        <span class="t20g-vazio__texto">Nada anotado neste nível. Se algo da ficha veio daqui, ponha no nível pela lista abaixo.</span>
+        <span class="t20g-vazio__texto">{{#if ganhos}}Nenhum poder ou magia anotado neste nível.{{else}}Nada anotado neste nível.{{/if}} Se algo da ficha veio daqui, ponha no nível pela lista abaixo.</span>
       </div>
     {{else}}
       <div class="t20g-nv-obtido-grade">

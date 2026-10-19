@@ -23,7 +23,9 @@ import {
   atributosDoSistema, abrevAtr, sinal, rotulosPericias, chavesOficio, ref, ICONES_ATR
 } from '../criacao/app-assistente.mjs';
 import { PROFICIENCIAS } from '../criacao/aplicar.mjs';
-import { NIVEL_MAXIMO, PATAMARES, patamarDe, projetarNiveis, circuloMaximo, magiasNoNivel } from './regras-niveis.mjs';
+import {
+  NIVEL_MAXIMO, PATAMARES, patamarDe, projetarNiveis, circuloMaximo, magiasNoNivel, ganhosDoNivel, escalaSobe, dadosNoNivel
+} from './regras-niveis.mjs';
 import {
   aplicarNivel, anunciarNiveis, escalasDaClasse, uiAtivo, UI_ID, FLAG_PLANO, CATEGORIA_POR_TIPO
 } from './aplicar-nivel.mjs';
@@ -32,7 +34,7 @@ const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 const TextEditorImpl = () => foundry.applications.ux.TextEditor.implementation;
 
 const PASTA = `modules/${MODULE_ID}/templates/niveis`;
-export const TEMPLATES_NIVEIS = [`${PASTA}/janela.hbs`, `${PASTA}/resumo.hbs`, `${PASTA}/alcancado.hbs`, `${PASTA}/plano.hbs`];
+export const TEMPLATES_NIVEIS = [`${PASTA}/janela.hbs`, `${PASTA}/resumo.hbs`, `${PASTA}/alcancado.hbs`, `${PASTA}/plano.hbs`, `${PASTA}/ganhos.hbs`];
 
 const LOTE = 30;
 
@@ -81,6 +83,7 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
       remover: NiveisApp.#onRemover,
       abrirItem: NiveisApp.#onAbrirItem,
       adicionar: NiveisApp.#onAdicionar,
+      adicionarDeNovo: NiveisApp.#onAdicionarDeNovo,
       aba: NiveisApp.#onAba,
       niveis: NiveisApp.#onNiveisMaiores,
       focarZona: NiveisApp.#onFocarZona,
@@ -125,6 +128,8 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
   #ocupado = false;
   /** A lista "sem nível anotado" fica aberta entre redesenhos se o jogador a abriu. */
   #semNivelAberto = false;
+  /** uuid da classe → PV e PM por nível, de classes que não estão na ficha. */
+  #porNivelClasse = new Map();
 
   constructor(actor, options = {}) {
     super({ ...options, id: `t20g-niveis-${actor.id}` });
@@ -254,7 +259,7 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
     }));
     const ctx = { lateral, patamares, nivel: n, atual, ocupado: this.#ocupado };
     if (n === 1) ctx.resumo = this.#ctxResumo();
-    if (n <= atual) ctx.alcancado = this.#ctxAlcancado(n);
+    if (n <= atual) ctx.alcancado = await this.#ctxAlcancado(n);
     else ctx.plano = await this.#ctxPlano(n, porNivel);
     ctx.temSugestoes = !!ctx.plano?.sugestoes;
     ctx.sugestoes = ctx.plano?.sugestoes ?? null;
@@ -304,7 +309,7 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
    * uma ou outra magia). Perícias e proficiências só aparecem nos níveis
    * subidos pelo planejador, que guarda o que marcou.
    */
-  #ctxAlcancado(n) {
+  async #ctxAlcancado(n) {
     const anotaveis = this.actor.items.filter(i => ['poder', 'magia'].includes(i.type));
     const doNivel = anotaveis.filter(i => origemDe(i)?.nivel === n);
     const ordem = (x, y) => x.nome.localeCompare(y.nome, 'pt-BR');
@@ -326,6 +331,7 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const patamar = patamarDe(n);
     return {
       n, ui: uiAtivo(),
+      ganhos: await this.#ctxGanhos(n, aplicado?.classe ?? null, this.#nivelClasseAlcancado(n), 'Ganhos do nível'),
       classe: aplicado?.classe ? { ...aplicado.classe, img: this.#imgClasse(aplicado.classe.nome), nivel: this.#nivelClasseAlcancado(n) ?? '' } : null,
       vincular: this.#ctxVincular(n),
       patamar: { ...patamar, novo: n > 1 && n === patamar.de },
@@ -353,6 +359,90 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
       return { nome: c.name, img: c.img, total, ja, cheia: ja >= total, ativa: atual?.nome === c.name };
     });
     return { opcoes, vinculada: !!atual };
+  }
+
+  /* ─── Ganhos do nível ──────────────────────────────────────────────── */
+
+  /** PV e PM por nível da classe: da ficha, ou do item da classe (multiclasse nova). */
+  async #porNivelDaClasse(classe) {
+    const daFicha = this.#classesDaFicha().find(c => subtipoDe(c.name, classe.nome));
+    if (daFicha) return { pv: Number(daFicha.system.pvPorNivel) || 0, pm: Number(daFicha.system.pmPorNivel) || 0 };
+    if (!classe.uuid) return null;
+    if (!this.#porNivelClasse.has(classe.uuid)) {
+      const doc = await fromUuid(classe.uuid).catch(() => null);
+      this.#porNivelClasse.set(classe.uuid, doc?.type === 'classe' ? { pv: Number(doc.system.pvPorNivel) || 0, pm: Number(doc.system.pmPorNivel) || 0 } : null);
+    }
+    return this.#porNivelClasse.get(classe.uuid);
+  }
+
+  /** Bônus de PV ou PM por nível, par e ímpar da ficha (poderes como Vitalidade), já somados. */
+  #bonusPorNivel(tipo) {
+    const b = this.actor.system.attributes?.[tipo]?.bonus ?? {};
+    const dados = this.actor.getRollData();
+    const soma = (lista) => (Array.isArray(lista) ? lista : []).reduce((t, v) => {
+      try { return t + (Number(Roll.safeEval(Roll.replaceFormulaData(String(v), dados, { missing: '0' }))) || 0); } catch { return t; }
+    }, 0);
+    return { nivel: soma(b.nivel), par: soma(b.nivelPar), impar: soma(b.nivelImpar) };
+  }
+
+  /**
+   * O que o nível dá sem escolha nenhuma: PV, PM, os bônus da metade do nível
+   * (perícias, CD, Defesa Progressiva), o treino novo, as habilidades que
+   * melhoram e o círculo de magia novo. Do 2º nível em diante.
+   */
+  async #ctxGanhos(n, classe, L, titulo, planejando = false) {
+    if (n <= 1) return null;
+    const s = this.actor.system;
+    const porNivel = classe && !this.actor.getFlag('tormenta20', 'lvlconfig')?.manual ? await this.#porNivelDaClasse(classe) : null;
+    const { substituirCon = 'con' } = this.actor.flags?.tormenta20 ?? {};
+    const con = Number(s.atributos?.[substituirCon]?.value) || 0;
+    let defesaProgressiva = false;
+    try { defesaProgressiva = !!game.settings.get('tormenta20', 'progressiveDefense'); } catch { /* sistema sem a regra */ }
+    const bonus = { pv: this.#bonusPorNivel('pv'), pm: this.#bonusPorNivel('pm') };
+    const g = ganhosDoNivel({ nivel: n, porNivel, con, bonus, defesaProgressiva });
+    const nomeCon = CONFIG.T20?.atributos?.[substituirCon] ? game.i18n.localize(CONFIG.T20.atributos[substituirCon]) : 'Constituição';
+    const meio = Math.floor(n / 2);
+
+    const cartoes = [];
+    if (g.pv !== null) cartoes.push({
+      id: 'pv', icone: 'fa-heart', valor: sinal(g.pv), rotulo: 'Pontos de Vida',
+      dica: `${porNivel.pv} de ${classe.nome} ${sinal(con)} de ${nomeCon}${g.pv !== Math.max(1, porNivel.pv + con) ? ', com os bônus por nível' : ''}`
+    });
+    if (g.pm) cartoes.push({
+      id: 'pm', icone: 'fa-droplet', valor: sinal(g.pm), rotulo: 'Pontos de Mana',
+      dica: `${porNivel.pm} de ${classe.nome}${g.pm !== porNivel.pm ? ', com os bônus por nível' : ''}`
+    });
+    if (g.pericias) cartoes.push({ id: 'pericias', icone: 'fa-list-check', valor: '+1', rotulo: 'Em todas as perícias', dica: `As perícias somam metade do nível — agora +${meio}` });
+    if (g.treino) cartoes.push({ id: 'treino', icone: 'fa-graduation-cap', valor: sinal(g.treino.para - g.treino.de), rotulo: 'Nas perícias treinadas', dica: `O bônus de treino sobe de +${g.treino.de} para +${g.treino.para}` });
+    if (g.defesa) cartoes.push({ id: 'defesa', icone: 'fa-shield', valor: '+1', rotulo: 'Na Defesa', dica: `Defesa Progressiva: a Defesa soma metade do nível — agora +${meio}` });
+    if (g.cd) cartoes.push({ id: 'cd', icone: 'fa-bullseye', valor: '+1', rotulo: 'Na CD de habilidades e magias', dica: `A CD soma metade do nível — agora 10 + ${meio} + atributo` });
+
+    const melhorias = [];
+    if (classe && L) {
+      await this.#lerNiveisHabilidades(classe.nome);
+      const mc = this.#magiasDaClasse.get(classe.nome);
+      const circulo = mc ? circuloMaximo(mc.desc, L) : null;
+      if (circulo && L > 1 && circulo > (circuloMaximo(mc.desc, L - 1) ?? 1)) {
+        melhorias.push({ icone: 'fa-wand-sparkles', nome: `Magias de ${circulo}º círculo`, texto: `A partir deste nível, ${classe.nome} lança magias ${mc.tipo === 'arc' ? 'arcanas' : 'divinas'} de ${circulo}º círculo.` });
+      }
+      // A habilidade de magias da classe já entra pelo círculo.
+      for (const e of escalasDaClasse(this.actor, classe.nome, L)) {
+        if (mc && /\bmagias\b/.test(normalizar(e.item.name))) continue;
+        const ganho = nivelDaHabilidade(e.item.system?.description?.value ?? '');
+        if (!escalaSobe(e.escala, ganho, L)) continue;
+        const f = e.escala.incremento?.faces;
+        const antes = dadosNoNivel(e.escala, ganho, L - 1);
+        const depois = dadosNoNivel(e.escala, ganho, L);
+        melhorias.push({
+          nome: e.item.name, img: e.item.img, uuid: e.item.uuid, texto: e.escala.trecho,
+          valor: antes !== null && depois !== null ? `${antes}d${f} → ${depois}d${f}` : null,
+          // Planejando: diz se o dado é ajustado sozinho ao subir ou se fica para conferir.
+          auto: planejando && e.alvo !== null, manual: planejando && e.alvo === null
+        });
+      }
+    }
+    if (!cartoes.length && !melhorias.length) return null;
+    return { titulo, cartoes, melhorias };
   }
 
   async #lerNiveisHabilidades(nomeClasse) {
@@ -394,18 +484,8 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const mc = this.#magiasDaClasse.get(nomeClasse);
     const circulo = mc ? circuloMaximo(mc.desc, L) : null;
     this.#infoMagias = mc && circulo ? {
-      tipo: mc.tipo, tipoTexto: mc.tipo === 'arc' ? 'arcanas' : 'divinas', circulo, novas: magiasNoNivel(mc.desc, L),
-      novoCirculo: L > 1 && circulo > (circuloMaximo(mc.desc, L - 1) ?? 1)
+      tipo: mc.tipo, tipoTexto: mc.tipo === 'arc' ? 'arcanas' : 'divinas', circulo, novas: magiasNoNivel(mc.desc, L)
     } : null;
-    // A habilidade de magias da classe é tratada na seção Magias, não aqui.
-    const escalas = escalasDaClasse(this.actor, nomeClasse, L)
-      .filter(e => !(mc && /\bmagias\b/.test(normalizar(e.item.name))))
-      .map(e => ({
-      nome: e.item.name, img: e.item.img, uuid: e.item.uuid, trecho: e.escala.trecho,
-      auto: e.alvo !== null && e.atual !== e.alvo ? `${e.atual}d${e.escala.incremento.faces} → ${e.alvo}d${e.escala.incremento.faces}` : null,
-      igual: e.alvo !== null && e.atual === e.alvo
-    }));
-
     // Perícias: já treinadas na ficha ou em outro nível planejado ficam travadas.
     const r = rotulosPericias();
     const oficios = new Set(chavesOficio());
@@ -431,7 +511,7 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
       zonaPod: this.#zona(n, 'nvPoderes'),
       zonaMag: this.#zona(n, 'nvMagias'),
       infoMagias: this.#infoMagias,
-      escalas,
+      ganhos: await this.#ctxGanhos(n, plano.classe, L, `O que o ${n}º nível dá`, true),
       pericias: { etapa: 'nivel', gerais: todas.filter(([k]) => !oficios.has(k)).map(item), oficios: listaOficios, oficiosAbertos: listaOficios.some(o => o.marcada), total: plano.pericias.length },
       profs: PROFICIENCIAS.map(p => ({ ...p, marcada: !!plano.prof?.[p.id], tem: profAtuais.has(p.valor) })),
       sugestoes: this.#ctxSugestoes(n, nomeClasse, L)
@@ -602,21 +682,30 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const plano = this.#plano.niveis[this.#nivelVisto] ?? planoVazio();
     const usados = new Set([...plano.habilidades, ...plano.poderes, ...plano.magias].map(r => r.uuid));
     const naFicha = new Set(this.actor.items.map(i => normalizar(i.name)));
+    const emOutros = this.#niveisPlanejados(this.#nivelVisto);
     const esc = foundry.utils.escapeHTML;
     let mostrados = 0;
     const mais = () => {
       if (mostrados >= filtrados.length) return;
       const html = filtrados.slice(mostrados, mostrados + LOTE).map(x => {
         const usado = usados.has(x.uuid);
-        const tem = !usado && naFicha.has(normalizar(x.nome));
+        // Já planejado em outro nível: aparece marcado, com o nível. Só poderes
+        // (não habilidades de classe nem magias) podem ser pegos de novo.
+        const outros = usado ? [] : (emOutros.get(x.uuid) ?? emOutros.get(normalizar(x.nome)) ?? []);
+        const tem = !usado && !outros.length && naFicha.has(normalizar(x.nome));
+        const repetivel = x.type === 'poder' && x.sistema?.tipo !== 'ability';
+        const ondeTexto = outros.length ? `Planejado no ${outros.map(nv => `${nv}º`).join(', ')} nível` : '';
+        const deNovo = (dica) => `<button type="button" class="t20g-btn t20g-btn--icone t20g-btn--fantasma t20g-nv-sug-repetir" data-action="adicionarDeNovo" data-uuid="${esc(x.uuid)}" data-tooltip="${esc(dica)} — pegar de novo neste nível"><i class="fa-solid fa-clone"></i></button>`;
         const sub = [x.type === 'magia' && x.sistema?.circulo ? `${x.sistema.circulo}º círculo` : x.subtipo, x.fonte].filter(Boolean).join(' · ');
         const nivel = x.nivel ? `<span class="t20g-chip t20g-cc-nivel"${x.desteNivel ? ' data-tooltip="Habilidade deste nível da classe"' : ''}>${x.nivel}º nv</span>` : '';
-        return `<li class="t20g-cc-sug ${usado || tem ? 't20g-cc-sug--usada' : ''} ${x.desteNivel ? 't20g-nv-sug--nivel' : ''}" draggable="true" data-uuid="${esc(x.uuid)}" data-desc="${esc(x.uuid)}">
+        const onde = outros.length ? `<span class="t20g-chip t20g-nv-sug-onde" data-tooltip="${esc(ondeTexto)}"><i class="fa-solid fa-check"></i> ${outros.map(nv => `${nv}º`).join(', ')}</span>` : '';
+        return `<li class="t20g-cc-sug ${usado || tem || outros.length ? 't20g-cc-sug--usada' : ''} ${x.desteNivel ? 't20g-nv-sug--nivel' : ''}" draggable="true" data-uuid="${esc(x.uuid)}" data-desc="${esc(x.uuid)}">
           <img src="${esc(x.img)}" alt="" loading="lazy">
           <span class="t20g-cc-sug-texto"><b>${esc(x.nome)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>
-          ${nivel}
-          ${usado ? '<i class="fa-solid fa-check t20g-cc-sug-ok" data-tooltip="Já planejado"></i>'
-            : tem ? '<i class="fa-solid fa-user-check t20g-cc-sug-ok" data-tooltip="Já está na ficha"></i>'
+          ${nivel}${onde}
+          ${usado ? '<i class="fa-solid fa-check t20g-cc-sug-ok" data-tooltip="Já planejado neste nível"></i>'
+            : outros.length ? (repetivel ? deNovo(ondeTexto) : `<i class="fa-solid fa-check t20g-cc-sug-ok" data-tooltip="${esc(ondeTexto)}"></i>`)
+            : tem ? (repetivel ? deNovo('Já está na ficha') : '<i class="fa-solid fa-user-check t20g-cc-sug-ok" data-tooltip="Já está na ficha"></i>')
               : `<button type="button" class="t20g-btn t20g-btn--icone t20g-btn--fantasma" data-action="adicionar" data-uuid="${esc(x.uuid)}" data-tooltip="Adicionar"><i class="fa-solid fa-plus"></i></button>`}
         </li>`;
       }).join('');
@@ -656,12 +745,32 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /* ─── Adicionar ────────────────────────────────────────────────────── */
 
-  async #adicionarPorUuid(uuid) {
+  async #adicionarPorUuid(uuid, opcoes = {}) {
     const item = await fromUuid(uuid).catch(() => null);
-    if (item) this.#adicionar(item, null);
+    if (item) this.#adicionar(item, null, opcoes);
   }
 
-  #adicionar(item, zonaPedida) {
+  /** Níveis (fora `exceto`) em que cada item já foi planejado, por uuid e por nome. */
+  #niveisPlanejados(exceto) {
+    const mapa = new Map();
+    const marcar = (chave, nv) => {
+      if (!chave) return;
+      const lista = mapa.get(chave) ?? [];
+      if (!lista.includes(nv)) lista.push(nv);
+      mapa.set(chave, lista.sort((a, b) => a - b));
+    };
+    for (const [k, p] of Object.entries(this.#plano.niveis ?? {})) {
+      const nv = Number(k);
+      if (nv === exceto || !p) continue;
+      for (const r of [...(p.habilidades ?? []), ...(p.poderes ?? []), ...(p.magias ?? [])]) {
+        marcar(r.uuid, nv);
+        marcar(normalizar(r.nome), nv);
+      }
+    }
+    return mapa;
+  }
+
+  #adicionar(item, zonaPedida, { deNovo = false } = {}) {
     const n = this.#nivelVisto;
     if (n <= this.#nivelAtual()) return;
     if (item.type === 'classe') return this.#definirClasse(item);
@@ -675,6 +784,15 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
     if (!zona) return ui.notifications.warn(`O planejador usa poderes e magias — "${item.name}" é outro tipo de item.`);
     const lista = plano[ZONAS[zona].chave];
     if (lista.some(r => r.uuid === item.uuid || r.nome === item.name)) return ui.notifications.info(`${item.name} já está neste nível.`);
+    // Planejado em outro nível: só entra de novo pelo botão de repetir (poderes
+    // que podem ser escolhidos mais de uma vez); arrastar ou clicar duas vezes avisa.
+    const outros = this.#niveisPlanejados(n);
+    const onde = outros.get(item.uuid) ?? outros.get(normalizar(item.name));
+    if (onde?.length && !deNovo) {
+      const repetivel = item.type === 'poder' && item.system?.tipo !== 'ability';
+      return ui.notifications.info(`${item.name} já está planejado no ${onde.map(nv => `${nv}º`).join(', ')} nível.`
+        + (repetivel ? ' Se o poder pode ser escolhido mais de uma vez, use o botão de repetir na lista.' : ''));
+    }
     if (this.actor.items.some(i => i.name === item.name && i.type === item.type)) ui.notifications.info(`${item.name} já está na ficha — confira se não é repetido.`);
     lista.push(ref(item));
     this.#mudou();
@@ -753,6 +871,8 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   static #onAdicionar(ev, btn) { this.#adicionarPorUuid(btn.dataset.uuid); }
+
+  static #onAdicionarDeNovo(ev, btn) { this.#adicionarPorUuid(btn.dataset.uuid, { deNovo: true }); }
 
   static #onAba(ev, btn) { this.#aba = btn.dataset.aba; this.render(); }
 

@@ -47,35 +47,15 @@
     <p class="t20g-apoio t20g-nv-aviso"><i class="fa-solid fa-circle-info"></i> Multiclasse: ao entrar numa classe nova você recebe as habilidades de 1º nível dela, mas não os PV, as perícias e as proficiências iniciais — confira com o Mestre o que vale na mesa.</p>
   {{/if}}
 
+  {{#if ganhos}}
+    <section class="t20g-cc-secao">{{> "modules/t20-hayd-gmtools/templates/niveis/ganhos.hbs" ganhos}}</section>
+  {{/if}}
+
   <section class="t20g-cc-secao">
     <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-star"></i> Habilidades de {{classe.nome}} ({{L}}º nível)</h3>
     <p class="t20g-apoio">Coloque aqui as habilidades que você ganha neste nível. Na lista ao lado, as do {{L}}º nível de {{classe.nome}} ficam destacadas no topo — quando a classe pede uma escolha (como o arcanista), pegue só a sua.</p>
     {{> "modules/t20-hayd-gmtools/templates/criacao/partes/zona.hbs" zonaHab}}
   </section>
-
-  {{#if escalas.length}}
-    <section class="t20g-cc-secao">
-      <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-arrow-trend-up"></i> Habilidades que melhoram com o nível</h3>
-      <ul class="t20g-nv-escalas">
-        {{#each escalas}}
-          <li class="{{#if auto}}t20g-nv-escala--auto{{else if igual}}t20g-nv-escala--igual{{else}}t20g-nv-escala--manual{{/if}}" data-desc="{{uuid}}">
-            <img src="{{img}}" alt="">
-            <span class="t20g-nv-escala-texto">
-              <b>{{nome}}</b>
-              <small>{{trecho}}</small>
-            </span>
-            {{#if auto}}
-              <span class="t20g-chip t20g-chip--sucesso" data-tooltip="Ajustado sozinho ao subir de nível"><i class="fa-solid fa-wand-magic-sparkles"></i> {{auto}}</span>
-            {{else if igual}}
-              <span class="t20g-chip">sem mudança neste nível</span>
-            {{else}}
-              <span class="t20g-chip t20g-chip--aviso" data-tooltip="O assistente não consegue mudar este valor sozinho"><i class="fa-solid fa-triangle-exclamation"></i> confira à mão</span>
-            {{/if}}
-          </li>
-        {{/each}}
-      </ul>
-    </section>
-  {{/if}}
 
   <section class="t20g-cc-secao">
     <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-bolt"></i> Poderes</h3>
@@ -90,9 +70,6 @@
         {{#if (eq infoMagias.novas 1)}}{{classe.nome}} aprende <b>uma magia</b> neste nível{{else if (eq infoMagias.novas 0)}}{{classe.nome}} não aprende magia neste nível (só nos níveis pares){{else}}Solte aqui as magias que você aprende neste nível{{/if}}
         — {{infoMagias.tipoTexto}}, até o <b>{{infoMagias.circulo}}º círculo</b>. Clique na área abaixo e a lista já vem filtrada; um poder que dê magias também entra aqui.
       </p>
-      {{#if infoMagias.novoCirculo}}
-        <p class="t20g-cc-res-pronto"><i class="fa-solid fa-star"></i> Novo círculo: a partir deste nível, {{classe.nome}} lança magias de <b>{{infoMagias.circulo}}º círculo</b>.</p>
-      {{/if}}
     {{else}}
       <p class="t20g-apoio">Se um poder te dá magias neste nível, solte-as aqui.</p>
     {{/if}}

@@ -66,3 +66,23 @@ test('patamares de jogo: 1–4, 5–10, 11–16, 17–20', () => {
   assert.deepEqual([1, 4, 5, 10, 11, 16, 17, 20].map(n => patamarDe(n).id),
     ['iniciante', 'iniciante', 'veterano', 'veterano', 'campeao', 'campeao', 'lenda', 'lenda']);
 });
+
+test('ganhos do nível: PV/PM da classe, Constituição e os bônus de nível par', async () => {
+  const { ganhosDoNivel, bonusTreino, escalaSobe } = await import('../../scripts/niveis/regras-niveis.mjs');
+  const g = ganhosDoNivel({ nivel: 4, porNivel: { pv: 3, pm: 4 }, con: 2, defesaProgressiva: true });
+  assert.deepEqual(g, { pv: 5, pm: 4, pericias: 1, cd: 1, defesa: 1, treino: null });
+  const impar = ganhosDoNivel({ nivel: 5, porNivel: { pv: 3, pm: 4 }, con: -5, bonus: { pv: { impar: 1 }, pm: { nivel: 1 } } });
+  assert.equal(impar.pv, 1, 'PV mínimo de 1 por nível');
+  assert.equal(impar.pm, 5);
+  assert.equal(impar.pericias, 0);
+  assert.equal(impar.defesa, 0);
+  assert.equal(ganhosDoNivel({ nivel: 6, porNivel: null }).defesa, 0, 'sem Defesa Progressiva');
+  assert.equal(ganhosDoNivel({ nivel: 6, porNivel: null }).pv, null);
+  assert.deepEqual(ganhosDoNivel({ nivel: 7, porNivel: null }).treino, { de: 2, para: 4 });
+  assert.deepEqual(ganhosDoNivel({ nivel: 15, porNivel: null }).treino, { de: 4, para: 6 });
+  assert.equal(ganhosDoNivel({ nivel: 8, porNivel: null }).treino, null);
+  assert.deepEqual([1, 6, 7, 14, 15, 20].map(bonusTreino), [2, 2, 4, 4, 6, 6]);
+  const furtivo = { passo: 2 };
+  assert.deepEqual([1, 2, 3, 4, 5].map(l => escalaSobe(furtivo, 1, l)), [false, false, true, false, true]);
+  assert.deepEqual([3, 6, 9, 15].map(l => escalaSobe({ passo: 6 }, 3, l)), [false, false, true, true]);
+});

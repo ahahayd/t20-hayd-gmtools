@@ -1,0 +1,27 @@
+{{!-- O que o nível dá sem escolha: PV, PM, bônus da metade do nível, treino e o que melhora. --}}
+<section class="t20g-nv-ganhos">
+  <h3 class="t20g-cc-secao-titulo"><i class="fa-solid fa-arrow-up-right-dots"></i> {{titulo}}</h3>
+  {{#if cartoes.length}}
+    <div class="t20g-nv-ganhos-cartoes">
+      {{#each cartoes}}
+        <div class="t20g-nv-ganho t20g-nv-ganho--{{id}}" data-tooltip="{{dica}}">
+          <i class="fa-solid {{icone}}"></i>
+          <b>{{valor}}</b>
+          <small>{{rotulo}}</small>
+        </div>
+      {{/each}}
+    </div>
+  {{/if}}
+  {{#if melhorias.length}}
+    <ul class="t20g-nv-melhorias">
+      {{#each melhorias}}
+        <li class="{{#if manual}}t20g-nv-melhoria--manual{{/if}}" {{#if uuid}}data-desc="{{uuid}}"{{/if}}>
+          {{#if img}}<img src="{{img}}" alt="">{{else}}<span class="t20g-nv-melhoria-icone"><i class="fa-solid {{icone}}"></i></span>{{/if}}
+          <span class="t20g-nv-melhoria-texto"><b>{{nome}}</b><small>{{texto}}</small></span>
+          {{#if valor}}<span class="t20g-chip t20g-chip--sucesso" {{#if auto}}data-tooltip="Ajustado sozinho ao subir de nível"{{/if}}><i class="fa-solid fa-arrow-trend-up"></i> {{valor}}</span>{{/if}}
+          {{#if manual}}<span class="t20g-chip t20g-chip--aviso" data-tooltip="O assistente não consegue mudar este valor sozinho"><i class="fa-solid fa-triangle-exclamation"></i> melhora — confira à mão</span>{{/if}}
+        </li>
+      {{/each}}
+    </ul>
+  {{/if}}
+</section>

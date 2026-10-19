@@ -148,3 +148,46 @@ export function magiasNoNivel(descricao, nivelClasse) {
   if (/a cada nivel, aprende (uma|1) magia/.test(t)) return 1;
   return null;
 }
+
+/** Bônus de treino das perícias treinadas no nível de personagem: +2, +4 a partir do 7º, +6 a partir do 15º. */
+export function bonusTreino(nivel) {
+  return nivel > 14 ? 6 : nivel > 6 ? 4 : 2;
+}
+
+/**
+ * Se uma habilidade que escala melhora exatamente neste nível de classe:
+ * ganha no `nivelGanho` e sobe a cada `passo` (Ataque Furtivo: 3º, 5º, 7º…).
+ */
+export function escalaSobe(escala, nivelGanho, nivelClasse) {
+  if (!escala?.passo) return false;
+  return nivelClasse > nivelGanho && (nivelClasse - nivelGanho) % escala.passo === 0;
+}
+
+/**
+ * O que um nível de personagem dá pela regra, sem contar as escolhas — a
+ * mesma conta do sistema: PV = PV da classe por nível + bônus por nível +
+ * Constituição (mínimo 1); PM = PM da classe por nível + bônus por nível.
+ * Nos níveis pares a metade do nível sobe: +1 nas perícias, na CD e, com a
+ * Defesa Progressiva, na Defesa. O treino muda no 7º e no 15º.
+ *
+ * @param {object} o
+ * @param {number} o.nivel                nível de personagem alcançado
+ * @param {{pv: number, pm: number}|null} o.porNivel  da classe; null = sem conta (PV/PM manuais ou classe desconhecida)
+ * @param {number} [o.con]                valor do atributo que soma nos PV
+ * @param {{pv?: object, pm?: object}} [o.bonus]  { nivel, par, impar } já somados
+ * @param {boolean} [o.defesaProgressiva]
+ */
+export function ganhosDoNivel({ nivel, porNivel, con = 0, bonus = {}, defesaProgressiva = false }) {
+  const par = nivel % 2 === 0;
+  const extra = (b) => (Number(b?.nivel) || 0) + (Number(par ? b?.par : b?.impar) || 0);
+  const treinoAntes = bonusTreino(nivel - 1);
+  const treino = bonusTreino(nivel);
+  return {
+    pv: porNivel ? Math.max(1, (Number(porNivel.pv) || 0) + extra(bonus.pv) + (Number(con) || 0)) : null,
+    pm: porNivel ? (Number(porNivel.pm) || 0) + extra(bonus.pm) : null,
+    pericias: par ? 1 : 0,
+    cd: par ? 1 : 0,
+    defesa: par && defesaProgressiva ? 1 : 0,
+    treino: treino !== treinoAntes ? { de: treinoAntes, para: treino } : null
+  };
+}
