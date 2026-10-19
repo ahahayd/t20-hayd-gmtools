@@ -56,8 +56,13 @@ export function semelhanca(nomeItem, nomeAutomacao) {
  * (não sugere) em vez de empurrar a automação errada para o topo da lista.
  */
 export function sugerirAutomacoes(nomeItem, disponiveis, { minimo = 0.6 } = {}) {
+  // Poderes cujo nome muda com a escolha ("Inimigo de Monstros", "Inimigo de
+  // Orcs e Gnolls") declaram o começo fixo do nome em `prefixoSugestao`.
+  const item = normalizarNome(nomeItem);
+  const casaPrefixo = (a) => !!a.prefixoSugestao
+    && (item === normalizarNome(a.prefixoSugestao) || item.startsWith(`${normalizarNome(a.prefixoSugestao)} `));
   return (disponiveis ?? [])
-    .map((a) => ({ automacao: a, pontos: semelhanca(nomeItem, a.nome) }))
+    .map((a) => ({ automacao: a, pontos: casaPrefixo(a) ? 1 : semelhanca(nomeItem, a.nome) }))
     .filter((r) => r.pontos >= minimo)
     .sort((x, y) => y.pontos - x.pontos || x.automacao.nome.localeCompare(y.automacao.nome, 'pt-BR'))
     .map((r) => r.automacao);

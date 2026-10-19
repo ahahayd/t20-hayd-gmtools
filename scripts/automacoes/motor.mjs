@@ -32,7 +32,7 @@ import {
   efeitoPorChave, efeitosPorChave, efeitoEmDia, textoDasMudancas, descricaoDeUso,
   criarEfeitoDoPoder, efeitosLegadosNoAtor
 } from './efeitos.mjs';
-import { ehV14, paraOSistema, mudancasV14, opcoesDeRoll, apagarChave } from '../versao.mjs';
+import { ehV14, paraOSistema, mudancasV14, opcoesDeRoll, apagarChave, usoDe } from '../versao.mjs';
 import { criarBotao } from './ui.mjs';
 import { aura as auras } from './aura/index.mjs';
 import { engenhocas } from './engenhocas/index.mjs';
@@ -69,6 +69,17 @@ import {
   registrarEstudo,
   desfazerEstudo
 } from './estudar-adversario.mjs';
+import {
+  PROGRESSAO_MARCA,
+  nivelDaMarca,
+  aumentosDisponiveis,
+  normalizarConfig,
+  normalizarMarca,
+  dadoDaMarca,
+  formulaDaMarca,
+  aplicarPassosNasPartes,
+  indiceDaMarca
+} from './marca-da-presa.mjs';
 
 const { DialogV2 } = foundry.applications.api;
 
@@ -128,6 +139,9 @@ async function sincronizarEfeito(item) {
   if (def?.combinacao) return sincronizarCombinacoes(ator);
   // O Golpe Pessoal monta os efeitos a partir do golpe salvo no item
   if (def?.golpe) return sincronizarGolpe(item);
+  // A marca depende da presa mirada; os de uso suspenso, só do poder
+  if (def?.marca) return sincronizarMarca(ator);
+  if (def?.usoSuspenso) return sincronizarUsoSuspenso(item);
 
   const valor = valorContador(item);
   const efeito = efeitoDoItem(item);
@@ -367,6 +381,11 @@ async function abrirDialogoAutomacao(item) {
     await item.unsetFlag(MODULE_ID, FLAG_AUTOMACAO);
     await item.unsetFlag(MODULE_ID, FLAG_CONTADOR);
     await item.unsetFlag(MODULE_ID, FLAG_GOLPE);
+    // Sem nenhuma Marca da Presa automatizada, as presas marcadas perdem o
+    // sentido (e o Mestre tira os efeitos visuais delas).
+    if (item.actor && !poderesDeMarca(item.actor).length && item.actor.getFlag(MODULE_ID, FLAG_MARCA)) {
+      await item.actor.unsetFlag(MODULE_ID, FLAG_MARCA);
+    }
     engenhocas.agendarSincronizacao(item.actor);
     return ui.notifications.info(game.i18n.localize('T20HaydGMTools.AutoRemovida'));
   }
@@ -397,11 +416,18 @@ async function abrirDialogoAutomacao(item) {
  */
 async function sugerirApagarEfeitosOriginais(item, def) {
   if (!def?.apagarEfeitos) return;
-  const efeitos = [...(item.effects ?? [])];
-  if (!efeitos.length) return;
+  // v13: o Tormenta20 1.5 liga o legacyTransferral, então criar o item copiou
+  // os efeitos "transfer" dele para a ficha do ator — e apagar os do item não
+  // apaga essas cópias. Elas entram na mesma lista (as do módulo, não).
+  const copias = ehV14() ? [] : [...(item.actor?.effects ?? [])].filter((ef) =>
+    ef.origin === item.uuid && !ef.getFlag(MODULE_ID, FLAG_ORIGEM));
+  // v14: os efeitos de uso da própria automação moram dentro do poder e já
+  // foram criados neste ponto — eles não são "originais".
+  const efeitos = [...(item.effects ?? [])].filter((ef) => !ef.getFlag(MODULE_ID, FLAG_ORIGEM));
+  if (!efeitos.length && !copias.length) return;
 
   const nomeSeguro = (t) => foundry.utils.escapeHTML?.(String(t ?? '')) ?? String(t ?? '');
-  const lista = efeitos
+  const lista = [...efeitos, ...copias]
     .map((ef) => {
       // v14: "de uso" mora em system.onuse; v13: flag tormenta20.onuse.
       const onuse = ehV14() ? ef.system?.onuse : ef.getFlag?.('tormenta20', 'onuse');
@@ -443,9 +469,10 @@ async function sugerirApagarEfeitosOriginais(item, def) {
 
   if (resposta !== 'apagar') return;
 
-  await item.deleteEmbeddedDocuments('ActiveEffect', efeitos.map((ef) => ef.id));
+  if (efeitos.length) await item.deleteEmbeddedDocuments('ActiveEffect', efeitos.map((ef) => ef.id));
+  if (copias.length) await item.actor.deleteEmbeddedDocuments('ActiveEffect', copias.map((ef) => ef.id));
   ui.notifications.info(
-    game.i18n.format('T20HaydGMTools.AutoApagados', { n: efeitos.length })
+    game.i18n.format('T20HaydGMTools.AutoApagados', { n: efeitos.length + copias.length })
   );
 }
 
@@ -2346,6 +2373,564 @@ function montarBarraEstudo(item, { completo, message }) {
   return barra;
 }
 
+/* ─── Marca da Presa (Caçador) ───────────────────────────────────────────── */
+
+/** Flag no ATOR: `{ [tokenId]: { item, aumentos, dobrado } }` — presas marcadas. */
+const FLAG_MARCA = 'marcaDaPresa';
+/** Flag no ITEM: `{ base, passos, nivel }` — ajustes do jogador (homebrew). */
+const FLAG_MARCA_CONFIG = 'marcaConfig';
+/** Flag no EFEITO visual da presa: `{ ator, token }`. */
+const FLAG_MARCA_VISUAL = 'marcaVisual';
+
+/** Poderes com a automação da marca. Só o primeiro gera bônus. */
+function poderesDeMarca(ator) {
+  return ator?.items?.filter((i) => definicaoDe(i)?.marca) ?? [];
+}
+
+/** Poderes "Inimigo de" do ator (dobram a marca contra o tipo escolhido). */
+function poderesInimigo(ator) {
+  return ator?.items?.filter((i) => definicaoDe(i)?.marcador === 'inimigo') ?? [];
+}
+
+const indiceMarca = new IndiceAtoresAutomacoes(
+  (ator) => poderesDeMarca(ator).length > 0
+);
+
+function configDaMarca(item) {
+  return normalizarConfig(item?.getFlag?.(MODULE_ID, FLAG_MARCA_CONFIG));
+}
+
+/** Nível que conta para a marca (o da configuração vence) e a tabela da classe. */
+function nivelDaMarcaDoAtor(ator, item) {
+  const classes = (ator?.items ?? [])
+    .filter((i) => i.type === 'classe')
+    .map((i) => ({ nome: i.name, nivel: i.system?.niveis }));
+  const { nivel: automatico, tabela } = nivelDaMarca(classes);
+  const cfg = configDaMarca(item);
+  return { nivel: cfg.nivel || automatico || 1, automatico, tabela };
+}
+
+/** Dado da marca (sem o dobro) para uma quantidade de PM extras. */
+function dadoDaMarcaDoAtor(ator, item, aumentos) {
+  const { tabela } = nivelDaMarcaDoAtor(ator, item);
+  return dadoDaMarca({ aumentos, config: configDaMarca(item), tabela });
+}
+
+function registroMarca(ator, tokenId) {
+  const tudo = ator?.getFlag?.(MODULE_ID, FLAG_MARCA) ?? {};
+  return tokenId ? normalizarMarca(tudo[tokenId]) : null;
+}
+
+/** Dado (antes do dobro) e fórmula que a marca contra um token vale agora. */
+function valorDaMarca(ator, tokenId) {
+  const registro = registroMarca(ator, tokenId);
+  const item = poderesDeMarca(ator)[0];
+  if (!registro || !item) return null;
+  const dado = dadoDaMarcaDoAtor(ator, item, registro.aumentos);
+  return { registro, dado, formula: formulaDaMarca(dado, { dobrado: registro.dobrado }) };
+}
+
+/** Primeira presa marcada entre os tokens mirados. */
+function marcaMirada(ator) {
+  for (const token of alvosMirados()) {
+    const valor = valorDaMarca(ator, token.id);
+    if (valor) return { token, ...valor };
+  }
+  return null;
+}
+
+/** Fila por ator, pelo mesmo motivo das Combinações e do Estudo. */
+const _filaMarca = new Map();
+
+function sincronizarMarca(ator) {
+  if (!ator?.id) return Promise.resolve();
+  const anterior = _filaMarca.get(ator.id) ?? Promise.resolve();
+  const proxima = anterior.catch(() => {}).then(() => _sincronizarMarca(ator));
+  _filaMarca.set(ator.id, proxima);
+  return proxima;
+}
+
+/**
+ * Efeito de uso LIGADO com o dado da presa mirada (como no Estudo: o bônus é
+ * automático contra ela). Sem presa mirada o efeito sai da ficha. Com dois
+ * poderes de marca na ficha, só o primeiro dá bônus — senão o dado somaria
+ * duas vezes.
+ */
+async function _sincronizarMarca(ator) {
+  if (!ator?.isOwner) return;
+  const [principal, ...repetidos] = poderesDeMarca(ator);
+  for (const item of repetidos) {
+    for (const ef of efeitosDoItem(ator, item.id)) await ef.delete();
+  }
+  if (!principal) return;
+
+  const def = definicaoDe(principal);
+  const marca = marcaMirada(ator);
+  const efeito = efeitoPorChave(ator, principal.id);
+  if (!marca) {
+    if (efeito) await efeito.delete();
+    return;
+  }
+
+  const changes = [{ key: 'dano', mode: 2, value: marca.formula, priority: 20 }];
+  const dados = {
+    name: ehV14() ? principal.name : `${principal.name} (${marca.formula} vs ${marca.token.name})`,
+    img: principal.img,
+    ...(ehV14() ? { description: descricaoDeUso(`Presa: ${marca.token.name}:`, `+${marca.formula} no dano.`) } : {}),
+    disabled: false,
+    changes,
+    flags: {
+      tormenta20: { onuse: true, custo: '0', ...def.marca.alvos },
+      [MODULE_ID]: { [FLAG_ORIGEM]: principal.id }
+    }
+  };
+  if (efeito) {
+    if (!efeitoEmDia(efeito, dados)) await efeito.update(paraOSistema(dados));
+  } else {
+    await criarEfeitoDoPoder(principal, dados);
+  }
+}
+
+/**
+ * Janela de marcar: PM extras (a tabela da classe) e, para cada poder
+ * "Inimigo de", se a presa é daquele tipo. O módulo não tenta descobrir o
+ * tipo da criatura — quem marca decide.
+ */
+async function abrirDialogoMarca(ator, item, nomeAlvo, anterior = null) {
+  const { nivel, tabela } = nivelDaMarcaDoAtor(ator, item);
+  const maximo = aumentosDisponiveis(nivel, tabela);
+  const esc = foundry.utils.escapeHTML;
+  // Remarcar a mesma presa abre com o que ela já tinha; marcar uma nova, no
+  // maior bônus — é o que quase sempre se escolhe.
+  const escolhido = Math.min(anterior?.aumentos ?? maximo, maximo);
+  // Ajustes de Gerenciar automações mudam todos os dados da lista; sem este
+  // aviso o dado parece errado para quem esqueceu que os configurou.
+  const cfg = configDaMarca(item);
+  const ajustes = [
+    cfg.passos ? game.i18n.format('T20HaydGMTools.MarcaAvisoPassos', { n: cfg.passos }) : '',
+    cfg.base !== PROGRESSAO_MARCA[0] ? game.i18n.format('T20HaydGMTools.MarcaAvisoBase', { base: cfg.base }) : ''
+  ].filter(Boolean).join(' · ');
+  const avisoAjustes = ajustes
+    ? `<p class="t20g-marca-aviso"><i class="fa-solid fa-triangle-exclamation"></i> ${ajustes}
+        <span class="notes">${game.i18n.localize('T20HaydGMTools.MarcaAvisoOnde')}</span></p>`
+    : '';
+  const opcoes = Array.from({ length: maximo + 1 }, (_, k) => {
+    const dado = dadoDaMarcaDoAtor(ator, item, k);
+    const custo = k ? game.i18n.format('T20HaydGMTools.MarcaPmExtra', { n: k }) : game.i18n.localize('T20HaydGMTools.MarcaSemPmExtra');
+    return `<option value="${k}" data-dado="${dado}" ${k === escolhido ? 'selected' : ''}>${dado} — ${custo}</option>`;
+  }).join('');
+  const inimigos = poderesInimigo(ator).map((p, i) => `
+    <label class="t20g-auto-item">
+      <input type="checkbox" name="inimigo" value="${p.id}" ${anterior?.dobrado && i === 0 ? 'checked' : ''}>
+      <i class="${definicaoDe(p).icone}"></i>
+      <span class="t20g-auto-nome">${esc(p.name)}
+        <span class="notes">— ${game.i18n.localize('T20HaydGMTools.MarcaInimigoDica')}</span></span>
+    </label>`).join('');
+
+  const resposta = await DialogV2.wait({
+    window: { title: game.i18n.format('T20HaydGMTools.MarcaTitulo', { alvo: nomeAlvo }), icon: 'fa-solid fa-crosshairs' },
+    position: { width: 420 },
+    content: `<div class="t20g-auto-dialogo t20g-marca-dialogo">
+        <p>${game.i18n.format('T20HaydGMTools.MarcaIntro', { alvo: esc(nomeAlvo) })}</p>
+        <label class="t20g-marca-campo">
+          <span>${game.i18n.localize('T20HaydGMTools.MarcaBonus')}</span>
+          <select name="aumentos">${opcoes}</select>
+        </label>
+        <p class="notes">${game.i18n.format('T20HaydGMTools.MarcaNivel', { nivel })}</p>
+        ${avisoAjustes}
+        ${inimigos ? `<div class="t20g-auto-grupo">${inimigos}</div>` : ''}
+        <p class="t20g-marca-resultado">${game.i18n.localize('T20HaydGMTools.MarcaResultado')} <b></b></p>
+      </div>`,
+    buttons: [
+      {
+        action: 'marcar',
+        label: game.i18n.localize('T20HaydGMTools.MarcaMarcar'),
+        icon: 'fa-solid fa-crosshairs',
+        default: true,
+        callback: (_ev, botao) => ({
+          aumentos: Number(botao.form.elements.aumentos.value) || 0,
+          dobrado: [...botao.form.querySelectorAll('input[name="inimigo"]')].some((c) => c.checked)
+        })
+      },
+      { action: 'cancelar', label: game.i18n.localize('T20HaydGMTools.AutoCancelar'), icon: 'fa-solid fa-xmark' }
+    ],
+    render: (_ev, dialogo) => {
+      const el = dialogo.element;
+      const resultado = el.querySelector('.t20g-marca-resultado b');
+      const atualizar = () => {
+        const dado = el.querySelector('select[name="aumentos"]').selectedOptions[0]?.dataset.dado;
+        const dobrado = [...el.querySelectorAll('input[name="inimigo"]')].some((c) => c.checked);
+        resultado.textContent = `+${formulaDaMarca(dado, { dobrado })}`;
+      };
+      el.addEventListener('change', atualizar);
+      atualizar();
+    },
+    rejectClose: false
+  });
+  return resposta && typeof resposta === 'object' ? resposta : null;
+}
+
+/** Marca a presa: grava o registro, desconta os PM extras e liga o bônus. */
+async function marcarPresa(ator, item, tokenId) {
+  const nome = nomeDoToken(tokenId) ?? '?';
+  const escolha = await abrirDialogoMarca(ator, item, nome, registroMarca(ator, tokenId));
+  if (!escolha) return false;
+
+  const tudo = foundry.utils.deepClone(ator.getFlag(MODULE_ID, FLAG_MARCA) ?? {});
+  tudo[tokenId] = { item: item.id, aumentos: escolha.aumentos, dobrado: escolha.dobrado };
+  await ator.setFlag(MODULE_ID, FLAG_MARCA, tudo);
+
+  // O PM da marca em si o sistema já cobrou ao usar o poder; aqui só os extras.
+  // Pelo spendMana do sistema: gasta os PM temporários primeiro e posta o
+  // cartão de gasto, que o log de mana transforma em registro com Desfazer.
+  if (escolha.aumentos > 0) {
+    if (typeof ator.spendMana === 'function') {
+      await ator.spendMana(escolha.aumentos, 0, false);
+    } else {
+      const pm = Number(ator.system?.attributes?.pm?.value) || 0;
+      await ator.update({ 'system.attributes.pm.value': Math.max(0, pm - escolha.aumentos) });
+    }
+  }
+  await sincronizarMarca(ator);
+  const { formula } = valorDaMarca(ator, tokenId);
+  ui.notifications.info(game.i18n.format('T20HaydGMTools.MarcaFeita', {
+    alvo: nome, formula, pm: escolha.aumentos
+  }));
+  return true;
+}
+
+/** Tira a marca de um oponente (o efeito visual sai pelo Mestre). */
+async function removerMarca(ator, tokenId) {
+  if (!registroMarca(ator, tokenId)) return false;
+  await ator.update({ ...apagarChave(`flags.${MODULE_ID}.${FLAG_MARCA}.${tokenId}`) });
+  await sincronizarMarca(ator);
+  return true;
+}
+
+/** Presas marcadas, por ator e oponente (para o lembrete de fim de cena). */
+function marcasRegistradas() {
+  const registros = [];
+  for (const ator of indiceMarca.listar()) {
+    const tudo = ator.getFlag(MODULE_ID, FLAG_MARCA) ?? {};
+    for (const tokenId of Object.keys(tudo)) {
+      const valor = valorDaMarca(ator, tokenId);
+      registros.push({ ator, tokenId, oponente: nomeDoToken(tokenId), formula: valor?.formula ?? '' });
+    }
+  }
+  return registros;
+}
+
+/**
+ * Efeito visual "Marca da Presa de <nome>" na criatura marcada. Não muda
+ * nada na ficha dela: só lembra a mesa de quem está marcado. A ficha da
+ * presa quase nunca é do jogador, então quem escreve é o Mestre ativo,
+ * reagindo à flag na ficha do caçador (que o jogador pode gravar).
+ */
+async function sincronizarMarcasVisuais() {
+  if (!souGmAtivo()) return;
+
+  const desejados = new Map();
+  for (const ator of indiceMarca.listar()) {
+    const item = poderesDeMarca(ator)[0];
+    for (const tokenId of Object.keys(ator.getFlag(MODULE_ID, FLAG_MARCA) ?? {})) {
+      desejados.set(`${ator.id}:${tokenId}`, { ator, tokenId, item });
+    }
+  }
+
+  const existentes = new Set();
+  for (const destino of atoresComEfeitos()) {
+    for (const efeito of [...(destino.effects ?? [])]) {
+      const marca = efeito.getFlag(MODULE_ID, FLAG_MARCA_VISUAL);
+      if (!marca) continue;
+      const chave = `${marca.ator}:${marca.token}`;
+      if (desejados.has(chave) && atorDoToken(marca.token) === destino && !existentes.has(chave)) {
+        existentes.add(chave);
+        continue;
+      }
+      await efeito.delete();
+    }
+  }
+
+  for (const [chave, { ator, tokenId, item }] of desejados) {
+    if (existentes.has(chave)) continue;
+    const destino = atorDoToken(tokenId);
+    if (!destino) continue;
+    await destino.createEmbeddedDocuments('ActiveEffect', [paraOSistema({
+      name: game.i18n.format('T20HaydGMTools.MarcaVisual', { ator: ator.name }),
+      img: item?.img ?? 'icons/svg/target.svg',
+      disabled: false,
+      // Ícone no token (ver a mesma escolha nas auras): no v13 o T20 só mostra
+      // efeito com duração; no v14 o ícone vem de showIcon.
+      ...(ehV14()
+        ? { showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS, duration: { value: null, expiry: null } }
+        : { duration: { rounds: 999 } }),
+      changes: [],
+      origin: item?.uuid,
+      flags: {
+        tormenta20: { onuse: false, custo: '0' },
+        [MODULE_ID]: { [FLAG_MARCA_VISUAL]: { ator: ator.id, token: tokenId } }
+      }
+    })]);
+  }
+}
+
+/** Atualiza as barras da marca já renderizadas no chat. */
+function atualizarBarrasMarca(ator) {
+  const seletor = `.t20g-marca-barra[data-actor-id="${CSS.escape(ator.id)}"]`;
+  for (const barra of document.querySelectorAll(seletor)) {
+    const item = ator.items.get(barra.dataset.itemId);
+    if (!item) continue;
+    const nova = montarBarraMarca(item, {
+      completo: barra.dataset.completo === '1',
+      message: mensagemDaBarra(barra)
+    });
+    if (!nova) { barra.remove(); continue; }
+    if (nova.outerHTML === barra.outerHTML) continue;
+    barra.replaceWith(nova);
+  }
+}
+
+/**
+ * Barra da marca. No cartão do próprio poder: uma linha por alvo da rolagem,
+ * com Marcar/Remover, e a troca de alvo (para marcar depois). Nos cartões de
+ * ataque: só as presas marcadas, para a mesa ver que o dado entrou.
+ */
+function montarBarraMarca(item, { completo, message }) {
+  const ator = item.actor;
+  const def = definicaoDe(item);
+  const controla = podeControlar(ator);
+  const alvos = alvosDaBarra(message);
+  const linhas = completo ? alvos : alvos.filter((alvo) => registroMarca(ator, alvo.id));
+  if (!completo && !linhas.length) return null;
+  if (!controla && !linhas.length) return null;
+
+  const barra = document.createElement('footer');
+  barra.className = 't20g-auto-barra t20g-marca-barra';
+  barra.dataset.actorId = ator.id;
+  barra.dataset.itemId = item.id;
+  barra.dataset.completo = completo ? '1' : '0';
+
+  const cabecalho = (linha) => {
+    const rotulo = document.createElement('div');
+    rotulo.className = 't20g-auto-rotulo';
+    const icone = document.createElement('i');
+    icone.className = def.icone ?? 'fa-solid fa-crosshairs';
+    rotulo.append(icone, ` ${item.name}`);
+    linha.appendChild(rotulo);
+    return rotulo;
+  };
+
+  if (!linhas.length) {
+    const linha = document.createElement('div');
+    linha.className = 't20g-auto-linha';
+    const dica = document.createElement('span');
+    dica.className = 't20g-comb-alvo';
+    dica.textContent = game.i18n.localize('T20HaydGMTools.CombSemAlvo');
+    cabecalho(linha).appendChild(dica);
+    barra.appendChild(linha);
+  } else for (const alvo of linhas) {
+    const valor = valorDaMarca(ator, alvo.id);
+    const linha = document.createElement('div');
+    linha.className = 't20g-auto-linha';
+    const rotulo = cabecalho(linha);
+    rotulo.append(': ');
+    const numero = document.createElement('b');
+    numero.textContent = valor ? `+${valor.formula}` : game.i18n.localize('T20HaydGMTools.MarcaNaoMarcada');
+    rotulo.appendChild(numero);
+    const nomeAlvo = document.createElement('span');
+    nomeAlvo.className = 't20g-comb-alvo';
+    nomeAlvo.textContent = game.i18n.format('T20HaydGMTools.CombVs', { alvo: alvo.name });
+    rotulo.appendChild(nomeAlvo);
+
+    if (controla && completo) {
+      const botao = (acao, ic, dica) => criarBotao(item, acao, ic, dica, {
+        dataset: { acaoMarca: acao, actorId: ator.id, tokenId: alvo.id }
+      });
+      linha.appendChild(botao('marcar', 'fa-crosshairs', game.i18n.format(
+        valor ? 'T20HaydGMTools.MarcaRefazer' : 'T20HaydGMTools.MarcaMarcarAlvo', { alvo: alvo.name })));
+      if (valor) {
+        linha.appendChild(botao('remover', 'fa-xmark',
+          game.i18n.format('T20HaydGMTools.MarcaRemover', { alvo: alvo.name })));
+      }
+    }
+    barra.appendChild(linha);
+  }
+
+  if (completo) {
+    const linhaAlvo = montarLinhaTrocaAlvo(message, ator, alvos, 'acaoMarca');
+    if (linhaAlvo) barra.appendChild(linhaAlvo);
+  }
+  return barra;
+}
+
+/* ─── Efeitos de uso suspensos (Tiro de Abate, Primeiro Sangue) ──────────── */
+
+/**
+ * Efeito de uso desmarcado na janela de rolagem: o jogador marca quando o
+ * poder vale (mirou; primeira rodada). O custo é o do próprio poder.
+ */
+async function sincronizarUsoSuspenso(item) {
+  const def = definicaoDe(item);
+  const ator = item.actor;
+  if (!def?.usoSuspenso || !ator?.isOwner) return;
+  const uso = def.usoSuspenso;
+  const changes = uso.changes();
+  const dados = {
+    name: item.name,
+    img: item.img,
+    ...(ehV14() ? { description: descricaoDeUso(def.comoUsar) } : {}),
+    disabled: true,
+    changes,
+    flags: {
+      tormenta20: { onuse: true, custo: String(Number(item.system?.ativacao?.custo) || 0), ...uso.alvos },
+      [MODULE_ID]: { [FLAG_ORIGEM]: item.id }
+    }
+  };
+  const efeito = efeitoPorChave(ator, item.id);
+  if (efeito) {
+    if (!efeitoEmDia(efeito, dados)) await efeito.update(paraOSistema(dados));
+  } else {
+    await criarEfeitoDoPoder(item, dados);
+  }
+}
+
+/* ─── Passos de dano e marca no crítico (na hora de rolar) ───────────────── */
+
+/**
+ * Ids dos efeitos de uso que entraram nesta rolagem. A janela de uso manda
+ * `aprs.<id>.aplica` (achatado no formulário ou aninhado); sem janela não há
+ * essa lista e valem os efeitos ligados — o mesmo que o sistema aplica.
+ */
+function idsAplicados(opcoes) {
+  let achou = false;
+  const ids = new Set();
+  const marcar = (id, aplica) => {
+    achou = true;
+    if (aplica === true || Number(aplica)) ids.add(id);
+  };
+  if (opcoes?.aprs && typeof opcoes.aprs === 'object') {
+    for (const [id, valor] of Object.entries(opcoes.aprs)) marcar(id, valor?.aplica);
+  }
+  for (const [chave, valor] of Object.entries(opcoes ?? {})) {
+    const m = chave.match(/^aprs\.([^.]+)\.aplica$/);
+    if (m) marcar(m[1], valor);
+  }
+  return achou ? ids : null;
+}
+
+function efeitoFoiAplicado(efeito, ids) {
+  if (!efeito) return false;
+  return ids ? ids.has(efeito.id) : usoDe(efeito).automatico;
+}
+
+/**
+ * Reescreve as partes de dano do item antes do sistema rolar: os passos do
+ * Primeiro Sangue (em todos os dados) e a marca multiplicada no crítico do
+ * Tiro de Abate. Devolve a função que desfaz — a prévia rola o mesmo clone
+ * duas vezes (normal e crítico) e não pode subir os passos em dobro.
+ */
+function prepararDanoDaMarca(item, args) {
+  const ator = item?.actor;
+  if (!ator || !automacoesAtivas()) return null;
+  const temAlgo = ator.items.some((i) => {
+    const def = definicaoDe(i);
+    return def?.usoSuspenso || def?.marca;
+  });
+  if (!temAlgo) return null;
+
+  const ids = idsAplicados(args?.options);
+  let passos = 0;
+  let multiplicaMarca = false;
+  // Nomes de quem mexeu, para as fontes da rolagem dizerem o porquê
+  const deQuemPassos = [];
+  let deQuemMultiplica = null;
+  for (const poder of ator.items) {
+    const uso = definicaoDe(poder)?.usoSuspenso;
+    if (!uso || !efeitoFoiAplicado(efeitoPorChave(ator, poder.id), ids)) continue;
+    if (uso.passosDano) {
+      passos += uso.passosDano;
+      deQuemPassos.push(poder.name);
+    }
+    if (uso.multiplicaMarca) {
+      multiplicaMarca = true;
+      deQuemMultiplica ??= poder.name;
+    }
+  }
+
+  const poderMarca = poderesDeMarca(ator)[0];
+  const marca = poderMarca && efeitoFoiAplicado(efeitoPorChave(ator, poderMarca.id), ids)
+    ? marcaMirada(ator)
+    : null;
+  // Mesma regra das fontes: um `critical` nas opções (a prévia manda) vence.
+  const critico = !!(args?.options?.critical
+    ?? (item.type === 'arma' ? item.system?.rolled?.Ataque?._critical : args?.critical));
+  const multiplicador = multiplicaMarca && critico ? Math.max(2, Number(item.system?.criticoX) || 2) : 1;
+  if (!passos && !(marca && multiplicador > 1)) return null;
+
+  const notaPassos = passos
+    ? game.i18n.format('T20HaydGMTools.FontePassos', { fonte: deQuemPassos.join(', '), n: passos })
+    : '';
+  const notaMarca = marca ? [
+    marca.registro.dobrado ? game.i18n.format('T20HaydGMTools.FonteDobro', {
+      fonte: poderesInimigo(ator)[0]?.name ?? 'Inimigo'
+    }) : '',
+    notaPassos,
+    multiplicador > 1 ? `${deQuemMultiplica}: ×${multiplicador}` : ''
+  ].filter(Boolean).join(', ') : '';
+
+  // Fórmula original e o porquê de cada parte reescrita: as fontes da
+  // rolagem (t20-hayd-fontes.mjs) casam pela original e citam o motivo.
+  const ajustadas = new Map();
+  const originais = [];
+  for (const r of item.system?.rolls ?? []) {
+    if (r.type !== 'dano' || !Array.isArray(r.parts)) continue;
+    const indice = marca ? indiceDaMarca(r.parts, marca.formula) : -1;
+    const novas = aplicarPassosNasPartes(r.parts, {
+      passos,
+      ehArma: item.type === 'arma',
+      indiceMarca: indice,
+      formulaMarca: indice >= 0
+        ? formulaDaMarca(marca.dado, { passos, dobrado: marca.registro.dobrado, multiplicador })
+        : null
+    });
+    novas.forEach((parte, i) => {
+      if (r.parts[i][0] === parte[0]) return;
+      // Troca por uma cópia em vez de mexer no lugar: o "dano: roll" do
+      // Ataque Furtivo põe aqui o MESMO array do poder, e alterá-lo mudaria
+      // o dano do próprio poder durante a rolagem.
+      const original = r.parts[i];
+      r.parts[i] = [...original];
+      originais.push([r.parts, i, original]);
+      // A marca é rotulada pelo nome do poder: no v13 o nome do efeito já
+      // carrega "(2d12 vs Fulano)" e o rótulo ficaria com dois parênteses.
+      ajustadas.set(r.parts[i], i === indice
+        ? { original: r.parts[i][0], nota: notaMarca, fonte: poderMarca.name }
+        : { original: r.parts[i][0], nota: notaPassos });
+      r.parts[i][0] = parte[0];
+    });
+  }
+  item._t20gPartesAjustadas = ajustadas;
+  return () => {
+    for (const [partes, i, original] of originais) partes[i] = original;
+    delete item._t20gPartesAjustadas;
+  };
+}
+
+/** Embrulha o rollDamage do sistema (também usado pela prévia de dano). */
+function ligarPassosDeDano() {
+  const proto = CONFIG.Item?.documentClass?.prototype;
+  if (!proto?.rollDamage || proto._t20gPassosDeDano) return;
+  const original = proto.rollDamage;
+  proto.rollDamage = async function (args = {}) {
+    let desfazer = null;
+    try { desfazer = prepararDanoDaMarca(this, args); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao aplicar passos de dano`, err); }
+    try { return await original.call(this, args); }
+    finally { desfazer?.(); }
+  };
+  proto._t20gPassosDeDano = true;
+}
+
 /* ─── Distribuição de projéteis entre alvos ──────────────────────────────── */
 
 /**
@@ -2689,6 +3274,7 @@ async function sincronizarMiraAntesDaRolagem(item) {
   const tarefas = [];
   if (poderesDeCombinacao(ator).length) tarefas.push(sincronizarCombinacoes(ator));
   if (poderesDeEstudo(ator).length) tarefas.push(sincronizarEstudo(ator));
+  if (poderesDeMarca(ator).length) tarefas.push(sincronizarMarca(ator));
   await Promise.all(tarefas);
 }
 
@@ -3168,7 +3754,17 @@ function alvosEditaveisDoAtor(ator, flag) {
 
 /** Estados persistentes que este painel sabe encerrar sem apagar efeitos avulsos. */
 function automacoesAtivasCancelaveis(ator) {
-  return [...(ator?.items ?? [])].flatMap((item) => {
+  const poderMarca = poderesDeMarca(ator)[0];
+  const marcas = poderMarca
+    ? Object.keys(ator.getFlag(MODULE_ID, FLAG_MARCA) ?? {}).map((tokenId) => ({
+      tipo: 'marca', chave: tokenId,
+      nome: `${poderMarca.name} — ${nomeDoToken(tokenId)
+        ?? game.i18n.format('T20HaydGMTools.ContadoresAlvoDesconhecido', { id: tokenId })}`,
+      icone: definicaoDe(poderMarca).icone,
+      detalhe: `+${valorDaMarca(ator, tokenId)?.formula ?? '?'} no dano`
+    }))
+    : [];
+  return [...marcas, ...[...(ator?.items ?? [])].flatMap((item) => {
     const def = definicaoDe(item);
     if (!def?.aura) return [];
 
@@ -3180,7 +3776,7 @@ function automacoesAtivasCancelaveis(ator) {
         raio: resumo.raio, valor: resumo.valor
       })
     }];
-  });
+  })];
 }
 
 /** Descrição canônica de tudo que o usuário pode consultar/editar no painel. */
@@ -3249,6 +3845,39 @@ function gruposDoPainelContadores(ator) {
     });
   }
 
+  // Marca da Presa: ajustes de homebrew/suplementos. Base e passos deslocam a
+  // tabela inteira; o nível só precisa ser preenchido quando a classe que dá
+  // a marca não é reconhecida pelo nome.
+  const poderMarca = poderesDeMarca(ator)[0];
+  if (poderMarca) {
+    const cfg = configDaMarca(poderMarca);
+    const { automatico } = nivelDaMarcaDoAtor(ator, poderMarca);
+    const icone = definicaoDe(poderMarca).icone;
+    grupos.push({
+      titulo: poderMarca.name,
+      linhas: [
+        {
+          tipo: 'marca-base', chave: poderMarca.id, icone,
+          nome: game.i18n.localize('T20HaydGMTools.MarcaCfgBase'),
+          detalhe: game.i18n.localize('T20HaydGMTools.MarcaCfgBaseDica'),
+          valor: PROGRESSAO_MARCA.indexOf(cfg.base), opcoes: PROGRESSAO_MARCA, semIndice: true
+        },
+        {
+          tipo: 'marca-passos', chave: poderMarca.id, icone: 'fa-solid fa-arrow-trend-up',
+          nome: game.i18n.localize('T20HaydGMTools.MarcaCfgPassos'),
+          detalhe: game.i18n.localize('T20HaydGMTools.MarcaCfgPassosDica'),
+          valor: cfg.passos, max: null
+        },
+        {
+          tipo: 'marca-nivel', chave: poderMarca.id, icone: 'fa-solid fa-layer-group',
+          nome: game.i18n.localize('T20HaydGMTools.MarcaCfgNivel'),
+          detalhe: game.i18n.format('T20HaydGMTools.MarcaCfgNivelDica', { nivel: automatico }),
+          valor: cfg.nivel, max: 20
+        }
+      ]
+    });
+  }
+
   return grupos;
 }
 
@@ -3263,7 +3892,7 @@ function htmlLinhaPainelContadores(linha) {
     + ` data-contador-original="${linha.valor}"`;
   const controle = linha.opcoes
     ? `<select class="t20g-campo" ${atributos}>${linha.opcoes.map((dado, indice) =>
-      `<option value="${indice}" ${indice === linha.valor ? 'selected' : ''}>${indice} — ${dado}</option>`
+      `<option value="${indice}" ${indice === linha.valor ? 'selected' : ''}>${linha.semIndice ? dado : `${indice} — ${dado}`}</option>`
     ).join('')}</select>`
     : `<input class="t20g-campo t20g-contadores-numero" type="number" min="0" step="1" value="${linha.valor}" ${atributos}`
       + `${linha.max === null ? '' : ` max="${linha.max}"`}>`;
@@ -3351,16 +3980,36 @@ async function aplicarEdicoesPainelContadores(ator, edicoes) {
       mudou = await definirCombinacao(ator, edicao.chave, edicao.valor);
     } else if (edicao.tipo === 'estudo') {
       mudou = await definirEstudo(ator, edicao.chave, edicao.valor);
+    } else if (edicao.tipo.startsWith('marca-')) {
+      const item = ator.items.get(edicao.chave);
+      if (item) mudou = await definirConfigMarca(item, edicao.tipo, edicao.valor);
     }
     if (mudou) total++;
   }
   return total;
 }
 
+/** Grava um ajuste da Marca da Presa e põe bônus, barras e presas em dia. */
+async function definirConfigMarca(item, tipo, valor) {
+  const cfg = configDaMarca(item);
+  if (tipo === 'marca-base') cfg.base = PROGRESSAO_MARCA[valor] ?? cfg.base;
+  else if (tipo === 'marca-passos') cfg.passos = valor;
+  else if (tipo === 'marca-nivel') cfg.nivel = Math.min(20, valor);
+  else return false;
+  await item.setFlag(MODULE_ID, FLAG_MARCA_CONFIG, normalizarConfig(cfg));
+  await sincronizarMarca(item.actor);
+  atualizarBarrasMarca(item.actor);
+  return true;
+}
+
 /** Encerra somente estados que possuem um fluxo explicito de cancelamento. */
 async function aplicarCancelamentosPainelContadores(ator, cancelamentos) {
   let total = 0;
   for (const cancelamento of cancelamentos) {
+    if (cancelamento.tipo === 'marca') {
+      if (await removerMarca(ator, cancelamento.chave)) total++;
+      continue;
+    }
     if (cancelamento.tipo !== 'aura') continue;
     const item = ator.items.get(cancelamento.chave);
     if (!item || !definicaoDe(item)?.aura || !auras.resumoDaAura(item)?.ativa) continue;
@@ -3594,7 +4243,8 @@ export function injetarControlesAutomacao(message, html) {
   });
   const combinacoes = poderesDeCombinacao(ator);
   const estudos = poderesDeEstudo(ator);
-  if (!comControles.length && !combinacoes.length && !estudos.length) return;
+  const marcas = poderesDeMarca(ator).slice(0, 1);
+  if (!comControles.length && !combinacoes.length && !estudos.length && !marcas.length) return;
 
   const itemDoCard = ator.items.get(card.dataset.itemId);
   const ehAtaque = itemDoCard?.system?.rolls?.some((r) => r.type === 'ataque') ?? false;
@@ -3657,6 +4307,16 @@ export function injetarControlesAutomacao(message, html) {
     if (barraEstudo) card.appendChild(barraEstudo);
   }
 
+  // Marca da Presa: marcar no cartão do poder (qualquer uma das cópias dele
+  // na ficha); nos cartões com dano, só mostra a presa marcada.
+  for (const item of marcas) {
+    const noPoder = poderesDeMarca(ator).some((i) => i.id === itemDoCard?.id);
+    const temDano = itemDoCard?.system?.rolls?.some((r) => r.type === 'dano') ?? false;
+    if (!noPoder && !temDano) continue;
+    const barraMarca = montarBarraMarca(item, { completo: noPoder, message });
+    if (barraMarca) card.appendChild(barraMarca);
+  }
+
   card.addEventListener('click', async (ev) => {
     const botao = ev.target.closest?.('.t20g-auto-btn');
     if (!botao) return;
@@ -3670,7 +4330,8 @@ export function injetarControlesAutomacao(message, html) {
     // Combinações e Estudar o Adversário compartilham o mesmo alvo persistido
     // no cartão e, portanto, exatamente a mesma ação para defini-lo ou trocá-lo.
     if (botao.dataset.acaoComb === 'trocar-alvo'
-        || botao.dataset.acaoEstudo === 'trocar-alvo') {
+        || botao.dataset.acaoEstudo === 'trocar-alvo'
+        || botao.dataset.acaoMarca === 'trocar-alvo') {
       botao.disabled = true;
       try { await trocarAlvoDaMensagem(message, ator); }
       catch (err) {
@@ -3740,6 +4401,24 @@ export function injetarControlesAutomacao(message, html) {
         atualizarBarrasEstudo(ator);
       } catch (err) {
         console.error(`${MODULE_ID} | Falha na contagem de estudo`, err);
+      } finally {
+        botao.disabled = false;
+      }
+      return;
+    }
+
+    // Botões da barra da Marca da Presa (cada linha age na sua presa)
+    if (botao.dataset.acaoMarca) {
+      const poder = ator.items.get(botao.dataset.itemId);
+      const tokenId = botao.dataset.tokenId;
+      if (!poder || !tokenId) return;
+      botao.disabled = true;
+      try {
+        if (botao.dataset.acaoMarca === 'marcar') await marcarPresa(ator, poder, tokenId);
+        else if (botao.dataset.acaoMarca === 'remover') await removerMarca(ator, tokenId);
+        atualizarBarrasMarca(ator);
+      } catch (err) {
+        console.error(`${MODULE_ID} | Falha na Marca da Presa`, err);
       } finally {
         botao.disabled = false;
       }
@@ -3942,7 +4621,8 @@ async function sugerirZerarContadores(motivo, contexto = {}) {
   const acesos = contadoresAcesos();
   const combinacoes = combinacoesAcesas(contexto);
   const estudos = estudosAcesos();
-  if (!acesos.length && !combinacoes.length && !estudos.length) return;
+  const marcas = marcasRegistradas().filter((m) => m.oponente);
+  if (!acesos.length && !combinacoes.length && !estudos.length && !marcas.length) return;
 
   const lista = [
     ...acesos.map(({ ator, item }) => {
@@ -3962,7 +4642,9 @@ async function sugerirZerarContadores(motivo, contexto = {}) {
         ator: ator.name,
         oponente: oponente ?? game.i18n.localize('T20HaydGMTools.CombOponenteDesconhecido'),
         valor: bonusDoEstudo(valor)
-      })}</li>`)
+      })}</li>`),
+    ...marcas.map(({ ator, oponente, formula }) =>
+      `<li>${game.i18n.format('T20HaydGMTools.FimCenaMarcaItem', { ator: ator.name, oponente, formula })}</li>`)
   ].join('');
 
   await ChatMessage.create({
@@ -3988,7 +4670,8 @@ async function zerarTodosContadores() {
   // a contagem, mas não devem permanecer crescendo nas flags do ator.
   const combinacoes = combinacoesRegistradas();
   const estudos = estudosRegistrados();
-  if (!acesos.length && !combinacoes.length && !estudos.length) {
+  const marcas = marcasRegistradas();
+  if (!acesos.length && !combinacoes.length && !estudos.length && !marcas.length) {
     return ui.notifications.info(game.i18n.localize('T20HaydGMTools.FimCenaNada'));
   }
 
@@ -4014,9 +4697,17 @@ async function zerarTodosContadores() {
   }
   for (const ator of atoresEstudo) atualizarBarrasEstudo(ator);
 
+  // Marca da Presa: dura até o fim da cena, então todas saem
+  const atoresMarca = new Set(marcas.map(({ ator }) => ator));
+  for (const ator of atoresMarca) {
+    await ator.unsetFlag(MODULE_ID, FLAG_MARCA);
+    await sincronizarMarca(ator);
+    atualizarBarrasMarca(ator);
+  }
+
   ui.notifications.info(
     game.i18n.format('T20HaydGMTools.FimCenaZerado', {
-      total: acesos.length + combinacoes.length + estudos.length
+      total: acesos.length + combinacoes.length + estudos.length + marcas.length
     })
   );
 }
@@ -4174,6 +4865,39 @@ function paginaDaAutomacao(def) {
         <li>O chat mostra quanto cada um curou, com um botão para o Mestre desfazer
             caso a caso.</li>
       </ul>`;
+  } else if (def.marca) {
+    comoFunciona = `
+      <ul>
+        <li>Mire a criatura e role o poder. No cartão, <b>Marcar</b> abre a escolha dos PM extras
+            (pela tabela do Caçador: 1d4, 1d8 no 5º nível, 1d12 no 9º, 2d8 no 13º e 2d10 no 17º)
+            e, se você tiver algum <i>Inimigo de</i>, se a presa é daquele tipo. Os PM extras
+            saem da ficha; o PM da marca o sistema já cobrou.</li>
+        <li>Para marcar depois, mire a criatura e use <b>Definir alvo</b> no cartão do poder.</li>
+        <li>A presa recebe o efeito <i>Marca da Presa de (personagem)</i>, só como lembrete (o
+            Mestre precisa estar conectado para ele aparecer).</li>
+        <li>O dado entra sozinho no dano sempre que a presa estiver mirada.</li>
+        <li>Em <b>Gerenciar automações</b> (aba Efeitos) dá para mudar o dado base, somar passos
+            de outros poderes ou itens e informar o nível, se a classe não for reconhecida.
+            Os passos seguem a Tabela 3-2 (Dano de Armas): 1d4 → 1d6 → 1d8 → 1d10 → 1d12 →
+            3d6 → 4d6…, 2d8 → 3d8 → 4d8…, 2d10 → 3d10 → 4d10 → 4d12 (máximo).</li>
+        <li>Dura até o fim da cena: no fim do encontro sai um aviso no chat com um botão para
+            limpar as marcas.</li>
+      </ul>`;
+  } else if (def.marcador === 'inimigo') {
+    comoFunciona = `
+      <ul><li>Com este poder na ficha, a janela da Marca da Presa pergunta se a presa é do tipo
+        escolhido. Marcando, os dados da marca dobram contra ela.</li></ul>`;
+  } else if (def.usoSuspenso) {
+    const u = def.usoSuspenso;
+    comoFunciona = `
+      <ul>
+        <li>Cria um efeito de uso <b>desmarcado</b> na janela de rolagem; marque quando o poder
+            valer.</li>
+        ${u.passosDano ? `<li>Todos os dados de dano sobem ${u.passosDano} passos antes do
+            crítico: arma e Marca da Presa na tabela de passos de dano, os outros dados de d4
+            até d12. Perda de PV não sobe.</li>` : ''}
+        ${u.multiplicaMarca ? '<li>No crítico, os dados da Marca da Presa são multiplicados junto com os da arma.</li>' : ''}
+      </ul>`;
   } else if (def.marcador === 'incremento2') {
     comoFunciona = `
       <ul><li>Com este poder na ficha, o botão <b>+</b> da contagem passa a somar 2.</li></ul>`;
@@ -4254,6 +4978,7 @@ function paginaGolpePessoal(def, tipos) {
  */
 const CATEGORIAS = [
   { id: 'barbaro', rotulo: 'T20HaydGMTools.DiarioCatBarbaro' },
+  { id: 'cacador', rotulo: 'T20HaydGMTools.DiarioCatCacador' },
   { id: 'guerreiro', rotulo: 'T20HaydGMTools.DiarioCatGuerreiro' },
   { id: 'inventor', rotulo: 'T20HaydGMTools.DiarioCatInventor' },
   { id: 'lutador', rotulo: 'T20HaydGMTools.DiarioCatLutador', abre: paginaCombinacoes },
@@ -4392,6 +5117,10 @@ registrarHooksAutomacoes({
   indiceEstudo,
   sincronizarEstudo,
   atualizarBarrasEstudo,
+  indiceMarca,
+  sincronizarMarca,
+  atualizarBarrasMarca,
+  sincronizarMarcasVisuais,
   injetarPainelContadores,
   atualizarRotulos,
   atualizarBarrasAura,
@@ -4464,6 +5193,7 @@ async function migrarEfeitosParaOsItens() {
       if (definicaoDe(item)) await sincronizarEfeito(item).catch(() => {});
     }
     if (poderesDeEstudo(ator).length) await sincronizarEstudo(ator).catch(() => {});
+    if (poderesDeMarca(ator).length) await sincronizarMarca(ator).catch(() => {});
   }
   await game.settings.set(MODULE_ID, 'versaoEfeitosAutomacoes', 2);
 }
@@ -4479,6 +5209,8 @@ Hooks.once('ready', () => {
   ligarSincronizacaoDaMira();
   // Conjurador: a magia do Golpe Pessoal precisa sair antes do ataque
   ligarConjurador();
+  // Primeiro Sangue e Tiro de Abate mexem nos dados na hora de rolar o dano
+  ligarPassosDeDano();
   engenhocas.ligarFluxo();
   for (const ator of game.actors ?? []) engenhocas.agendarSincronizacao(ator);
 
@@ -4518,6 +5250,11 @@ Hooks.once('ready', () => {
   if (ehV14() && game.user === game.users.activeGM) {
     migrarEfeitosParaOsItens().catch((err) =>
       console.error(`${MODULE_ID} | Falha ao mover os efeitos das automações para os poderes`, err));
+  }
+
+  if (automacoesAtivas() && souGmAtivo()) {
+    sincronizarMarcasVisuais().catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao sincronizar as marcas da presa`, err));
   }
 
   if (automacoesAtivas() && game.user.isGM && game.user === game.users.activeGM) {

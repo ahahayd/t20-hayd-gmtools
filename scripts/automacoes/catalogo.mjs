@@ -268,6 +268,94 @@ export const AUTOMACOES = {
     golpe: true
   },
 
+  /* --- Marca da Presa (Caçador) ----------------------------------------- */
+  // Os dados da marca, a tabela por nível e os passos moram em
+  // marca-da-presa.mjs; aqui ficam só a descrição e os efeitos de uso.
+
+  'marca-da-presa': {
+    categoria: 'cacador',
+    nome: 'Marca da Presa',
+    fonte: 'Livro Básico',
+    icone: 'fa-solid fa-crosshairs',
+    tipos: ['poder'],
+    ordemDiario: 0,
+    apagarEfeitos: true,
+    resumo:
+      'Você pode gastar uma ação de movimento e 1 PM para analisar uma criatura em alcance '
+      + 'curto. Até o fim da cena, você recebe +1d4 nas rolagens de dano contra essa criatura. '
+      + 'A cada quatro níveis, você pode gastar +1 PM para aumentar o bônus de dano.',
+    comoUsar:
+      'Mire a criatura e role o poder; no cartão, use <b>Marcar</b> para escolher os PM extras '
+      + 'e se ela é um dos seus Inimigos. O dado entra sozinho no dano sempre que ela estiver '
+      + 'mirada. Base e passos extras ficam em <b>Gerenciar automações</b>, na aba Efeitos.',
+    marca: {
+      // attack = armas, power = poderes, spell = magias: "nas rolagens de dano"
+      alvos: { attack: true, power: true, spell: true }
+    }
+  },
+
+  'inimigo-de': {
+    categoria: 'cacador',
+    nome: 'Inimigo de (Criatura)',
+    // O nome do poder muda com o tipo escolhido (Inimigo de Monstros…)
+    prefixoSugestao: 'Inimigo de',
+    fonte: 'Livro Básico',
+    icone: 'fa-solid fa-skull-crossbones',
+    tipos: ['poder'],
+    apagarEfeitos: true,
+    resumo:
+      'Escolha um tipo de criatura (ou duas raças humanoides). Quando você usa a Marca da Presa '
+      + 'contra uma criatura do tipo escolhido, dobra os dados de bônus no dano.',
+    comoUsar:
+      'Basta ter o poder na ficha. Ao marcar uma presa, a janela da Marca da Presa pergunta se '
+      + 'ela é do tipo deste poder; marcando, os dados da marca dobram contra ela.',
+    marcador: 'inimigo'
+  },
+
+  'tiro-de-abate': {
+    categoria: 'cacador',
+    nome: 'Tiro de Abate',
+    fonte: 'Heróis de Arton',
+    icone: 'fa-solid fa-bullseye',
+    tipos: ['poder'],
+    apagarEfeitos: true,
+    resumo:
+      'Quando usa a ação mirar, até o fim do turno você recebe +2 em testes de ataque e na '
+      + 'margem de ameaça com ataques à distância, e os dados extras de sua Marca da Presa '
+      + 'também são multiplicados em caso de acerto crítico.',
+    comoUsar:
+      'Ao mirar, marque o efeito na janela de rolagem do ataque à distância. No crítico, os '
+      + 'dados da Marca da Presa são multiplicados junto com os da arma.',
+    usoSuspenso: {
+      alvos: { attack: true },
+      multiplicaMarca: true,
+      changes: () => [
+        { key: 'ataque', mode: 2, value: '2', priority: 20 },
+        { key: 'criticoM', mode: 2, value: '-2', priority: 20 }
+      ]
+    }
+  },
+
+  'primeiro-sangue': {
+    categoria: 'cacador',
+    nome: 'Primeiro Sangue',
+    fonte: 'Heróis de Arton',
+    icone: 'fa-solid fa-droplet',
+    tipos: ['poder'],
+    apagarEfeitos: true,
+    resumo:
+      'Na primeira rodada de cada combate, você recebe +2 em testes de ataque e todos os seus '
+      + 'dados de dano aumentam em dois passos.',
+    comoUsar:
+      'Na primeira rodada, marque o efeito na janela de rolagem. Todos os dados de dano sobem '
+      + 'dois passos antes do crítico, inclusive os da Marca da Presa; perda de PV não sobe.',
+    usoSuspenso: {
+      alvos: { attack: true, power: true, spell: true },
+      passosDano: 2,
+      changes: () => [{ key: 'ataque', mode: 2, value: '2', priority: 20 }]
+    }
+  },
+
   /* --- Combinações Desarmadas (Lutador) --------------------------------- */
   ...montarCombinacoes()
 };

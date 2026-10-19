@@ -15,6 +15,7 @@ export function registrarHooksAutomacoes(s) {
   const invalidarIndices = () => {
     s.indiceCombinacoes.invalidar();
     s.indiceEstudo.invalidar();
+    s.indiceMarca.invalidar();
     s.aura.indice.invalidar();
   };
 
@@ -149,8 +150,18 @@ export function registrarHooksAutomacoes(s) {
     }));
   };
 
+  // A Marca da Presa também depende da mira: o dado só vale contra a presa.
+  const sincronizarMarcas = async () => {
+    const atores = s.indiceMarca.listar()
+      .filter((ator) => souResponsavelPeloAtor(ator));
+    await Promise.all(atores.map((ator) => s.sincronizarMarca(ator)));
+  };
+
   Hooks.on('targetToken', (usuario) => {
     if (!automacoesAtivas() || usuario?.id !== game.user.id) return;
+    sincronizarMarcas().catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao sincronizar marcas da presa`, err)
+    );
     sincronizarAtores().catch((err) =>
       console.error(`${MODULE_ID} | Falha ao sincronizar combinações`, err)
     );
@@ -274,6 +285,14 @@ export function registrarHooksAutomacoes(s) {
         console.error(`${MODULE_ID} | Falha ao processar estado da aura`, err));
     }
 
+    if ('marcaDaPresa' in flags || '-=marcaDaPresa' in flags
+        || Object.keys(flags).some((chave) => chave.startsWith('marcaDaPresa.'))) {
+      s.atualizarBarrasMarca(ator);
+      // A presa quase nunca é do jogador: o Mestre põe e tira o lembrete nela.
+      s.sincronizarMarcasVisuais().catch((err) =>
+        console.error(`${MODULE_ID} | Falha ao sincronizar as marcas da presa`, err));
+    }
+
     const mexeuNaContagem = ['combinacoes', 'estudarAdversario']
       .some((chave) => chave in flags || `-=${chave}` in flags);
     if (!mexeuNaContagem) return;
@@ -343,7 +362,7 @@ export function registrarHooksAutomacoes(s) {
 
     if (userId !== game.user.id || !item.actor?.isOwner) return;
     const def = s.definicaoDe(item);
-    if (!def?.contador && !def?.golpe) return;
+    if (!def?.contador && !def?.golpe && !def?.usoSuspenso) return;
     if (!('name' in mudancas) && !('img' in mudancas)) return;
     if (def.contador && s.valorContador(item) <= 0) return;
     if (def.golpe && !s.golpeDoItem(item)) return;

@@ -21,7 +21,8 @@ automações sem quebrar itens e mundos existentes.
 - As flags `automacao`, `contador`, `combinacoes`, `automacaoOrigem`,
   `combDebuff`, `condicoesDeCombinacao`, `msgRetroativa`, `golpe`,
   `estudarAdversario`, `auras`, `auraEfeito`, `auraCura`, `alvosDaRolagem`,
-  `resistenciaResultado` e `engenhoca` não devem ser renomeadas sem uma
+  `resistenciaResultado`, `engenhoca`, `marcaDaPresa`, `marcaConfig` e
+  `marcaVisual` não devem ser renomeadas sem uma
   migração de mundo.
 - `t20-hayd-automacoes.mjs` é a fachada pública e deve manter os exports já
   publicados.
@@ -155,6 +156,40 @@ O Supressor de Segurança não trava sozinho por já ter sido usado na cena —
 só desmarcado por padrão quando `supressorUsado` já é verdadeiro: "uma vez
 por cena" é sugestão da UI, não trava imposta pela regra pura — o Mestre
 pode marcar de novo de propósito e o Supressor age de novo.
+
+## Marca da Presa e passos de dano
+
+`scripts/automacoes/marca-da-presa.mjs` é puro: tabela da classe por nível,
+progressão de passos, dado da marca e a reescrita das partes de dano. As
+classes que concedem a marca ficam em `CLASSES_DA_MARCA` (nome normalizado →
+tabela); os níveis delas se somam. Uma classe nova entra só ali.
+
+Estado:
+- `marcaDaPresa` no ATOR do caçador: `{ [tokenId]: { item, aumentos, dobrado } }`.
+  O dado é recalculado a partir daí, então mudar a configuração muda as
+  marcas já feitas.
+- `marcaConfig` no PODER: `{ base, passos, nivel }`, editado em
+  **Gerenciar automações**. Base e passos deslocam a tabela inteira.
+- `marcaVisual` no EFEITO lembrete da presa. A presa quase nunca é do
+  jogador, então quem cria e apaga esse efeito é o Mestre ativo
+  (`sincronizarMarcasVisuais`), reagindo à flag do caçador.
+
+O bônus é um efeito de uso ligado, no molde do Estudar o Adversário: vale
+contra a presa mirada e sai sem alvo marcado. O tipo da presa (Inimigo de) não
+é detectado — quem marca decide na janela.
+
+Primeiro Sangue e Tiro de Abate são efeitos de uso suspensos
+(`usoSuspenso` no catálogo). O que eles fazem com os dados não cabe numa
+mudança de efeito — o `passos` do sistema só sobe a primeira parte da arma —,
+então `ligarPassosDeDano` embrulha o `rollDamage` do item: lê quais efeitos
+entraram (`aprs.<id>.aplica` das opções; sem janela, os ligados), reescreve as
+partes antes de o sistema rolar e desfaz depois. Desfazer importa: a prévia
+rola o mesmo clone duas vezes (normal e crítico). A parte da marca é achada
+pela fórmula exata que o efeito dela colocou.
+
+No v13 o Tormenta20 liga `legacyTransferral`: criar o item copia os efeitos
+"transfer" dele para o ator. Por isso `sugerirApagarEfeitosOriginais` também
+oferece apagar as cópias com `origin` no item.
 
 ## Teste de Resistência automático
 

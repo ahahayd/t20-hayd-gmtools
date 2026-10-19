@@ -62,7 +62,7 @@ test('a lista de origem é respeitada (magia não vira sugestão de poder)', () 
 });
 
 test('todas as automações têm categoria conhecida', () => {
-  const validas = new Set(['barbaro', 'guerreiro', 'inventor', 'lutador', 'paladino', 'combate', 'magia']);
+  const validas = new Set(['barbaro', 'cacador', 'guerreiro', 'inventor', 'lutador', 'paladino', 'combate', 'magia']);
   for (const a of catalogo) {
     assert.ok(validas.has(a.categoria), `${a.nome} está sem categoria válida: ${a.categoria}`);
   }
@@ -186,4 +186,12 @@ test('a tabela do diário lista só o nome do efeito do Golpe Pessoal', async ()
     motor.indexOf('</tbody></table>')
   );
   assert.doesNotMatch(tabela, /\$\{ef\.texto\}/);
+});
+
+test('Inimigo de (Criatura) é sugerido para qualquer tipo escolhido', () => {
+  for (const nome of ['Inimigo de Monstros', 'Inimigo de Orcs e Gnolls', 'Inimigo de (Criatura)']) {
+    assert.equal(sugerirAutomacoes(nome, catalogo)[0]?.id, 'inimigo-de', nome);
+  }
+  // "Inimigo" no meio de outro nome não basta
+  assert.notEqual(sugerirAutomacoes('Inimigos Jurados', catalogo)[0]?.id, 'inimigo-de');
 });

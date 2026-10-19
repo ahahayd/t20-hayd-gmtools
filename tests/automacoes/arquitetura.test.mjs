@@ -46,7 +46,8 @@ test('flags persistentes mantêm seus nomes publicados', () => {
   for (const flag of [
     'automacao', 'contador', 'automacaoOrigem', 'combinacoes',
     'msgRetroativa', 'combDebuff', 'condicoesDeCombinacao', 'golpe',
-    'estudarAdversario', 'alvosDaRolagem', 'resistenciaResultado'
+    'estudarAdversario', 'alvosDaRolagem', 'resistenciaResultado',
+    'marcaDaPresa', 'marcaConfig', 'marcaVisual'
   ]) assert.ok(motor.includes(`'${flag}'`), `flag ausente: ${flag}`);
 });
 
@@ -187,7 +188,7 @@ test('o botão de resistência funciona mesmo sem nenhuma automação configurad
   // botão.
   const inicio = motor.indexOf('export function injetarControlesAutomacao');
   const fimAutomacao = motor.indexOf(
-    'if (!comControles.length && !combinacoes.length && !estudos.length) return;', inicio);
+    'if (!comControles.length && !combinacoes.length && !estudos.length && !marcas.length) return;', inicio);
   const inicioResist = motor.indexOf('export function injetarBotaoResistencia');
   assert.ok(inicio > 0 && fimAutomacao > inicio, 'não achei o early-return de injetarControlesAutomacao');
   assert.ok(inicioResist > 0 && (inicioResist < inicio || inicioResist > fimAutomacao + 200),

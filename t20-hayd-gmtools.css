@@ -471,6 +471,16 @@ a.header-button.t20g-atr-header {
 }
 
 /* Diálogo de escolha da automação: busca + lista agrupada por classe */
+/* Marca da Presa: ajustes de Gerenciar automações à vista na janela de marcar */
+.t20g-marca-dialogo .t20g-marca-aviso {
+  margin: 6px 0;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in oklab, var(--t20g-aviso, #d9a441) 45%, transparent);
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--t20g-aviso, #d9a441) 14%, transparent);
+}
+.t20g-marca-dialogo .t20g-marca-aviso > i { color: var(--t20g-aviso, #d9a441); }
+
 .t20g-auto-dialogo .t20g-auto-busca {
   display: flex;
   align-items: center;
