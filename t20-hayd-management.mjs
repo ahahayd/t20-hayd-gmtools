@@ -633,14 +633,13 @@ function postTransferChat({ kind, sourceName, targetName, itemName, qty, coins }
 ============================================================ */
 
 function activeOwnerOf(actor, { excludeUserId = null } = {}) {
+  const online = game.users.filter((u) => u.active && u.id !== excludeUserId);
   return (
-    game.users.find(
-      (u) =>
-        u.active &&
-        !u.isGM &&
-        u.id !== excludeUserId &&
-        actor.testUserPermission(u, "OWNER")
-    ) ?? null
+    online.find((u) => !u.isGM && actor.testUserPermission(u, "OWNER"))
+    // Jogador com papel de Assistente conta como Mestre (isGM) e ficaria de
+    // fora: vale quem tem este personagem atribuído no próprio perfil.
+    ?? online.find((u) => u.character?.id === actor.id)
+    ?? null
   );
 }
 
