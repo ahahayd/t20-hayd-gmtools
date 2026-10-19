@@ -771,7 +771,7 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
           return {
             k, nome: atrs[k], abr: abrevAtr(k), valor: v, valorTexto: sinal(v),
             marcado: !!v,
-            cheio: (!!sel.regra && !v && marcados >= sel.regra.quantos) || (!v && (e.raca.abertos ?? []).includes(k)),
+            cheio: !!sel.regra && !v && marcados >= sel.regra.quantos,
             bonus: sel.regra ? sinal(sel.regra.valor) : null
           };
         })
@@ -787,8 +787,9 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
           celulas: Object.keys(atrs).map(k => ({
             k, abr: abrevAtr(k), nome: atrs[k],
             marcado: colocados[i] === k,
-            // Um modificador por atributo: outra peça ou um dinâmico já está lá.
-            ocupado: colocados[i] !== k && (colocados.some((c, j) => j !== i && c === k) || !!e.raca.escolhidos[k])
+            // Uma peça por atributo. O bônus à escolha soma por cima: o
+            // meio-elfo põe o +1 em Int e ainda escolhe Int nos dois +1.
+            ocupado: colocados[i] !== k && colocados.some((c, j) => j !== i && c === k)
           }))
         }))
       };
@@ -1698,11 +1699,17 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
     const s = doc.system;
     const atrs = Object.keys(atributosDoSistema());
     const abertas = !!game.settings.get('tormenta20', 'openRaces');
-    const din = s.atributosDinamicos?.value ? [...s.atributosDinamicos.value] : [];
+    let din = s.atributosDinamicos?.value ? [...s.atributosDinamicos.value] : [];
     const zeros = Object.fromEntries(atrs.map(k => [k, 0]));
     // Raças Abertas (variante do Heróis de Arton): os modificadores fixos
     // viram peças que o jogador põe onde quiser; os dinâmicos seguem iguais.
     const pecas = abertas ? modificadoresAbertos(s.atributos) : [];
+    // O "+1 em dois outros atributos" exclui os da raça (Int, no meio-elfo);
+    // com as peças soltas essa exclusão perde o sentido, então eles voltam.
+    if (abertas && din.length) {
+      const daRaca = Object.keys(s.atributos ?? {}).filter(k => Number(s.atributos[k]));
+      din = atrs.filter(k => din.includes(k) || daRaca.includes(k));
+    }
     const sel = {
       uuid: doc.uuid, nome: doc.name, img: doc.img,
       aberta: abertas, pecas,
@@ -1805,9 +1812,6 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
     const esc = this.#estado.raca.escolhidos;
     if (esc[k]) delete esc[k];
     else {
-      if ((this.#estado.raca.abertos ?? []).includes(k)) {
-        return ui.notifications.warn('Raças Abertas: esse atributo já recebeu um modificador da raça — só cabe um por atributo.');
-      }
       if (Object.values(esc).filter(v => v).length >= sel.regra.quantos) {
         return ui.notifications.warn(`A raça permite ${sel.regra.quantos} atributo(s). Desmarque um antes.`);
       }
@@ -1828,9 +1832,6 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
     raca.abertos ??= raca.sel.pecas.map(() => '');
     if (raca.abertos[i] === k) raca.abertos[i] = '';
     else {
-      if (raca.escolhidos[k]) {
-        return ui.notifications.warn('Esse atributo já recebeu o bônus à escolha da raça — só cabe um modificador por atributo.');
-      }
       const j = raca.abertos.findIndex((c, x) => x !== i && c === k);
       if (j >= 0) raca.abertos[j] = raca.abertos[i];
       raca.abertos[i] = k;
