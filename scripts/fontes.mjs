@@ -155,7 +155,9 @@ export function textoDaFonte(faixa, termoValor, diferenca = 'Diferença') {
  */
 export function rotularExtras(extras, candidatos, { bonusJanela, rotuloJanela, rotuloEfeito }) {
   const livres = [...(candidatos ?? [])];
-  const normal = (v) => String(v ?? '').replace(/^\+|\s/g, '');
+  // "2d6[fogo]" no efeito chega na rolagem como "2d6" — o sistema tira o
+  // tipo de dano da fórmula e o guarda à parte. Compara sem os colchetes.
+  const normal = (v) => String(v ?? '').replace(/^\+|\s|\[[^\]]*\]/g, '');
   return (extras ?? []).map((formula, i, todas) => {
     const alvo = normal(formula);
     // O campo Bônus da janela entra por último.

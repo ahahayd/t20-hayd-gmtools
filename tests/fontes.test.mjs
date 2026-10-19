@@ -114,3 +114,12 @@ test('zeros: as faixas de fonte andam junto', () => {
   assert.deepEqual(novas.map((f) => [f.fonte, f.ini, f.fim]),
     [['Dado', 0, 1], ['Perícia', 1, 2], ['Arma', 2, 2], ['Poder', 2, 3], ['Bônus', 3, 3]]);
 });
+
+test('efeito com tipo de dano entre colchetes casa com a parte sem ele', () => {
+  // Arma Mágica: "2d6[fogo]" no efeito vira "2d6" (tipo fogo) na rolagem
+  const r = rotularExtras(['1', '2d6'],
+    [{ fonte: 'Arma Mágica', valor: 1 }, { fonte: 'Arma Mágica', valor: '2d6[fogo]' }],
+    { rotuloJanela: 'J', rotuloEfeito: 'E' });
+  assert.deepEqual(r.map((x) => x.fonte), ['Arma Mágica', 'Arma Mágica']);
+  assert.ok(!r.some((x) => x.semOrigem));
+});

@@ -25,7 +25,7 @@ import {
   distribuir, fontePorTermo, linhasDaTabela, reindexar, rotularExtras, termosComSinal, textoDaFonte,
   zerosRemoviveis
 } from './scripts/fontes.mjs';
-import { ehV14 } from './scripts/versao.mjs';
+import { ehV14, modoDaMudanca } from './scripts/versao.mjs';
 
 const MODULE_ID = 't20-hayd-gmtools';
 const SETTING = 'fontesRolagem';
@@ -192,6 +192,7 @@ function candidatosDeUso(item, ator, opcoes) {
     }
   }
   const candidatos = [];
+  const aumentos = [];
   for (const [id, escolha] of Object.entries(aprs)) {
     const vezes = Number(escolha?.aplica) || 0;
     const efeito = vistos.get(id);
@@ -199,10 +200,40 @@ function candidatosDeUso(item, ator, opcoes) {
     const nome = vezes > 1 ? `${efeito.name} ×${vezes}` : efeito.name;
     const mudancas = efeito.system?.changes ?? efeito.changes ?? [];
     for (const mudanca of mudancas) {
-      candidatos.push({ fonte: nome, valor: multiplicar(mudanca.value, vezes) });
+      const modo = modoDaMudanca(mudanca);
+      // "Personalizado" com dados (aprimoramento "+1d8 por PM"): o sistema
+      // não cria parcela nova, soma os dados na parcela do mesmo poder.
+      if (modo === 0 && /^\d+d\d+$/i.test(String(mudanca.value).trim())) {
+        aumentos.push({ nome, origem: efeito.sourceName, dados: parseInt(mudanca.value, 10) * vezes });
+        continue;
+      }
+      // Só "somar" vira parcela nova; as outras mudanças não têm o que casar.
+      if (modo !== 2) continue;
+      candidatos.push({
+        fonte: nome,
+        origem: efeito.sourceName,
+        valor: multiplicar(valorDaMudanca(mudanca.value, efeito, ator), vezes)
+      });
     }
   }
+  for (const aumento of aumentos) {
+    const alvo = candidatos.find((c) => c.origem === aumento.origem && /^\d+d/i.test(String(c.valor)));
+    if (!alvo) continue;
+    alvo.valor = String(alvo.valor).replace(/^\d+/, (n) => Number(n) + aumento.dados);
+    alvo.fonte = `${alvo.fonte} + ${aumento.nome}`;
+  }
   return candidatos;
+}
+
+/**
+ * Valor que a mudança realmente empurra. "roll" (Ataque Furtivo e afins) é
+ * a primeira parcela do dano do próprio poder que originou o efeito.
+ */
+function valorDaMudanca(valor, efeito, ator) {
+  if (valor !== 'roll') return valor;
+  const id = String(efeito.origin ?? '').match(/Item\.([^.]+)/)?.[1];
+  const poder = (id && ator?.items?.get(id)) || (efeito.parent?.documentName === 'Item' ? efeito.parent : null);
+  return poder?.system?.rolls?.find((r) => r.type === 'dano')?.parts?.[0]?.[0] ?? valor;
 }
 
 const opcoesDeRotulo = (bonusJanela) => ({
@@ -265,6 +296,7 @@ const parcelaDoDado = (formula) => ({
 
 /** Teste de perícia: ["1d20", valor da perícia, …extras da janela] + @bonus. */
 export function registrarPericia(roll, itemData, ator, opcoes) {
+  if (!fontesAtivas()) { limparZeros(roll); return null; }
   const parts = itemData?.parts ?? [];
   const chave = itemData?.id;
   const parcelas = [
@@ -278,6 +310,7 @@ export function registrarPericia(roll, itemData, ator, opcoes) {
 
 /** Teste de atributo: ["1d20", "@for", "@atributo"?, "@fisicos"?, …]. */
 function registrarAtributo(roll, itemData, ator, opcoes) {
+  if (!fontesAtivas()) { limparZeros(roll); return null; }
   const parts = itemData?.parts ?? [];
   const caminho = (grupo) => `system.modificadores.atributos.${grupo}`;
   const bonus = foundry.utils.getProperty(ator.system, 'modificadores.atributos') || {};
@@ -392,9 +425,17 @@ function parcelasDoDano(item, rolagem, opcoes, critico, dados) {
       lista.push({ fonte: t('FonteItem', { nome: item.name }), formula });
     }
   });
-  const rotulos = rotularExtras(extras.map((e) => e.formula), candidatosDeUso(item, ator, opcoes),
-    opcoesDeRotulo(opcoes?.bonusdano));
-  extras.forEach((e, n) => { lista[e.i] = rotulos[n]; });
+  // Partes que a Marca da Presa / Primeiro Sangue reescreveram antes de rolar
+  // casam pela fórmula original (a do efeito) e ganham o motivo no rótulo.
+  const ajustadas = item._t20gPartesAjustadas;
+  const ajuste = (i) => ajustadas?.get(rolagem.parts[i]);
+  const rotulos = rotularExtras(extras.map((e) => ajuste(e.i)?.original ?? e.formula),
+    candidatosDeUso(item, ator, opcoes), opcoesDeRotulo(opcoes?.bonusdano));
+  extras.forEach((e, n) => { lista[e.i] = { ...rotulos[n], formula: e.formula }; });
+  lista.forEach((parcela, i) => {
+    const { nota, fonte } = ajuste(i) ?? {};
+    if (parcela && nota) lista[i] = { ...parcela, fonte: `${fonte ?? parcela.fonte} (${nota})`, semOrigem: false };
+  });
 
   const parts = rolagem.parts;
   const cura = parts.some((p) => p[1] === 'curapv');
@@ -445,7 +486,8 @@ Hooks.once('setup', () => {
       const antes = [];
       semFalhar(() => {
         for (const r of this.system.rolls.filter((i) => i.type === 'ataque')) {
-          antes.push({ r, ...parcelasDoAtaque(this, r, args?.options) });
+          // Desligadas, as fontes não custam nada: só a limpeza dos "+ 0".
+          antes.push({ r, ...(fontesAtivas() ? parcelasDoAtaque(this, r, args?.options) : {}) });
         }
       });
       const saida = await ataque.call(this, args);
@@ -469,7 +511,9 @@ Hooks.once('setup', () => {
         const dados = this.getRollData();
         for (const r of this.system.rolls.filter((i) => i.type === 'dano')) {
           const roll = this.system.rolled?.[r.name];
-          if (roll) registrar(roll, parcelasDoDano(this, r, args?.options ?? {}, critico, dados), dados);
+          if (!roll) continue;
+          if (fontesAtivas()) registrar(roll, parcelasDoDano(this, r, args?.options ?? {}, critico, dados), dados);
+          else limparZeros(roll);
         }
       });
       return saida;
