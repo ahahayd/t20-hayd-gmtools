@@ -71,7 +71,7 @@ export class CriacaoFontesApp extends HandlebarsApplicationMixin(ApplicationV2) 
       mundo: mundoLigado(),
       grupos: [
         { titulo: 'Sistema Tormenta20', icone: 'fa-dice-d20', itens: ordenar(grupos.sistema) },
-        { titulo: 'Módulos', icone: 'fa-puzzle-piece', itens: ordenar(grupos.modulo), dica: 'Desligados até você ligar.' },
+        { titulo: 'Módulos', icone: 'fa-puzzle-piece', itens: ordenar(grupos.modulo), dica: 'Desligados até você ligar, menos o Suplementos de Arton.' },
         { titulo: 'Compêndios do mundo', icone: 'fa-globe', itens: ordenar(grupos.mundo), dica: 'Desligados até você ligar.' }
       ].filter(g => g.itens.length)
     };

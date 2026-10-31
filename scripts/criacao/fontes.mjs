@@ -4,7 +4,8 @@
  * O Mestre liga e desliga compêndios (e os itens do mundo) numa tela própria,
  * como a Loja faz. Sem configuração, valem os compêndios do sistema e os
  * itens do mundo: o que vem de módulo entra quando o Mestre liga, para que um
- * suplemento cheio de raças de monstro não apareça sem ele querer.
+ * suplemento cheio de raças de monstro não apareça sem ele querer. A exceção
+ * são os módulos de conteúdo conhecidos (Suplementos de Arton).
  *
  * O catálogo é montado dos ÍNDICES dos compêndios (nunca dos documentos
  * inteiros) e fica em memória até a configuração mudar.
@@ -47,7 +48,11 @@ export function ehDoSistema(pack) {
  *  desligados por padrão para não encher a lista "Todos" de poderes. */
 const FORA_DO_PADRAO = new Set(['tormenta20.habilidades-de-criaturas', 'tormenta20.parceiros']);
 
+/** Módulos de conteúdo T20 conhecidos: seus compêndios já nascem ligados. */
+const MODULOS_LIGADOS_POR_PADRAO = new Set(['suplementos-de-arton']);
+
 export function packLigadoPorPadrao(pack) {
+  if (MODULOS_LIGADOS_POR_PADRAO.has(pack.metadata.packageName)) return true;
   return ehDoSistema(pack) && !FORA_DO_PADRAO.has(pack.collection);
 }
 
