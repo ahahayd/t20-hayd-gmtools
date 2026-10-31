@@ -96,6 +96,8 @@ export function registrarHooksAutomacoes(s) {
     catch (err) { console.error(`${MODULE_ID} | Falha ao montar o painel de contadores`, err); }
     try { s.engenhocas.injetarPainel(app, html); }
     catch (err) { console.error(`${MODULE_ID} | Falha ao montar o painel de engenhocas`, err); }
+    try { s.grimorio.injetarNaFichaDoSistema(app, html); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao montar o grimório na ficha`, err); }
   });
 
   Hooks.on('renderChatMessageHTML', (message, html) => {
@@ -107,6 +109,7 @@ export function registrarHooksAutomacoes(s) {
       s.engenhocas.ligarBotoesChat(message, container);
       if (container) s.aura.ligarBotoes(message, container);
       s.injetarBotaoResistencia(message, container);
+      s.injetarAvisoNaoPreparada(message, container);
       // O veredito do teste de resistência é só para o Mestre — a marca some
       // do DOM de quem não é Mestre antes de aparecer na tela, mesmo que o
       // conteúdo já tenha chegado no cliente (mesmo mecanismo do metagame).
@@ -225,6 +228,8 @@ export function registrarHooksAutomacoes(s) {
     if (!automacoesAtivas()) return;
     try { s.marcarAlvosDaRolagem(message); }
     catch (err) { console.error(`${MODULE_ID} | Falha ao marcar alvos da rolagem`, err); }
+    try { s.marcarMagiaNaoPreparada(message); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao conferir o grimório`, err); }
   });
 
   Hooks.on('createChatMessage', (message, options, userId) => {
@@ -251,6 +256,17 @@ export function registrarHooksAutomacoes(s) {
     s.registrarMensagemRetroativa(message).catch((err) =>
       console.error(`${MODULE_ID} | Falha ao registrar mensagem retroativa`, err)
     );
+  });
+
+  // Mago: magia nova já entra marcada como de mago (ou não), no cliente que cria
+  Hooks.on('preCreateItem', (item) => {
+    if (!automacoesAtivas()) return;
+    try { s.marcarMagiaNova(item); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao marcar magia nova no grimório`, err); }
+  });
+  Hooks.on('createItem', (item, options, userId) => {
+    if (!automacoesAtivas() || userId !== game.user.id) return;
+    s.grimorio.garantirPreparo(item.parent).catch(() => {});
   });
 
   Hooks.on('createItem', (item) => {
@@ -342,6 +358,23 @@ export function registrarHooksAutomacoes(s) {
     ).catch((err) => console.error(`${MODULE_ID} | Falha ao sugerir zerar contadores`, err));
     s.engenhocas.resetarSupressores().catch((err) =>
       console.error(`${MODULE_ID} | Falha ao resetar supressores`, err));
+  });
+
+  // Mago: o sol de preparar não passa do limite; trocas em combate vão ao chat
+  Hooks.on('preUpdateItem', (item, mudancas) => {
+    if (!automacoesAtivas()) return;
+    try { return s.grimorio.antesDeMudarMagia(item, mudancas); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao conferir o limite do grimório`, err); }
+  });
+  Hooks.on('updateItem', (item, mudancas, options, userId) => {
+    if (!automacoesAtivas()) return;
+    try {
+      s.grimorio.aoMudarMagia(item, mudancas, userId);
+      // Automação ligada agora no poder: a ficha passa a preparar magias
+      if (userId === game.user.id && foundry.utils.hasProperty(mudancas, `flags.${MODULE_ID}.automacao`)) {
+        s.grimorio.garantirPreparo(item.parent).catch(() => {});
+      }
+    } catch (err) { console.error(`${MODULE_ID} | Falha no grimório`, err); }
   });
 
   Hooks.on('updateItem', (item, mudancas, options, userId) => {

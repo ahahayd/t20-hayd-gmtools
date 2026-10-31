@@ -130,7 +130,7 @@ export const AUTOMACOES = {
   },
 
   'escriba-arcano': {
-    categoria: 'magia',
+    categoria: 'arcanista',
     nome: 'Escriba Arcano',
     fonte: 'Livro Básico',
     icone: 'fa-solid fa-feather-pointed',
@@ -145,6 +145,23 @@ export const AUTOMACOES = {
       + 'não conhece. Aprenda uma de cada vez ou monte uma lista: o dinheiro sai da ficha, com '
       + 'troco, e o chat registra os dias de trabalho e as magias aprendidas.',
     escriba: true
+  },
+
+  'caminho-do-arcanista-mago': {
+    categoria: 'arcanista',
+    nome: 'Caminho do Arcanista: Mago',
+    fonte: 'Livro Básico',
+    icone: 'fa-solid fa-book-skull',
+    tipos: ['poder'],
+    resumo:
+      'Você lança magias através de estudo e memorização de fórmulas arcanas. Só pode lançar '
+      + 'magias memorizadas: estudando o grimório por uma hora, escolhe metade das magias que '
+      + 'conhece, uma vez por dia. Seu atributo-chave para magias é Inteligência.',
+    comoUsar:
+      'Role o poder e use <b>Grimório</b> no cartão (na Ficha Hayd, o botão fica na aba Magias). '
+      + 'Marque quais magias são de mago (as de outras fontes não contam), veja a metade e '
+      + 'prepare as memorizadas; o limite pode ser ajustado para poderes que o mudam. ',
+    grimorio: true
   },
 
   'aura-sagrada': {

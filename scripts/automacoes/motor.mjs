@@ -37,6 +37,10 @@ import { criarBotao } from './ui.mjs';
 import { aura as auras } from './aura/index.mjs';
 import { engenhocas } from './engenhocas/index.mjs';
 import { escriba } from './escriba-arcano.mjs';
+import {
+  grimorio, marcarMagiaNaoPreparada, injetarAvisoNaoPreparada, marcarMagiaNova,
+  aoMudarMagia, antesDeMudarMagia, garantirPreparo, injetarNaFichaDoSistema
+} from './grimorio-mago.mjs';
 import { ocultarContagemDe } from './segredos.mjs';
 import { sugerirAutomacoes, normalizarNome } from './sugestao.mjs';
 import { abrirDistribuicao } from './seta-infalivel.mjs';
@@ -4148,6 +4152,16 @@ function montarBarra(item, { completo }) {
     rotulo.appendChild(numero);
   }
 
+  if (def.grimorio) {
+    const r = grimorio.resumo(item.actor);
+    if (r) {
+      rotulo.append(': ');
+      const numero = document.createElement('b');
+      numero.textContent = `${r.preparadas}/${r.limite} preparada(s)`;
+      rotulo.appendChild(numero);
+    }
+  }
+
   if (def.engenhoqueiro) {
     const { total, inteligencia } = engenhocas.resumoPoder(item);
     rotulo.append(': ');
@@ -4206,6 +4220,10 @@ function montarBarra(item, { completo }) {
     const botao = criarBotao(item, 'escriba', def.icone, null, { largo: true });
     botao.append(' Aprender magias');
     linha.appendChild(botao);
+  } else if (def.grimorio) {
+    const botao = criarBotao(item, 'grimorio', def.icone, null, { largo: true });
+    botao.append(' Grimório');
+    linha.appendChild(botao);
   } else if (def.distribuicao) {
     const botao = criarBotao(item, 'distribuir', def.icone, def.distribuicao.rotulo, { largo: true });
     botao.append(` ${def.distribuicao.rotulo}`);
@@ -4239,7 +4257,7 @@ export function injetarControlesAutomacao(message, html) {
   const comControles = ator.items.filter((i) => {
     const def = definicaoDe(i);
     return def?.contador || def?.acao || def?.distribuicao || def?.golpe || def?.aura
-      || def?.engenhoqueiro || def?.escriba;
+      || def?.engenhoqueiro || def?.escriba || def?.grimorio;
   });
   const combinacoes = poderesDeCombinacao(ator);
   const estudos = poderesDeEstudo(ator);
@@ -4272,6 +4290,7 @@ export function injetarControlesAutomacao(message, html) {
     // Engenhoqueiro só resume as engenhocas — nada a ver com o ataque
     if (def.engenhoqueiro && !ehOProprioItem) continue;
     if (def.escriba && !ehOProprioItem) continue;
+    if (def.grimorio && !ehOProprioItem) continue;
     if (!ehAtaque && !ehOProprioItem) continue;
     card.appendChild(montarBarra(item, { completo: ehOProprioItem }));
   }
@@ -4440,6 +4459,10 @@ export function injetarControlesAutomacao(message, html) {
       }
       if (botao.dataset.acao === 'escriba') {
         escriba.abrir(ator);
+        return;
+      }
+      if (botao.dataset.acao === 'grimorio') {
+        grimorio.abrir(ator);
         return;
       }
       if (botao.dataset.acao === 'distribuir') {
@@ -4898,6 +4921,43 @@ function paginaDaAutomacao(def) {
             até d12. Perda de PV não sobe.</li>` : ''}
         ${u.multiplicaMarca ? '<li>No crítico, os dados da Marca da Presa são multiplicados junto com os da arma.</li>' : ''}
       </ul>`;
+  } else if (def.escriba) {
+    comoFunciona = `
+      <ul>
+        <li>Role o poder e use <b>Aprender magias</b> no cartão (na Ficha Hayd, o botão fica na
+            aba Magias).</li>
+        <li>A janela lista as magias de todos os compêndios. Por padrão mostra só as arcanas dos
+            círculos a que o arcanista já tem acesso e que ele ainda não conhece; os filtros
+            mudam tipo, círculo e escola.</li>
+        <li>Cada PM da magia custa <b>1 dia</b> de trabalho e <b>T$ 250</b> em matérias-primas
+            (1º círculo: 1 dia e T$ 250; 2º: 3 dias e T$ 750; 3º: 6 dias e T$ 1.500;
+            4º: 10 dias e T$ 2.500; 5º: 15 dias e T$ 3.750).</li>
+        <li>Aprenda uma magia de cada vez ou monte uma lista. Ao confirmar, o dinheiro sai da
+            ficha, as magias entram na ficha e o chat registra os dias de trabalho e
+            as magias aprendidas.</li>
+        <li>Sem dinheiro suficiente, o botão fica travado e a janela mostra quanto falta.</li>
+      </ul>`;
+  } else if (def.grimorio) {
+    comoFunciona = `
+      <ul>
+        <li>Ligar a automação marca a ficha como <b>Preparar magias (para magos)</b>: o sol de
+            preparar aparece na lista de magias, nas fichas do sistema e na Ficha Hayd.</li>
+        <li>Ao lado da CD de magias ficam as <b>preparadas / limite</b>, com uma barra de
+            progresso, e o botão <b>Grimório</b>. O cartão do poder também tem o botão.</li>
+        <li>No Grimório você marca quais magias são <b>de mago</b>: as de outras fontes (raça,
+            item, outra classe) não contam para a metade, não precisam ser preparadas e ficam
+            sem o sol. Há opção para magias novas já entrarem como de mago ou não.</li>
+        <li>O limite padrão é <b>metade</b> das magias de mago, arredondada para baixo. Os botões
+            <b>+</b> e <b>−</b> ajustam o limite para poderes que o aumentam ou diminuem.</li>
+        <li>Prepare pelo sol ou pelo Grimório. Passar do limite é barrado com um aviso.</li>
+        <li>Filtros por nome, origem (de mago ou não), preparo, tipo, círculo e escola, todos
+            combináveis, e ações em massa na lista filtrada.</li>
+        <li>Lançar uma magia de mago <b>não preparada</b> não é impedido, mas o cartão no chat
+            ganha a faixa vermelha <b>Magia não preparada</b>.</li>
+        <li>Em combate, preparar ou esquecer uma magia é anunciado no chat.</li>
+        <li>O módulo não controla o estudo de uma hora nem o uso uma vez por dia; isso fica com
+            a mesa.</li>
+      </ul>`;
   } else if (def.marcador === 'incremento2') {
     comoFunciona = `
       <ul><li>Com este poder na ficha, o botão <b>+</b> da contagem passa a somar 2.</li></ul>`;
@@ -4977,6 +5037,7 @@ function paginaGolpePessoal(def, tipos) {
  * abre o grupo do Lutador, porque é onde a mecânica delas é explicada.
  */
 const CATEGORIAS = [
+  { id: 'arcanista', rotulo: 'T20HaydGMTools.DiarioCatArcanista' },
   { id: 'barbaro', rotulo: 'T20HaydGMTools.DiarioCatBarbaro' },
   { id: 'cacador', rotulo: 'T20HaydGMTools.DiarioCatCacador' },
   { id: 'guerreiro', rotulo: 'T20HaydGMTools.DiarioCatGuerreiro' },
@@ -5108,6 +5169,10 @@ async function abrirDiario() {
  * `getItemSheetHeaderButtons`, que cobre ItemSheetT20 e RaceSheetT20.
  */
 registrarHooksAutomacoes({
+  grimorio: { aoMudarMagia, antesDeMudarMagia, garantirPreparo, injetarNaFichaDoSistema },
+  marcarMagiaNaoPreparada,
+  injetarAvisoNaoPreparada,
+  marcarMagiaNova,
   abrirDialogoAutomacao,
   injetarControlesAutomacao,
   zerarTodosContadores,
@@ -5229,6 +5294,7 @@ Hooks.once('ready', () => {
         ativas: automacoesAtivas,
         engenhocas,
         escriba,
+        grimorio,
         // Fichas de terceiros (a Ficha Hayd, por exemplo) montam o acesso ao
         // painel com o visual delas em vez de receber o <section> injetado.
         contadores: {

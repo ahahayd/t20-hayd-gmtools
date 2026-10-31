@@ -2636,3 +2636,119 @@ table.t20g-fontes .t20g-fontes-detalhe td { opacity: 0.75; font-size: 0.92em; }
 table.t20g-fontes .t20g-fontes-detalhe td:first-child { padding-left: 20px; }
 table.t20g-fontes .t20g-fontes-sem td:first-child { font-style: italic; opacity: 0.7; }
 .t20g-fontes-dados { opacity: 0.65; }
+
+/* ─── Grimório (Caminho do Arcanista: Mago) ──────────────────────────────── */
+
+.t20g-gri-placar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e3);
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-radius: var(--t20g-r2);
+}
+
+.t20g-gri-numeros { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--t20g-e4); }
+.t20g-gri-numeros > span { display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
+.t20g-gri-numeros > span > small {
+  font-size: 0.625rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--t20g-ink-3);
+}
+.t20g-gri-numeros > span > b { font-size: 1rem; color: var(--t20g-ink); }
+.t20g-gri-numeros > span.t20g-esc-falta > b { color: var(--t20g-perigo); }
+.t20g-gri-numeros a { font-size: inherit; line-height: 1; margin-left: 3px; color: var(--t20g-ink-3); cursor: pointer; }
+.t20g-gri-numeros a:hover { color: var(--t20g-accent); }
+
+.t20g-gri-massa { flex-wrap: wrap; gap: var(--t20g-e2); }
+.t20g-gri-massa[hidden] { display: none; }
+.t20g-gri-massa-rotulo { font-size: 0.75rem; color: var(--t20g-ink-3); }
+
+/* miniatura | nome | de mago | preparar */
+.t20g-gri-item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto 104px;
+  align-items: center;
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e2) var(--t20g-e3);
+  transition: background-color var(--t20g-transicao);
+}
+.t20g-gri-item:hover { background: var(--t20g-s2); }
+.t20g-gri-item.preparada {
+  background: color-mix(in oklab, var(--t20g-accent) 12%, transparent);
+  box-shadow: inset 3px 0 0 var(--t20g-accent);
+}
+.t20g-gri-item.preparada .t20g-gri-preparar { color: var(--t20g-accent); border-color: var(--t20g-accent); }
+.t20g-gri-item.outra-fonte > img,
+.t20g-gri-item.outra-fonte .t20g-esc-info { opacity: 0.55; }
+.t20g-gri-preparar { justify-content: center; }
+.t20g-gri-janela button[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+/* Faixa no topo do cartão da magia lançada sem estar memorizada */
+.t20g-gri-aviso {
+  margin: 0 0 6px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: #8f1d1d;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8125rem;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.t20g-gri-aviso i { margin-right: 4px; }
+
+.t20g-gri-chat ul { list-style: none; margin: 0; padding: 0; }
+.t20g-gri-chat-linha { display: flex; align-items: center; gap: 8px; }
+.t20g-gri-chat-linha + .t20g-gri-chat-linha { margin-top: 4px; }
+.t20g-gri-chat-linha img {
+  width: 36px; height: 36px; flex: 0 0 36px;
+  border: 1px solid currentColor; border-radius: 4px; object-fit: cover;
+}
+
+/* Limite de memorizadas e botão do Grimório na faixa da CD, nas fichas do sistema */
+.t20g-gri-faixa {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 14px;
+  vertical-align: middle;
+}
+.t20g-gri-contador {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.t20g-gri-contador > i { color: #d8b26a; }
+.t20g-gri-mini-barra {
+  display: inline-block;
+  width: 48px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(128, 128, 128, 0.3);
+  overflow: hidden;
+}
+.t20g-gri-mini-barra > span { display: block; height: 100%; background: #d8b26a; }
+.t20g-gri-faixa.excedeu .t20g-gri-contador b { color: #e0645a; }
+.t20g-gri-faixa.excedeu .t20g-gri-mini-barra > span { background: #e0645a; }
+.t20g-gri-abrir {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: auto;
+  height: 22px;
+  margin: 0;
+  padding: 0 8px;
+  font-size: inherit;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.t20g-gri-filtros { flex-wrap: nowrap; }
+.t20g-gri-filtros select { flex: 1 1 0; min-width: 0; }
+.t20g-gri-filtros input[type="search"] { flex: 2 1 0; }
+.t20g-gri-topo { display: flex; justify-content: flex-end; }
+.t20g-gri-topo > button { flex: none; white-space: nowrap; }

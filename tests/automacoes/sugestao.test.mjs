@@ -62,7 +62,7 @@ test('a lista de origem é respeitada (magia não vira sugestão de poder)', () 
 });
 
 test('todas as automações têm categoria conhecida', () => {
-  const validas = new Set(['barbaro', 'cacador', 'guerreiro', 'inventor', 'lutador', 'paladino', 'combate', 'magia']);
+  const validas = new Set(['barbaro', 'cacador', 'guerreiro', 'inventor', 'lutador', 'paladino', 'arcanista', 'combate', 'magia']);
   for (const a of catalogo) {
     assert.ok(validas.has(a.categoria), `${a.nome} está sem categoria válida: ${a.categoria}`);
   }
@@ -124,8 +124,8 @@ test('o diário não repete a regra do poder — só o que a automação faz', a
   // A regra vinha em <blockquote>${def.resumo}</blockquote>
   assert.doesNotMatch(motor, /blockquote/,
     'a regra do poder saiu das páginas do diário');
-  // \b evita casar `.resumoDaAura`, que é outra coisa
-  assert.doesNotMatch(motor, /\.resumo\b/,
+  // \b evita casar `.resumoDaAura`, e o lookbehind, `grimorio.resumo`: são outra coisa
+  assert.doesNotMatch(motor, /(?<!grimorio)\.resumo\b/,
     'nem o diário nem o seletor devem exibir a descrição do poder');
 });
 
