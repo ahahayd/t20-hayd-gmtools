@@ -23,6 +23,7 @@ import {
   atributosDoSistema, abrevAtr, sinal, rotulosPericias, chavesOficio, ref, ICONES_ATR
 } from '../criacao/app-assistente.mjs';
 import { PROFICIENCIAS } from '../criacao/aplicar.mjs';
+import { ehOficioNovo, chaveDoOficio, oficiosDaFicha, rotuloPericia, semPrefixoOficio } from '../criacao/oficios.mjs';
 import {
   NIVEL_MAXIMO, PATAMARES, patamarDe, projetarNiveis, circuloMaximo, magiasNoNivel, ganhosDoNivel, escalaSobe, dadosNoNivel
 } from './regras-niveis.mjs';
@@ -88,6 +89,7 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
       niveis: NiveisApp.#onNiveisMaiores,
       focarZona: NiveisApp.#onFocarZona,
       pericia: NiveisApp.#onPericia,
+      oficioNovo: NiveisApp.#onOficioNovo,
       proficiencia: NiveisApp.#onProficiencia,
       subir: NiveisApp.#onSubir,
       limparNivel: NiveisApp.#onLimparNivel,
@@ -287,7 +289,7 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
         { rotulo: 'Defesa', valor: s.attributes?.defesa?.value ?? '?', tom: '' },
         { rotulo: 'Dinheiro', valor: formatarMoedas((Number(s.dinheiro?.tp) || 0) + (Number(s.dinheiro?.tc) || 0) / 10 + (Number(s.dinheiro?.to) || 0) * 10), tom: '' }
       ],
-      pericias: Object.entries(s.pericias ?? {}).filter(([, p]) => p?.treinado).map(([k]) => r[k]).filter(Boolean).sort((x, y) => x.localeCompare(y, 'pt-BR'))
+      pericias: Object.entries(s.pericias ?? {}).filter(([, p]) => p?.treinado).map(([k]) => rotuloPericia(k, r, this.actor)).filter(Boolean).sort((x, y) => x.localeCompare(y, 'pt-BR'))
     };
   }
 
@@ -317,7 +319,7 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const semNivel = anotaveis.filter(i => !origemDe(i)?.nivel).map(i => this.#linhaItem(i)).sort(ordem);
     const aplicado = this.#plano.aplicados?.[n] ?? null;
     const r = rotulosPericias();
-    const pericias = (aplicado?.pericias ?? []).map(k => r[k] ?? k);
+    const pericias = (aplicado?.pericias ?? []).map(k => rotuloPericia(k, r, this.actor) ?? k);
     const profs = PROFICIENCIAS.filter(p => aplicado?.prof?.[p.id]).map(p => p.rotulo);
     const grupos = [
       { id: 'habilidades', rotulo: 'Habilidade de classe', rotuloVarios: 'Habilidades de classe', icone: 'fa-star', itens: linhas(i => i.type === 'poder' && i.system?.tipo === 'ability') },
@@ -496,12 +498,16 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
       const marcada = plano.pericias.includes(k);
       const deOnde = treinadas.has(k) ? 'ficha' : outrasPlan[k] ?? null;
       return {
-        k, rotulo: oficios.has(k) ? rotulo.replace(/^Ofício:\s*/, '') : rotulo,
-        abr: abrevAtr(CONFIG.T20.pericias[k]?.abl ?? ''), marcada, bloqueada: !marcada && !!deOnde, deOnde
+        k, rotulo: oficios.has(k) ? semPrefixoOficio(rotulo) : rotulo,
+        abr: abrevAtr(CONFIG.T20.pericias[k]?.abl ?? this.actor.system.pericias?.[k]?.atributo ?? 'int'), marcada, bloqueada: !marcada && !!deOnde, deOnde
       };
     };
     const todas = Object.entries(r).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
-    const listaOficios = todas.filter(([k]) => oficios.has(k)).map(item);
+    // Ofícios personalizados: os que a ficha já tem e os novos planejados.
+    const daFicha = oficiosDaFicha(this.actor);
+    const novos = [...new Set([...plano.pericias, ...Object.keys(outrasPlan)].filter(ehOficioNovo))].map(k => [k, rotuloPericia(k, r)]);
+    for (const [k] of [...daFicha, ...novos]) oficios.add(k);
+    const listaOficios = [...todas.filter(([k]) => oficios.has(k)), ...daFicha, ...novos].map(item);
     const profAtuais = new Set([...(this.actor.system.tracos?.profArmas?.value ?? []), ...(this.actor.system.tracos?.profArmaduras?.value ?? [])]);
 
     return {
@@ -664,6 +670,12 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
       this.render();
     }));
     el.querySelectorAll('[data-desc]').forEach(n => n.addEventListener('pointerenter', () => this.#descricao(n), { once: true }));
+    // Enter no campo de ofício personalizado adiciona, como o botão ao lado.
+    el.querySelectorAll('[data-oficio-novo]').forEach(inp => inp.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      inp.nextElementSibling?.click();
+    }));
   }
 
   /** Lista de sugestões de 30 em 30, guardando a rolagem entre redesenhos. */
@@ -893,6 +905,19 @@ export class NiveisApp extends HandlebarsApplicationMixin(ApplicationV2) {
     const k = btn.dataset.pericia;
     const i = lista.indexOf(k);
     if (i >= 0) lista.splice(i, 1); else lista.push(k);
+    this.#mudou();
+  }
+
+  static #onOficioNovo(ev, btn) {
+    const campo = btn.closest('[data-pericias]')?.querySelector('[data-oficio-novo]');
+    if (!campo) return;
+    const r = rotulosPericias();
+    const k = chaveDoOficio(campo.value, [...chavesOficio().map(c => [c, r[c]]), ...oficiosDaFicha(this.actor)]);
+    if (!k) return campo.focus();
+    const atual = this.#nivelAtual();
+    const usadas = Object.entries(this.#plano.niveis).filter(([n]) => Number(n) > atual).flatMap(([, p]) => p.pericias ?? []);
+    if (this.actor.system.pericias?.[k]?.treinado || usadas.includes(k)) return ui.notifications.info('Esse ofício já é treinado (na ficha ou em outro nível planejado).');
+    this.#planoDo(this.#nivelVisto).pericias.push(k);
     this.#mudou();
   }
 

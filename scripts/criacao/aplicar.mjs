@@ -20,6 +20,7 @@
  * origem (raça, origem, devoção ou 1º nível) que a Ficha Hayd organiza.
  */
 import { MODULE_ID } from './fontes.mjs';
+import { updOficiosNovos } from './oficios.mjs';
 import { dividirEmMoedas } from './regras.mjs';
 import { apagarChave } from '../versao.mjs';
 
@@ -146,6 +147,9 @@ export async function aplicarCriacao(actor, est, calculo) {
   for (const k of calculo.pericias) {
     if (actor.system.pericias?.[k]) upd[`system.pericias.${k}.treinado`] = true;
   }
+  const oficios = updOficiosNovos(actor, calculo.pericias);
+  Object.assign(upd, oficios.upd);
+  if (oficios.semVaga.length) ui.notifications.warn(`A ficha só comporta nove ofícios personalizados; ficaram de fora: ${oficios.semVaga.join(', ')}.`);
   const dinheiro = Number(calculo.dinheiro);
   if (Number.isFinite(dinheiro) && dinheiro > 0) {
     // T$ quebrado (6,8) vira 6 tibares e 8 tibares de cobre — a ficha não

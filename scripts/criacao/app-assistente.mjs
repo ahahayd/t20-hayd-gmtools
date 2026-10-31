@@ -19,6 +19,7 @@ import {
   outrasDivindades, CATEGORIAS_GERAIS, categoriaGeral, saldoDoEquipamento, chaveDeNome,
   modificadoresAbertos, racialAberto, formatarTibares, formatarMoedas
 } from './regras.mjs';
+import { ehOficioNovo, nomeOficioNovo, chaveDoOficio, rotuloPericia } from './oficios.mjs';
 import { aplicarCriacao, anunciarPersonagem, FLAG_RASCUNHO, FLAG_CONCLUIDA, PROFICIENCIAS } from './aplicar.mjs';
 import { escolherAtributos, metodosDeAtributos } from '../../t20-hayd-atributos.mjs';
 
@@ -228,6 +229,7 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
       habilidadesNivel1: CriacaoAssistenteApp.#onHabilidadesNivel1,
       dinamicoPasso: CriacaoAssistenteApp.#onDinamicoPasso,
       pericia: CriacaoAssistenteApp.#onPericia,
+      oficioNovo: CriacaoAssistenteApp.#onOficioNovo,
       remover: CriacaoAssistenteApp.#onRemover,
       quantidade: CriacaoAssistenteApp.#onQuantidade,
       abrirItem: CriacaoAssistenteApp.#onAbrirItem,
@@ -385,7 +387,12 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
   #regraClasse() {
     const sel = this.#estado.classe.sel;
     if (!sel) return null;
-    return lerPericiasDaClasse(sel.inatas, rotulosPericias(), chavesOficio());
+    const oficios = chavesOficio();
+    const regra = lerPericiasDaClasse(sel.inatas, rotulosPericias(), oficios);
+    // Um ofício personalizado marcado na classe também cumpre o "um Ofício" dela.
+    const novos = this.#estado.classe.pericias.filter(ehOficioNovo);
+    for (const g of regra?.fixas ?? []) if (novos.length && g.length > 1 && g.every(k => oficios.includes(k))) g.push(...novos);
+    return regra;
   }
 
   /** Perícias marcadas em cada etapa: { raca: [...], classe: [...], origem: [...] } */
@@ -600,7 +607,14 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
       apagada: !!regra && !fixas.has(k) && !grupos.has(k) && !opcoes.has(k)
     });
     const todas = Object.entries(rotulosPericias()).sort((a, b) => a[1].localeCompare(b[1], 'pt-BR'));
-    const listaOficios = todas.filter(([k]) => oficios.has(k)).map(item);
+    // Ofícios personalizados de todas as etapas: marcados aqui ou travados.
+    const ofGrupo = [...oficios].some(k => grupos.has(k));
+    const ofOpcao = [...oficios].some(k => opcoes.has(k));
+    const novos = [...new Set(Object.values(marcadas).flat().filter(ehOficioNovo))].map(k => ({
+      ...item([k, nomeOficioNovo(k)]), abr: abrevAtr('int'),
+      grupo: ofGrupo, opcao: ofOpcao, apagada: !!regra && !ofGrupo && !ofOpcao
+    }));
+    const listaOficios = [...todas.filter(([k]) => oficios.has(k)).map(item), ...novos];
     return {
       etapa,
       gerais: todas.filter(([k]) => !oficios.has(k)).map(item),
@@ -633,7 +647,7 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
     return lista.map(x => ({
       uuid: x.uuid, nome: x.nome, img: x.img, fonte: x.fonte,
       chips: tipo === 'race' ? chipsDeRaca(x.sistema, this.#racasAbertas())
-        : [{ texto: `${x.sistema?.pvPorNivel ?? '?'} PV/nv` }, { texto: `${x.sistema?.pmPorNivel ?? '?'} PM/nv` }]
+        : [{ texto: `${x.sistema?.pvPorNivel != null ? x.sistema.pvPorNivel * 4 : '?'} PV inicial` }, { texto: `+${x.sistema?.pvPorNivel ?? '?'} PV/nv` }, { texto: `${x.sistema?.pmPorNivel ?? '?'} PM/nv` }]
     }));
   }
 
@@ -876,7 +890,8 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
     const tipoMagia = info?.tipo ?? '';
     const iniciais = this.#magiasIniciais();
     return {
-      sel,
+      // Na classe inicial, o 1º nível vale 4x o PV por nível (fora a Constituição).
+      sel: { ...sel, pvInicial: (Number(sel.pv) || 0) * 4 },
       regra: !!regra,
       inatas: sel.inatas,
       contagem,
@@ -1353,7 +1368,7 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
     // Perícias, cada uma com a cor da etapa que a deu.
     const de = { raca: 'Raça', classe: 'Classe', origem: 'Origem' };
     const pericias = Object.entries(this.#periciasPorEtapa())
-      .flatMap(([etapa, lista]) => lista.map(k => ({ rotulo: r[k], tom: etapa, de: de[etapa] })))
+      .flatMap(([etapa, lista]) => lista.map(k => ({ rotulo: rotuloPericia(k, r), tom: etapa, de: de[etapa] })))
       .filter(p => p.rotulo)
       .sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR'));
 
@@ -1473,6 +1488,13 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
 
     // Escolhas do equipamento inicial (arma simples, marcial, armadura).
     el.querySelectorAll('select[data-vaga]').forEach(sel => sel.addEventListener('change', () => this.#onVaga(sel.dataset.vaga, sel.value)));
+
+    // Enter no campo de ofício personalizado adiciona, como o botão ao lado.
+    el.querySelectorAll('[data-oficio-novo]').forEach(inp => inp.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      inp.nextElementSibling?.click();
+    }));
 
     // Campos de texto que mudam o estado.
     el.querySelectorAll('[data-campo]').forEach(inp => {
@@ -1876,6 +1898,19 @@ export class CriacaoAssistenteApp extends HandlebarsApplicationMixin(Application
     const i = lista.indexOf(k);
     if (i >= 0) lista.splice(i, 1);
     else lista.push(k);
+    this.#mudou();
+  }
+
+  static #onOficioNovo(ev, btn) {
+    const caixa = btn.closest('[data-pericias]');
+    const lista = this.#periciasPorEtapa()[caixa?.dataset.pericias];
+    const campo = caixa?.querySelector('[data-oficio-novo]');
+    if (!lista || !campo) return;
+    const r = rotulosPericias();
+    const k = chaveDoOficio(campo.value, chavesOficio().map(c => [c, r[c]]));
+    if (!k) return campo.focus();
+    if (this.#todasPericias().has(k)) return ui.notifications.info('Esse ofício já foi escolhido.');
+    lista.push(k);
     this.#mudou();
   }
 

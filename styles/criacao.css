@@ -545,6 +545,9 @@
   cursor: pointer;
 }
 .t20g-cc-oficios > .t20g-cc-per-grade { margin-top: var(--t20g-e1); }
+.t20g-cc-oficio-novo { display: flex; gap: var(--t20g-e1); margin-top: var(--t20g-e2); }
+.t20g-cc-oficio-novo > input { flex: 1; min-width: 0; }
+.t20g-cc-oficio-novo > button { flex: 0 0 auto; width: auto; padding: 0 var(--t20g-e2); }
 
 .t20g-cc-legenda { display: flex; align-items: center; flex-wrap: wrap; gap: var(--t20g-e2) var(--t20g-e3); margin-bottom: var(--t20g-e3); }
 .t20g-cc-leg { display: inline-block; width: 14px; height: 14px; border: 1px solid var(--t20g-line); border-radius: 3px; background: var(--t20g-s1); vertical-align: -2px; }

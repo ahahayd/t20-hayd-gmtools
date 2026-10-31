@@ -14,6 +14,7 @@
 import { MODULE_ID } from '../criacao/fontes.mjs';
 import { nivelDaHabilidade, subtipoDe } from '../criacao/regras.mjs';
 import { PROFICIENCIAS } from '../criacao/aplicar.mjs';
+import { updOficiosNovos } from '../criacao/oficios.mjs';
 import { escalonamento, dadosNoNivel, ajustarDadosNasRolagens } from './regras-niveis.mjs';
 
 export const UI_ID = 't20-hayd-ui';
@@ -100,6 +101,9 @@ export async function aplicarNivel(actor, nivel, plano) {
   // 3. Perícias e proficiências
   const upd = {};
   for (const k of plano.pericias ?? []) if (actor.system.pericias?.[k]) upd[`system.pericias.${k}.treinado`] = true;
+  const oficios = updOficiosNovos(actor, plano.pericias ?? []);
+  Object.assign(upd, oficios.upd);
+  if (oficios.semVaga.length) ui.notifications.warn(`A ficha só comporta nove ofícios personalizados; ficaram de fora: ${oficios.semVaga.join(', ')}.`);
   for (const campo of ['profArmas', 'profArmaduras']) {
     const atuais = new Set(actor.system.tracos?.[campo]?.value ?? []);
     let mudou = false;
