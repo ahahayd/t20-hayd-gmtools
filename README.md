@@ -127,6 +127,28 @@ Os grupos são definidos em *Gerenciar grupos*, apontando uma pasta de atores pa
 
 > A Ficha do Grupo veio do antigo módulo **t20-hayd-management**, que agora faz parte do GMTools. As configurações e os dados dele são mantidos; pode desativá-lo.
 
+### Calculadora de Encontros
+
+Monte o combate contra o seu grupo sem fazer conta: coloque o grupo de um lado e as ameaças do outro, e a janela mostra o ND do encontro, a dificuldade em relação ao grupo e o que ajustar para chegar no alvo, com botões que aplicam a mudança. Só o Mestre vê. Ela abre em dois lugares:
+
+![Barra de ferramentas de tokens com uma seta apontando para o ícone de balança, logo abaixo do saco de moedas](docs/Icone%20de%20calculadora%20de%20encontros.png)
+
+*Na barra de tokens, o ícone de balança fica logo abaixo do Gerador de Tesouros. Com mais de um grupo, ela pergunta para qual é o encontro.*
+
+![Ficha do Grupo na aba Mestre, com uma seta apontando para o botão "Calculadora de encontro"](docs/Ficha%20do%20grupo%20calculadora%20de%20encontros.png)
+
+*Na Ficha do Grupo, aba Mestre: já abre com os personagens daquele grupo.*
+
+![Calculadora de Encontros com um grupo de quatro personagens, uma emboscada de ND 9 classificada como Desafiador, o montador de encontros e a sugestão de Defesa recomendada](docs/calculadora-de-encontros.png)
+
+- **Ameaças** — arraste criaturas ou pastas do diretório e dos compêndios, use os tokens selecionados ou peça sugestões dos compêndios, ordenadas pelo quanto aproximam o encontro do alvo.
+- **Monte um encontro pra mim** — escolha a dificuldade e clique em **Montar**: são 36 estruturas (solo com lacaios, emboscada, horda, bando, chefe final) com criaturas de todos os compêndios do mundo. Clique de novo para outra variação.
+- **Temas e ambiente (experimental)** — filtre o montador por tipo e subtipo de criatura, como Morto-Vivo ou Monstro (dragão), e misture vários. Os ambientes Aquático e Aéreo só usam criaturas com natação ou voo. Depende do que está preenchido nas fichas.
+- **Chefe Final** (Ameaças de Arton, p. 368) — qualquer solo ou especial vira chefe final: PV em dobro, RD, Maior que a Morte e recursos de arena. Simule só no cálculo ou aplique na ficha. Também fica no menu de contexto do ator.
+- **Bando** (Ameaças de Arton, p. 388) — transforma criaturas iguais em uma ameaça só, só no encontro ou criando a ficha.
+- **Tesouro do encontro** — role pelo ND do encontro ou por criatura, edite o resultado e entregue para uma pasta ou para o inventário de uma criatura.
+- **Pasta de encontro** — copia as fichas do encontro para uma pasta nova, sem tocar nos originais.
+
 ### Automações de itens
 
 O botão **Automação** nas fichas de item liga contadores e efeitos automáticos para habilidades que precisam de controle a cada rodada ou a cada uso (Sangue dos Inimigos, Combinações Desarmadas e afins). Desligar a configuração não apaga nada — religar volta tudo a funcionar.
