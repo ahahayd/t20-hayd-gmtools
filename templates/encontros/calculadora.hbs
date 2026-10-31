@@ -1,0 +1,391 @@
+<div class="t20g-enc" data-rola="corpo">
+
+  {{!-- Barra de controles: de onde vem o ND do grupo e que dificuldade buscar. --}}
+  <section class="t20g-enc-controles">
+    <label class="t20g-enc-campo">
+      <span class="t20g-rotulo">ND de referência
+        <i class="fa-solid fa-circle-question" data-tooltip="Auto: nível médio do grupo, ajustado pelo tamanho do grupo (o livro presume 4 PJs), pela quantidade de combates e pelo perfil da mesa. Escolha um valor para fixar."></i>
+      </span>
+      <select name="ndModo">
+        <option value="auto" {{#if (eq st.ndModo "auto")}}selected{{/if}}>Auto (ND {{grupo.ndAuto}})</option>
+        {{#each opcoesND}}<option value="{{valor}}" {{#if sel}}selected{{/if}}>ND {{valor}}</option>{{/each}}
+      </select>
+    </label>
+    <label class="t20g-enc-campo">
+      <span class="t20g-rotulo">Dificuldade desejada</span>
+      <select name="alvo">
+        {{#each alvos}}<option value="{{id}}" {{#if sel}}selected{{/if}}>{{rotulo}} (ND {{nd}})</option>{{/each}}
+      </select>
+    </label>
+    <label class="t20g-enc-campo">
+      <span class="t20g-rotulo">Combates na aventura
+        <i class="fa-solid fa-circle-question" data-tooltip="O grupo aguenta 1 ou 2 combates de ND igual ao seu nível antes de descansar. Aventura com muitos combates: −1 ou −2 em cada. Combate único: +1 ou +2."></i>
+      </span>
+      <select name="ritmo" {{#if grupo.manual}}disabled{{/if}}>
+        {{#each ritmos}}<option value="{{id}}" {{#if sel}}selected{{/if}}>{{rotulo}}</option>{{/each}}
+      </select>
+    </label>
+    <label class="t20g-enc-campo">
+      <span class="t20g-rotulo">Perfil da mesa</span>
+      <select name="perfil" {{#if grupo.manual}}disabled{{/if}}>
+        {{#each perfis}}<option value="{{id}}" {{#if sel}}selected{{/if}}>{{rotulo}}</option>{{/each}}
+      </select>
+    </label>
+    <div class="t20g-enc-campo">
+      <span class="t20g-rotulo">Ajuste</span>
+      <div class="t20g-stepper">
+        <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--pequeno" data-action="manualMenos" {{#if grupo.manual}}disabled{{/if}}><i class="fa-solid fa-minus"></i></button>
+        <span class="t20g-stepper__valor">{{#if (gt st.manual 0)}}+{{/if}}{{st.manual}}</span>
+        <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--pequeno" data-action="manualMais" {{#if grupo.manual}}disabled{{/if}}><i class="fa-solid fa-plus"></i></button>
+      </div>
+    </div>
+  </section>
+
+  {{!-- Placar: ND do encontro, faixa e régua. --}}
+  <section class="t20g-enc-placar t20g-painel">
+    <div class="t20g-enc-placar__nd">
+      <span class="t20g-rotulo">Encontro</span>
+      <span class="t20g-enc-nd">ND {{#if enc.vazio}}—{{else}}{{enc.nd}}{{/if}}</span>
+      {{#if enc.patamar}}<small>{{enc.patamar}}</small>{{/if}}
+    </div>
+    <div class="t20g-enc-placar__nd">
+      <span class="t20g-rotulo">Grupo</span>
+      <span class="t20g-enc-nd t20g-enc-nd--grupo">ND {{grupo.nd}}</span>
+      <small>{{grupo.patamar}}</small>
+    </div>
+    <div class="t20g-enc-placar__nd">
+      <span class="t20g-rotulo">Alvo</span>
+      <span class="t20g-enc-nd t20g-enc-nd--alvo">ND {{alvoND}}</span>
+    </div>
+    <div class="t20g-enc-placar__faixa">
+      {{#if faixa}}
+        <span class="t20g-enc-faixa t20g-enc-faixa--{{faixa.id}}">{{faixa.rotulo}}</span>
+        <p class="t20g-apoio">{{faixa.dica}}</p>
+      {{else}}
+        <span class="t20g-enc-faixa">Sem ameaças</span>
+        <p class="t20g-apoio">Arraste ameaças para a janela, ou use a busca nos compêndios.</p>
+      {{/if}}
+      <div class="t20g-enc-regua" aria-hidden="true">
+        {{#each faixasRegua}}<span class="t20g-enc-regua__faixa t20g-enc-regua__faixa--{{id}}" style="width: {{largura}}%" data-tooltip="{{rotulo}}"></span>{{/each}}
+        <span class="t20g-enc-regua__alvo" style="left: {{marcadorAlvo}}%" data-tooltip="Alvo: ND {{alvoND}}"></span>
+        {{#if (ne marcadorEnc null)}}<span class="t20g-enc-regua__atual" style="left: {{marcadorEnc}}%" data-tooltip="Encontro: ND {{enc.nd}}"></span>{{/if}}
+      </div>
+    </div>
+  </section>
+
+  <div class="t20g-enc-colunas">
+    {{!-- ─── Grupo ─────────────────────────────────────────────────────── --}}
+    <section class="t20g-painel t20g-enc-coluna">
+      <header class="t20g-painel__topo">
+        <i class="fa-solid fa-users"></i>
+        <span class="t20g-titulo">Grupo</span>
+        <span class="t20g-chip">{{nPJs}} PJ{{#if (ne nPJs 1)}}s{{/if}}</span>
+        <span class="t20g-chip" data-tooltip="Níveis do grupo">Nív. {{grupo.faixaNiveis}}</span>
+        <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno t20g-espaco" data-action="restaurarParty" data-tooltip="Voltar aos personagens do grupo"><i class="fa-solid fa-rotate-left"></i></button>
+      </header>
+      <div class="t20g-enc-lista" data-rola="party">
+        {{#each pjs}}
+        <div class="t20g-linha t20g-enc-pj">
+          <img class="t20g-miniatura" src="{{img}}" alt="">
+          <div class="t20g-cresce">
+            <div class="t20g-linha__nome">{{nome}}</div>
+            <div class="t20g-linha__apoio">{{#if classe}}{{classe}} · {{/if}}{{pv}} PV</div>
+          </div>
+          <span class="t20g-chip t20g-chip--accent">Nív. {{nivel}}</span>
+          <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno" data-action="removerPJ" data-id="{{id}}" data-tooltip="Tirar do cálculo"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        {{else}}
+        <div class="t20g-vazio">
+          <i class="fa-solid fa-user-plus"></i>
+          <p class="t20g-vazio__titulo">Nenhum personagem</p>
+          <p class="t20g-vazio__texto">Arraste personagens para cá ou escolha abaixo.</p>
+        </div>
+        {{/each}}
+      </div>
+      <footer class="t20g-enc-rodape">
+        <select name="adicionarPJ">
+          <option value="">+ Adicionar personagem…</option>
+          {{#each disponiveis}}<option value="{{id}}">{{nome}} (nív. {{nivel}})</option>{{/each}}
+        </select>
+        <details class="t20g-enc-detalhe">
+          <summary>Como o ND do grupo foi calculado</summary>
+          <ul>
+            {{#each grupo.partes}}<li>{{rotulo}}: <b>{{sinal}}</b>{{#if convencao}} <i class="fa-solid fa-flask" data-tooltip="Decisão do módulo: o livro não dá número para isto."></i>{{/if}}</li>{{/each}}
+            {{#if grupo.manual}}<li><b>ND fixado manualmente em {{grupo.nd}}</b></li>{{/if}}
+          </ul>
+          <p class="t20g-apoio">Nível médio exato: {{grupo.media}}. O ND do livro presume 4 PJs otimizados para combate, com todos os recursos do nível.</p>
+        </details>
+      </footer>
+    </section>
+
+    {{!-- ─── Encontro ──────────────────────────────────────────────────── --}}
+    <section class="t20g-painel t20g-enc-coluna">
+      <header class="t20g-painel__topo">
+        <i class="fa-solid fa-dragon"></i>
+        <span class="t20g-titulo">Encontro</span>
+        <input type="text" name="titulo" class="t20g-enc-titulo" value="{{st.titulo}}" placeholder="Título…" data-tooltip="Título do encontro: usado no nome da pasta e do tesouro">
+        <span class="t20g-chip">{{inimigos}} inimigo{{#if (ne inimigos 1)}}s{{/if}}</span>
+        <div class="t20g-btn-grupo t20g-espaco">
+          <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno" data-action="tokensSelecionados" data-tooltip="Adicionar tokens selecionados"><i class="fa-solid fa-object-group"></i></button>
+          <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno" data-action="criarPasta" data-tooltip="Criar pasta de encontro"><i class="fa-solid fa-folder-plus"></i></button>
+          <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno" data-action="limparEncontro" data-tooltip="Limpar encontro"><i class="fa-solid fa-trash"></i></button>
+        </div>
+      </header>
+      <div class="t20g-enc-lista" data-rola="ameacas">
+        {{#each ameacas}}
+        <div class="t20g-enc-ameaca {{#if chefe}}t20g-enc-ameaca--chefe{{/if}} {{#if (eq contrib.classe 'zero')}}t20g-enc-ameaca--ignorada{{/if}}">
+          <img class="t20g-miniatura" src="{{img}}" alt="" data-action="abrirFicha" data-uuid="{{uuid}}" data-tooltip="Abrir ficha">
+          <div class="t20g-cresce t20g-enc-ameaca__info">
+            <div class="t20g-linha__nome">
+              {{#if chefe}}<i class="fa-solid fa-crown t20g-enc-coroa"></i>{{/if}}
+              {{nome}}
+              {{#if desvios.length}}<i class="fa-solid fa-triangle-exclamation t20g-enc-desvio" data-tooltip="{{desviosTitulo}}{{#each desvios}}<br>• {{{this}}}{{/each}}<br><i>Desvios de 1 ND são normais; a partir de 2, vale conferir se a ficha compensa em outro número.</i>"></i>{{/if}}
+            </div>
+            <div class="t20g-enc-ameaca__meta">
+              <span class="t20g-chip t20g-chip--accent">ND {{ndRotulo}}</span>
+              {{#if hazard}}
+                <span class="t20g-chip"><i class="fa-solid {{papelIcone}}"></i> {{papelRotulo}}</span>
+              {{else}}
+                <select data-papel-de="{{id}}" class="t20g-enc-papel {{#if papelAlterado}}t20g-enc-papel--alterado{{/if}}" data-tooltip="Papel no cálculo. Na ficha: {{papelFichaRotulo}}">
+                  {{#each papeis}}<option value="{{valor}}" {{#if sel}}selected{{/if}}>{{rotulo}}</option>{{/each}}
+                </select>
+              {{/if}}
+              {{#if recursoDe}}<span class="t20g-chip t20g-chip--accent" data-tooltip="Criatura de um recurso do Chefe Final (Lacaios ou Campeão Secreto): não conta para o ND nem para recompensas"><i class="fa-solid fa-crown"></i> Recurso do chefe</span>{{/if}}
+              {{#if bando}}<span class="t20g-chip" data-tooltip="Bando de {{bando.base.nome}} (ND {{bando.base.nd}})"><i class="fa-solid fa-people-group"></i> Bando</span>{{/if}}
+              {{#if contrib}}<span class="t20g-enc-contrib t20g-enc-contrib--{{contrib.classe}}" data-tooltip="Peso no ND do encontro">{{contrib.rotulo}}</span>{{/if}}
+            </div>
+            {{#if linha}}
+            <div class="t20g-linha__apoio">
+              {{#if pvMostrado}}{{pvMostrado}} PV · {{/if}}Tabela: atq +{{linha.ataque}}, dano {{linha.dano}}/rod, Def {{linha.defesa}}, CD {{linha.cd}}
+            </div>
+            {{/if}}
+            {{#if chefeInfo}}<div class="t20g-linha__apoio t20g-enc-chefe-info">{{chefeInfo}}</div>{{/if}}
+          </div>
+          <div class="t20g-stepper">
+            <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--pequeno" data-action="qtdMenos" data-id="{{id}}"><i class="fa-solid fa-minus"></i></button>
+            <span class="t20g-stepper__valor">×{{qtd}}</span>
+            <button type="button" class="t20g-btn t20g-btn--icone t20g-btn--pequeno" data-action="qtdMais" data-id="{{id}}"><i class="fa-solid fa-plus"></i></button>
+          </div>
+          {{#unless hazard}}
+          <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno {{#if ehBando}}t20g-enc-ativo{{else if bando}}t20g-enc-simulado{{/if}}" data-action="bando" data-id="{{id}}" data-tooltip="{{#if ehBando}}Esta ficha já é um bando{{else if bando}}Bando só no encontro (ND {{ndRotulo}}) — a ficha é criada com a pasta de encontro{{else}}Bando (AdA p. 388): transformar esta criatura num grupo{{/if}}"><i class="fa-solid fa-people-group"></i></button>
+          <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno {{#if chefeAplicado}}t20g-enc-ativo{{else if chefe}}t20g-enc-simulado{{/if}}" data-action="aplicarChefe" data-id="{{id}}" data-tooltip="{{#if chefeAplicado}}Chefe Final aplicado na ficha — editar ou remover{{else if chefe}}Chefe Final só no cálculo (a ficha não foi alterada){{else}}Chefe Final (AdA p. 368): simular no cálculo ou aplicar na ficha{{/if}}"><i class="fa-solid fa-crown"></i></button>
+          {{/unless}}
+          <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno" data-action="removerAmeaca" data-id="{{id}}" data-tooltip="Remover"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        {{else}}
+        <div class="t20g-vazio">
+          <i class="fa-solid fa-hand-pointer"></i>
+          <p class="t20g-vazio__titulo">Nenhuma ameaça</p>
+          <p class="t20g-vazio__texto">Arraste criaturas, perigos ou uma pasta de atores — do diretório ou de um compêndio.</p>
+        </div>
+        {{/each}}
+      </div>
+      <footer class="t20g-enc-rodape">
+        <div class="t20g-enc-montar">
+          <span class="t20g-rotulo"><i class="fa-solid fa-dice"></i> Monte um encontro pra mim</span>
+          <div class="t20g-enc-montar__linha">
+            <select name="montarEstrutura">
+              <option value="aleatoria" {{#if montar.aleatoria}}selected{{/if}}>Surpreenda-me (estrutura aleatória)</option>
+              {{#each montar.grupos}}
+              <optgroup label="{{nome}}">
+                {{#each opcoes}}<option value="{{id}}" {{#if sel}}selected{{/if}} {{#if disabled}}disabled{{/if}}>{{rotulo}}</option>{{/each}}
+              </optgroup>
+              {{/each}}
+            </select>
+            <select name="montarFonte" data-tooltip="De onde sortear as criaturas" {{#if montar.carregando}}disabled{{/if}}>
+              <option value="">{{#if montar.carregando}}Lendo compêndios…{{else}}Todos os compêndios{{/if}}</option>
+              {{#each montar.fontes}}<option value="{{id}}" {{#if sel}}selected{{/if}}>{{nome}}</option>{{/each}}
+            </select>
+            <button type="button" class="t20g-btn" data-action="montarEncontro" data-tooltip="Substitui as ameaças atuais por um encontro sorteado no ND alvo ({{alvoND}}). Clique de novo para outra variação."><i class="fa-solid fa-dice-d20"></i> Montar</button>
+          </div>
+          <div class="t20g-enc-montar__linha">
+            <select name="montarTema" data-tooltip="Só sorteia criaturas destes tipos. Escolha mais de um para misturar, como Monstro + Morto-vivo." {{#if montar.carregando}}disabled{{/if}}>
+              <option value="">+ Tema…</option>
+              {{#each montar.temas}}
+              {{#if temas.length}}
+              <optgroup label="{{nome}}">
+                {{#each temas}}<option value="{{id}}">{{rotulo}}</option>{{/each}}
+              </optgroup>
+              {{/if}}
+              {{/each}}
+            </select>
+            <select name="montarAmbiente" data-tooltip="Aquático: só criaturas com natação. Aéreo: só criaturas com voo.">
+              <option value="">Qualquer ambiente</option>
+              {{#each montar.ambientes}}<option value="{{id}}" {{#if sel}}selected{{/if}}>{{rotulo}}</option>{{/each}}
+            </select>
+          </div>
+          {{#if montar.escolhidos.length}}
+          <div class="t20g-enc-temas">
+            {{#each montar.escolhidos}}<button type="button" class="t20g-chip t20g-chip--accent" data-action="removerTema" data-tema="{{id}}" data-tooltip="Remover tema">{{rotulo}} <i class="fa-solid fa-xmark"></i></button>{{/each}}
+          </div>
+          {{/if}}
+          {{#if montar.filtrando}}<p class="t20g-apoio t20g-enc-montar__nota"><i class="fa-solid fa-flask"></i> Experimental: depende do tipo e do deslocamento preenchidos nas fichas.</p>{{/if}}
+        </div>
+        <button type="button" class="t20g-btn t20g-btn--primario" data-action="abrirBusca"><i class="fa-solid fa-magnifying-glass"></i> Sugerir ameaças dos compêndios</button>
+        <button type="button" class="t20g-btn" data-action="criarPasta" data-tooltip="Copia as ameaças para uma pasta nova no diretório de atores"><i class="fa-solid fa-folder-plus"></i> Criar pasta de encontro</button>
+        {{#if enc.passos.length}}
+        <details class="t20g-enc-detalhe">
+          <summary>Passo a passo do ND</summary>
+          <ol>{{#each enc.passos}}<li>{{this}}</li>{{/each}}</ol>
+        </details>
+        {{/if}}
+      </footer>
+    </section>
+  </div>
+
+  {{!-- ─── Busca nos compêndios ─────────────────────────────────────────── --}}
+  {{#if busca.aberta}}
+  <section class="t20g-painel t20g-enc-busca">
+    <header class="t20g-painel__topo">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <span class="t20g-titulo">Ameaças sugeridas para ND {{alvoND}}</span>
+      {{#if busca.desejado}}<span class="t20g-chip t20g-chip--aviso">Falta: {{busca.desejado}}</span>{{/if}}
+      <div class="t20g-btn-grupo t20g-espaco">
+        <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno" data-action="recarregarIndice" data-tooltip="Reler os compêndios"><i class="fa-solid fa-arrows-rotate"></i></button>
+        <button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno" data-action="fecharBusca" data-tooltip="Fechar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+    </header>
+    {{#if busca.carregando}}
+      <div class="t20g-vazio"><i class="fa-solid fa-spinner fa-spin"></i><p class="t20g-vazio__texto">Lendo os compêndios do mundo…</p></div>
+    {{else}}
+    <div class="t20g-enc-busca__filtros">
+      <input type="search" name="buscaTexto" value="{{busca.texto}}" placeholder="Filtrar por nome…">
+      <select name="buscaPapel">
+        <option value="">Qualquer papel</option>
+        {{#each busca.papeis}}<option value="{{valor}}" {{#if sel}}selected{{/if}}>{{rotulo}}</option>{{/each}}
+      </select>
+      <select name="buscaNdMin">
+        <option value="">ND mín.</option>
+        {{#each busca.opcoesND}}<option value="{{valor}}" {{#if min}}selected{{/if}}>{{valor}}</option>{{/each}}
+      </select>
+      <select name="buscaNdMax">
+        <option value="">ND máx.</option>
+        {{#each busca.opcoesND}}<option value="{{valor}}" {{#if max}}selected{{/if}}>{{valor}}</option>{{/each}}
+      </select>
+      <select name="buscaFonte">
+        <option value="">Todos os compêndios</option>
+        {{#each busca.fontes}}<option value="{{id}}" {{#if sel}}selected{{/if}}>{{nome}}</option>{{/each}}
+      </select>
+    </div>
+    <p class="t20g-apoio t20g-enc-busca__dica">Ordenadas pelo quanto aproximam o encontro do alvo, já com a melhor quantidade. {{busca.total}} ameaças encontradas.</p>
+    <div class="t20g-enc-busca__lista" data-rola="busca">
+      {{#each busca.resultados}}
+      <div class="t20g-linha t20g-enc-resultado" data-busca-nome="{{chave}}">
+        <img class="t20g-miniatura" src="{{img}}" alt="" data-action="abrirFicha" data-uuid="{{uuid}}" data-tooltip="Abrir ficha">
+        <div class="t20g-cresce">
+          <div class="t20g-linha__nome">{{nome}}</div>
+          <div class="t20g-linha__apoio">{{fonte}}</div>
+        </div>
+        <span class="t20g-chip t20g-chip--accent">ND {{ndRotulo}}</span>
+        <span class="t20g-chip" {{#if semPapel}}data-tooltip="Papel não definido na ficha — considerado Solo"{{/if}}><i class="fa-solid {{papelIcone}}"></i> {{papelRotulo}}{{#if semPapel}}?{{/if}}</span>
+        <span class="t20g-enc-resultado__nd {{#if exato}}t20g-enc-resultado__nd--exato{{/if}}" data-tooltip="ND do encontro se adicionar">→ ND {{ndResultante}}</span>
+        <button type="button" class="t20g-btn t20g-btn--pequeno" data-action="adicionarDaBusca" data-uuid="{{uuid}}" data-qtd="{{qtd}}"><i class="fa-solid fa-plus"></i> {{#if (gt qtd 1)}}{{qtd}}×{{else}}Adicionar{{/if}}</button>
+      </div>
+      {{else}}
+      <div class="t20g-vazio"><p class="t20g-vazio__texto">Nada com esses filtros.</p></div>
+      {{/each}}
+    </div>
+    {{/if}}
+  </section>
+  {{/if}}
+
+  {{!-- ─── Sugestões ─────────────────────────────────────────────────────── --}}
+  <section class="t20g-enc-sugestoes">
+    <h3 class="t20g-enc-secao"><i class="fa-solid fa-wand-magic-sparkles"></i> Sugestões</h3>
+    {{#each cartoes}}
+    <article class="t20g-enc-cartao t20g-enc-cartao--{{nivel}}">
+      <i class="fa-solid {{icone}} t20g-enc-cartao__icone"></i>
+      <div class="t20g-cresce">
+        <h4>{{titulo}}</h4>
+        <p>{{texto}}</p>
+        {{#if receitas}}
+        <ul class="t20g-enc-receitas">
+          {{#each receitas}}
+          <li><b>{{titulo}}:</b>
+            {{#each partes}}<button type="button" class="t20g-btn t20g-btn--pequeno" data-action="buscarReceita" data-chave="{{chave}}" data-tooltip="Buscar nos compêndios">{{#if (gt qtd 1)}}{{qtd}} × {{/if}}{{papelRotulo}} ND {{ndRotulo}}</button>{{/each}}
+          </li>
+          {{/each}}
+        </ul>
+        {{/if}}
+        {{#if acoes.length}}
+        <div class="t20g-enc-cartao__acoes">
+          {{#each acoes}}<button type="button" class="t20g-btn t20g-btn--pequeno" data-action="aplicarSugestao" data-chave="{{chave}}">{{rotulo}}</button>{{/each}}
+        </div>
+        {{/if}}
+      </div>
+    </article>
+    {{/each}}
+  </section>
+
+  {{!-- ─── Números ───────────────────────────────────────────────────────── --}}
+  {{#unless enc.vazio}}
+  <section class="t20g-enc-numeros">
+    <div class="t20g-painel">
+      <header class="t20g-painel__topo"><i class="fa-solid fa-fire"></i><span class="t20g-titulo">Pressão sobre o grupo</span></header>
+      <div class="t20g-painel__corpo t20g-pilha">
+        <div class="t20g-medidor t20g-medidor--pv">
+          <div class="t20g-medidor__rotulo"><span>Dano esperado/rodada vs. PV do grupo</span><span class="t20g-medidor__valor">{{ameaca.esperado}} / {{ameaca.pvGrupo}}</span></div>
+          <div class="t20g-medidor__trilho"><div class="t20g-medidor__preenche" style="width: {{ameaca.pctDano}}%"></div></div>
+        </div>
+        <p class="t20g-apoio">
+          Dano médio da Tabela 2-3 ({{ameaca.dano}} se tudo acertar) vezes a chance de acerto{{#if ameaca.defesaMedia}} contra a Defesa média {{ameaca.defesaMedia}} do grupo{{/if}}. Não conta RD, cura, resistências nem crítico.
+          {{#if ameaca.rodadas}}Nesse ritmo, o dano soma os PV do grupo em <b>≈ {{ameaca.rodadas}} rodada{{#if (ne ameaca.rodadas 1)}}s{{/if}}</b>.{{/if}}
+        </p>
+        <p class="t20g-apoio">PV somados dos inimigos: <b>{{ameaca.pvInimigos}}</b>. Ações por rodada (inimigos × PJs): <b>{{ameaca.acoes}}</b>.</p>
+      </div>
+    </div>
+    <div class="t20g-painel">
+      <header class="t20g-painel__topo"><i class="fa-solid fa-star"></i><span class="t20g-titulo">Experiência</span></header>
+      <div class="t20g-painel__corpo t20g-pilha">
+        <p><b>{{xp.porAmeaca}} XP</b> — {{xp.porAmeacaPJ}} por PJ <span class="t20g-apoio">(ND × 1.000 por ameaça)</span></p>
+        <p class="t20g-apoio">Pelo ND do encontro (alternativa unificada, AdA p. 376): {{xp.unificado}} XP — {{xp.unificadoPJ}} por PJ.</p>
+        <p class="t20g-apoio">Empate: {{xp.empate}} por PJ · Derrota dos heróis: {{xp.derrota}} por PJ.</p>
+        {{#if xp.ate}}<p class="t20g-apoio">≈ <b>{{xp.ate}}</b> encontro{{#if (ne xp.ate 1)}}s{{/if}} como este para o próximo nível.</p>{{/if}}
+        {{#if xp.temChefe}}<p class="t20g-apoio"><i class="fa-solid fa-crown"></i> Chefe Final conta +2 ND para XP e tesouro.</p>{{/if}}
+      </div>
+    </div>
+    <div class="t20g-painel">
+      <header class="t20g-painel__topo"><i class="fa-solid fa-sack-dollar"></i><span class="t20g-titulo">Tesouro</span></header>
+      <div class="t20g-painel__corpo t20g-pilha">
+        <div class="t20g-enc-tesouro-cfg">
+          <select name="tesouroModo" data-tooltip="Pelo encontro: uma rolagem na linha do ND do encontro, com a categoria da criatura de maior ND (AdA p. 376). Por criatura: uma rolagem para cada criatura, cada uma com seu ND e sua categoria.">
+            <option value="encontro" {{#if (eq tesouro.modo "encontro")}}selected{{/if}}>Pelo ND do encontro</option>
+            <option value="criatura" {{#if (eq tesouro.modo "criatura")}}selected{{/if}}>Uma rolagem por criatura</option>
+          </select>
+          {{#if (eq tesouro.modo "encontro")}}
+          <select name="tesouroND">
+            <option value="auto" {{#if (eq tesouro.ndModo "auto")}}selected{{/if}}>Auto (ND {{tesouro.ndAuto}})</option>
+            {{#each tesouro.opcoesND}}<option value="{{valor}}" {{#if sel}}selected{{/if}}>ND {{valor}}</option>{{/each}}
+          </select>
+          {{/if}}
+        </div>
+
+        {{#if tesouro.categoriasFicha.length}}
+        <ul class="t20g-enc-tesouro-previa">
+          {{#each tesouro.categoriasFicha}}<li><span class="t20g-cresce">{{nome}}</span><span class="t20g-enc-cat t20g-enc-cat--{{id}}" {{#if texto}}data-tooltip="Na ficha: {{texto}}"{{/if}}>{{rotulo}}</span></li>{{/each}}
+        </ul>
+        {{/if}}
+        <div class="t20g-enc-tesouro-total {{#unless tesouro.gerado}}t20g-enc-tesouro-total--vazio{{/unless}}">
+          <i class="fa-solid fa-coins"></i>
+          <span class="t20g-cresce">{{#if tesouro.gerado}}{{#if tesouro.moedas}}{{tesouro.moedas}}{{else}}Sem dinheiro{{/if}} · {{tesouro.nItens}} {{#if (eq tesouro.nItens 1)}}item{{else}}itens{{/if}}{{else}}Nada rolado ainda{{/if}}</span>
+          {{#if tesouro.desatualizado}}<i class="fa-solid fa-triangle-exclamation t20g-enc-desvio" data-tooltip="O encontro mudou depois da última rolagem."></i>{{/if}}
+          {{#if tesouro.gerado}}<button type="button" class="t20g-btn t20g-btn--fantasma t20g-btn--icone t20g-btn--pequeno" data-action="limparTesouro" data-tooltip="Apagar todo o tesouro"><i class="fa-solid fa-trash"></i></button>{{/if}}
+        </div>
+        <div class="t20g-btn-grupo">
+          <button type="button" class="t20g-btn t20g-btn--primario" data-action="gerarTesouro" data-tooltip="{{tesouro.dica}}"><i class="fa-solid fa-dice-d20"></i> {{#if tesouro.gerado}}Rolar mais{{else}}Rolar tesouro{{/if}}</button>
+          <button type="button" class="t20g-btn" data-action="verTesouro" data-tooltip="Editar dinheiro e itens e ver cada dado rolado"><i class="fa-solid fa-pen-to-square"></i> Ver e editar{{#if tesouro.nRolagens}} ({{tesouro.nRolagens}}){{/if}}</button>
+        </div>
+        {{#if tesouro.gerado}}
+        <div class="t20g-enc-tesouro-manual">
+          <span class="t20g-rotulo">Entregar para</span>
+          <div class="t20g-enc-montar__linha">
+            <select name="tesouroDestino">{{#each tesouro.destinos}}<option value="{{id}}" {{#if sel}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+            <button type="button" class="t20g-btn t20g-btn--pequeno" data-action="entregarTesouro"><i class="fa-solid fa-hand-holding"></i> Entregar</button>
+          </div>
+        </div>
+        {{/if}}
+      </div>
+    </div>
+  </section>
+  {{/unless}}
+</div>

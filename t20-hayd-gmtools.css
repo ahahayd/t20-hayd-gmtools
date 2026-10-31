@@ -1,6 +1,7 @@
 /* T20 Hayd GMTools — estilos do módulo */
 @import url("styles/hayd-ui-base.css");
 @import url("styles/criacao.css");
+@import url("styles/encontros.css");
 
 /* Fórmula ocultada: aparência discreta para indicar que foi mascarada */
 .tormenta20 .dice-formula:is([data-formula-hidden]) {

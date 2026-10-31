@@ -312,6 +312,13 @@ export class TesourosGeradorApp extends HandlebarsApplicationMixin(ApplicationV2
       this.#instancia.#estoqueFolderId = opcoes.estoqueFolderId;
       this.#instancia.#escopo = opcoes.estoqueFolderId;
     }
+    // Vindo da Calculadora de Encontros: tesouro já rolado, direto para a distribuição.
+    if (opcoes.tesouro) {
+      this.#instancia.#tesouro = opcoes.tesouro;
+      this.#instancia.#colunasRoladas = new Set(['dinheiro', 'itens']);
+      this.#instancia.#atribuicoes.clear();
+      this.#instancia.#moedas.clear();
+    }
     this.#instancia.render(true);
     return this.#instancia;
   }

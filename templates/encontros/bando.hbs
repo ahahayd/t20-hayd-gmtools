@@ -1,0 +1,40 @@
+<div class="t20g-chefe-raiz">
+<div class="t20g-chefe-corpo">
+  <header class="t20g-chefe-topo">
+    <img class="t20g-miniatura" src="{{img}}" alt="">
+    <div class="t20g-cresce">
+      <div class="t20g-chefe-nome">{{base}}</div>
+      <div class="t20g-linha__apoio">ND {{ndBase}} · {{papel}}</div>
+    </div>
+  </header>
+
+  <p class="t20g-apoio t20g-chefe-modos">Bando (AdA p. 388): o grupo vira uma ameaça só. A quantidade é descritiva; o que muda é o ND. Cada estatística vai para a linha do novo ND mantendo a distância que a criatura tinha da tabela.</p>
+
+  <div class="t20g-bando-campos">
+    <label class="t20g-enc-campo"><span class="t20g-rotulo">Tamanho do bando</span>
+      <select name="escala">{{#each escalas}}<option value="{{id}}" {{#if sel}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+    </label>
+    <label class="t20g-enc-campo"><span class="t20g-rotulo">ND do bando</span>
+      <select name="ndBando">{{#each nds}}<option value="{{valor}}" {{#if sel}}selected{{/if}}>ND {{valor}}</option>{{/each}}</select>
+    </label>
+    <label class="t20g-enc-campo t20g-bando-nome"><span class="t20g-rotulo">Nome da ficha</span>
+      <input type="text" name="nome" value="{{nome}}">
+    </label>
+  </div>
+
+  <section class="t20g-painel">
+    <header class="t20g-painel__topo"><i class="fa-solid fa-people-group"></i><span class="t20g-titulo">Como fica</span></header>
+    <div class="t20g-painel__corpo">
+      <table class="t20g-chefe-tabela">
+        {{#each linhas}}<tr><td>{{rotulo}}</td><td>{{de}}</td><td>{{#if de}}<i class="fa-solid fa-arrow-right"></i>{{/if}}</td><td><b>{{para}}</b></td></tr>{{/each}}
+      </table>
+      <p class="t20g-apoio">Ganha o poder <b>Bando</b>: dano dobrado ao passar a Defesa por 10+, metade ao errar, imune a manobras, vulnerável a área.{{#if subiu}} Subiu de patamar: o livro sugere uma habilidade nova (ex.: Varrer).{{/if}} Dano de poderes e habilidades em texto não é alterado automaticamente — a ficha recebe uma nota com o multiplicador.</p>
+    </div>
+  </section>
+</div>
+<footer class="t20g-chefe-rodape">
+  {{#if jaNoEncontro}}<button type="button" class="t20g-btn t20g-btn--perigo" data-action="desfazer"><i class="fa-solid fa-rotate-left"></i> Desfazer bando</button>{{/if}}
+  {{#if noEncontro}}<button type="button" class="t20g-btn" data-action="noEncontro" data-tooltip="Usa o bando só no cálculo; a ficha é criada quando você criar a pasta de encontro"><i class="fa-solid fa-calculator"></i> Só no encontro</button>{{/if}}
+  <button type="button" class="t20g-btn t20g-btn--primario" data-action="criar"><i class="fa-solid fa-user-plus"></i> Criar ficha do bando</button>
+</footer>
+</div>

@@ -1,0 +1,462 @@
+/* ==========================================================================
+   Calculadora de Encontros
+   Tudo pende de .t20g-encontros (a janela) — uma classe a mais que a base,
+   para vencer a base reimportada por outros módulos.
+   ========================================================================== */
+
+.t20g-encontros .window-content {
+  padding: 0;
+  overflow: hidden;
+  background: var(--t20g-s0);
+}
+
+.t20g-encontros .t20g-enc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t20g-e4);
+  height: 100%;
+  overflow-y: auto;
+  padding: var(--t20g-e4);
+}
+
+.t20g-encontros .t20g-enc--sobre {
+  outline: 2px dashed var(--t20g-accent-linha);
+  outline-offset: -6px;
+}
+
+/* ─── Controles ─────────────────────────────────────────────────────────── */
+
+.t20g-encontros .t20g-enc-controles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  gap: var(--t20g-e3);
+  align-items: end;
+}
+
+.t20g-encontros .t20g-enc-campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t20g-e1);
+  min-width: 0;
+}
+
+.t20g-encontros .t20g-enc-campo .t20g-rotulo i { opacity: 0.6; cursor: help; }
+.t20g-encontros .t20g-enc select { width: 100%; min-width: 0; }
+
+/* ─── Placar ────────────────────────────────────────────────────────────── */
+
+.t20g-encontros .t20g-enc-placar {
+  display: grid;
+  grid-template-columns: auto auto auto 1fr;
+  gap: var(--t20g-e5);
+  align-items: center;
+  padding: var(--t20g-e4) var(--t20g-e5);
+  overflow: visible;
+}
+
+.t20g-encontros .t20g-enc-placar__nd {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding-inline-end: var(--t20g-e5);
+  border-inline-end: 1px solid var(--t20g-line);
+}
+
+.t20g-encontros .t20g-enc-placar__nd small { color: var(--t20g-ink-3); font-size: 0.75rem; }
+
+.t20g-encontros .t20g-enc-nd {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--t20g-accent-forte);
+  white-space: nowrap;
+}
+
+.t20g-encontros .t20g-enc-nd--grupo,
+.t20g-encontros .t20g-enc-nd--alvo { font-size: 1.35rem; color: var(--t20g-ink); }
+
+.t20g-encontros .t20g-enc-placar__faixa { display: flex; flex-direction: column; gap: var(--t20g-e2); min-width: 0; }
+.t20g-encontros .t20g-enc-placar__faixa .t20g-apoio { margin: 0; }
+
+.t20g-encontros .t20g-enc-faixa {
+  align-self: flex-start;
+  padding: 2px 10px;
+  border-radius: var(--t20g-r-pill);
+  font-weight: 700;
+  font-size: 0.85rem;
+  background: var(--t20g-s3);
+  color: var(--t20g-ink);
+}
+
+/* Cores das faixas: do frio (irrelevante) ao quente (massacre). */
+.t20g-encontros .t20g-enc-faixa--irrelevante,
+.t20g-encontros .t20g-enc-regua__faixa--irrelevante { --faixa: var(--t20g-ink-3); }
+.t20g-encontros .t20g-enc-faixa--facil,
+.t20g-encontros .t20g-enc-regua__faixa--facil { --faixa: var(--t20g-info); }
+.t20g-encontros .t20g-enc-faixa--justo,
+.t20g-encontros .t20g-enc-regua__faixa--justo { --faixa: var(--t20g-sucesso); }
+.t20g-encontros .t20g-enc-faixa--desafiador,
+.t20g-encontros .t20g-enc-regua__faixa--desafiador { --faixa: var(--t20g-aviso); }
+.t20g-encontros .t20g-enc-faixa--mortal,
+.t20g-encontros .t20g-enc-regua__faixa--mortal { --faixa: var(--t20g-perigo); }
+.t20g-encontros .t20g-enc-faixa--massacre,
+.t20g-encontros .t20g-enc-regua__faixa--massacre { --faixa: #9b3fbf; }
+
+.t20g-encontros .t20g-enc-faixa[class*="--"] {
+  background: color-mix(in oklab, var(--faixa) 22%, transparent);
+  color: color-mix(in oklab, var(--faixa) 70%, var(--t20g-ink));
+  border: 1px solid color-mix(in oklab, var(--faixa) 50%, transparent);
+}
+
+.t20g-encontros .t20g-enc-regua {
+  position: relative;
+  display: flex;
+  height: 10px;
+  border-radius: var(--t20g-r-pill);
+  margin-top: var(--t20g-e2);
+}
+
+.t20g-encontros .t20g-enc-regua__faixa {
+  height: 100%;
+  background: color-mix(in oklab, var(--faixa) 55%, var(--t20g-s2));
+}
+.t20g-encontros .t20g-enc-regua__faixa:first-child { border-radius: var(--t20g-r-pill) 0 0 var(--t20g-r-pill); }
+.t20g-encontros .t20g-enc-regua__faixa:nth-last-child(3) { border-radius: 0 var(--t20g-r-pill) var(--t20g-r-pill) 0; }
+
+.t20g-encontros :is(.t20g-enc-regua__alvo, .t20g-enc-regua__atual) {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+.t20g-encontros .t20g-enc-regua__alvo {
+  width: 16px; height: 16px;
+  border: 2px dashed var(--t20g-ink);
+  background: transparent;
+}
+
+.t20g-encontros .t20g-enc-regua__atual {
+  width: 14px; height: 14px;
+  background: var(--t20g-ink);
+  border: 2px solid var(--t20g-s0);
+  box-shadow: var(--t20g-sombra1);
+  transition: left var(--t20g-transicao);
+}
+
+/* ─── Colunas ───────────────────────────────────────────────────────────── */
+
+.t20g-encontros .t20g-enc-colunas {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--t20g-e4);
+  min-height: 300px;
+}
+
+.t20g-encontros .t20g-enc-coluna { display: flex; flex-direction: column; }
+
+.t20g-encontros .t20g-enc-lista {
+  flex: 1 1 auto;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: var(--t20g-e2);
+}
+
+.t20g-encontros .t20g-enc-rodape {
+  display: flex;
+  flex-direction: column;
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e3) var(--t20g-e4);
+  border-top: 1px solid var(--t20g-line);
+}
+
+.t20g-encontros .t20g-enc-detalhe summary { cursor: pointer; color: var(--t20g-ink-2); font-size: 0.85rem; }
+.t20g-encontros .t20g-enc-detalhe :is(ul, ol) { margin: var(--t20g-e2) 0; padding-inline-start: 1.3em; font-size: 0.85rem; }
+.t20g-encontros .t20g-enc-detalhe .fa-flask { color: var(--t20g-ink-3); cursor: help; }
+
+.t20g-encontros .t20g-enc-ameaca {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e3);
+  padding: var(--t20g-e3);
+  border-radius: var(--t20g-r2);
+  border: 1px solid transparent;
+}
+.t20g-encontros .t20g-enc-ameaca + .t20g-enc-ameaca { border-top-color: var(--t20g-line); }
+.t20g-encontros .t20g-enc-ameaca:hover { background: var(--t20g-s2); }
+.t20g-encontros .t20g-enc-ameaca--chefe { border-color: var(--t20g-accent-linha); background: var(--t20g-accent-fundo); }
+.t20g-encontros .t20g-enc-ameaca--ignorada .t20g-miniatura { opacity: 0.5; }
+.t20g-encontros .t20g-enc-ameaca .t20g-miniatura { cursor: pointer; }
+
+.t20g-encontros .t20g-enc-ameaca__info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.t20g-encontros .t20g-enc-ameaca__meta { display: flex; align-items: center; gap: var(--t20g-e2); flex-wrap: wrap; }
+
+.t20g-encontros .t20g-enc-papel {
+  width: auto;
+  height: 22px;
+  padding: 0 4px;
+  font-size: 0.78rem;
+}
+.t20g-encontros .t20g-enc-papel--alterado { border-color: var(--t20g-aviso); color: var(--t20g-aviso); }
+
+.t20g-encontros .t20g-enc-contrib {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--t20g-r1);
+  background: var(--t20g-s3);
+}
+.t20g-encontros .t20g-enc-contrib--base { color: var(--t20g-accent-forte); }
+.t20g-encontros .t20g-enc-contrib--zero { color: var(--t20g-ink-3); text-decoration: line-through; }
+
+.t20g-encontros .t20g-enc-coroa,
+.t20g-encontros .t20g-enc-ativo { color: var(--t20g-accent-forte); }
+.t20g-encontros .t20g-enc-desvio { color: var(--t20g-aviso); cursor: help; margin-inline-start: 4px; }
+.t20g-encontros .t20g-enc-chefe-info { color: var(--t20g-accent); }
+
+/* ─── Busca ─────────────────────────────────────────────────────────────── */
+
+.t20g-encontros .t20g-enc-busca { flex: 0 0 auto; border-color: var(--t20g-accent-linha); }
+
+.t20g-encontros .t20g-enc-busca__filtros {
+  display: grid;
+  grid-template-columns: 2fr 1fr 0.7fr 0.7fr 1.4fr;
+  gap: var(--t20g-e2);
+  padding: var(--t20g-e3) var(--t20g-e4) 0;
+}
+
+.t20g-encontros .t20g-enc-busca__dica { margin: var(--t20g-e2) var(--t20g-e4); }
+
+.t20g-encontros .t20g-enc-busca__lista {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 0 var(--t20g-e2) var(--t20g-e2);
+}
+
+.t20g-encontros .t20g-enc-resultado__nd {
+  font-size: 0.8rem;
+  color: var(--t20g-ink-3);
+  white-space: nowrap;
+}
+.t20g-encontros .t20g-enc-resultado__nd--exato { color: var(--t20g-sucesso); font-weight: 700; }
+
+/* ─── Sugestões ─────────────────────────────────────────────────────────── */
+
+.t20g-encontros .t20g-enc-secao {
+  display: flex;
+  align-items: center;
+  gap: var(--t20g-e3);
+  margin: 0;
+  border: 0;
+  font-size: 0.95rem;
+}
+.t20g-encontros .t20g-enc-secao > i { color: var(--t20g-accent); }
+
+.t20g-encontros .t20g-enc-sugestoes { display: flex; flex-direction: column; gap: var(--t20g-e3); }
+
+.t20g-encontros .t20g-enc-cartao {
+  --tom: var(--t20g-info);
+  display: flex;
+  gap: var(--t20g-e4);
+  padding: var(--t20g-e3) var(--t20g-e4);
+  background: var(--t20g-s1);
+  border: 1px solid var(--t20g-line);
+  border-inline-start: 3px solid var(--tom);
+  border-radius: var(--t20g-r2);
+}
+.t20g-encontros .t20g-enc-cartao--alerta { --tom: var(--t20g-perigo); }
+.t20g-encontros .t20g-enc-cartao--aviso { --tom: var(--t20g-aviso); }
+.t20g-encontros .t20g-enc-cartao--ok { --tom: var(--t20g-sucesso); }
+
+.t20g-encontros .t20g-enc-cartao__icone { color: var(--tom); font-size: 1.1rem; margin-top: 2px; width: 1.2em; text-align: center; }
+.t20g-encontros .t20g-enc-cartao h4 { margin: 0 0 2px; font-size: 0.92rem; border: 0; }
+.t20g-encontros .t20g-enc-cartao p { margin: 0; color: var(--t20g-ink-2); font-size: 0.85rem; line-height: 1.4; }
+
+.t20g-encontros .t20g-enc-cartao__acoes,
+.t20g-encontros .t20g-enc-receitas li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--t20g-e2);
+  margin-top: var(--t20g-e2);
+}
+.t20g-encontros .t20g-enc-receitas { list-style: none; margin: var(--t20g-e2) 0 0; padding: 0; font-size: 0.85rem; }
+.t20g-encontros .t20g-enc-cartao .t20g-btn { flex: 0 0 auto; width: auto; }
+
+/* ─── Números ───────────────────────────────────────────────────────────── */
+
+.t20g-encontros .t20g-enc-numeros {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--t20g-e4);
+}
+.t20g-encontros .t20g-enc-numeros p { margin: 0; font-size: 0.88rem; }
+
+@container (max-width: 760px) {
+  .t20g-encontros .t20g-enc-colunas,
+  .t20g-encontros .t20g-enc-numeros { grid-template-columns: 1fr; }
+}
+
+/* A coluna rola inteira: nenhuma seção encolhe para caber. */
+.t20g-encontros .t20g-enc > * { flex-shrink: 0; }
+
+.t20g-encontros .t20g-enc select.t20g-enc-papel {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.t20g-encontros .t20g-enc-montar { display: flex; flex-direction: column; gap: var(--t20g-e1); }
+.t20g-encontros .t20g-enc-montar .t20g-rotulo i { color: var(--t20g-accent); }
+.t20g-encontros .t20g-enc-montar__linha { display: flex; gap: var(--t20g-e2); }
+.t20g-encontros .t20g-enc-montar__linha select { flex: 1 1 0; }
+.t20g-encontros .t20g-enc-montar__linha .t20g-btn { flex: 0 0 auto; width: auto; }
+.t20g-encontros .t20g-enc-temas { display: flex; flex-wrap: wrap; gap: var(--t20g-e1); }
+.t20g-encontros .t20g-enc-temas .t20g-chip { width: auto; height: auto; cursor: pointer; }
+.t20g-encontros .t20g-enc-montar__nota { margin: 0; font-size: var(--font-size-11, 11px); opacity: 0.75; }
+
+/* ─── Aplicador de Chefe Final ──────────────────────────────────────────── */
+
+.t20g-chefe .window-content { padding: 0; overflow: hidden; background: var(--t20g-s0); }
+.t20g-chefe .t20g-chefe-raiz { display: flex; flex-direction: column; height: 100%; }
+.t20g-chefe .t20g-chefe-corpo {
+  flex: 1 1 auto; overflow-y: auto;
+  display: flex; flex-direction: column; gap: var(--t20g-e4);
+  padding: var(--t20g-e4);
+}
+.t20g-chefe .t20g-chefe-corpo > * { flex-shrink: 0; }
+.t20g-chefe .t20g-chefe-topo { display: flex; align-items: center; gap: var(--t20g-e4); }
+.t20g-chefe .t20g-chefe-topo .t20g-miniatura { width: 48px; height: 48px; }
+.t20g-chefe .t20g-chefe-nome { font-size: 1.15rem; font-weight: 700; }
+.t20g-chefe .t20g-chefe-aviso {
+  margin: 0; padding: var(--t20g-e3) var(--t20g-e4);
+  border-radius: var(--t20g-r2);
+  background: color-mix(in oklab, var(--t20g-aviso) 14%, transparent);
+  color: color-mix(in oklab, var(--t20g-aviso) 70%, var(--t20g-ink));
+}
+.t20g-chefe .t20g-chefe-tabela { width: 100%; margin: 0 0 var(--t20g-e3); border: 0; background: none; }
+.t20g-chefe .t20g-chefe-tabela td { padding: 3px 6px; border: 0; }
+.t20g-chefe .t20g-chefe-tabela td:first-child { color: var(--t20g-ink-2); }
+.t20g-chefe .t20g-chefe-tabela .fa-arrow-right { color: var(--t20g-ink-3); }
+.t20g-chefe .t20g-chefe-tabela b { color: var(--t20g-accent-forte); }
+.t20g-chefe .t20g-chefe-texto { margin: 0; font-size: 0.86rem; color: var(--t20g-ink-2); line-height: 1.4; }
+.t20g-chefe .t20g-chefe-recursos-topo { display: flex; align-items: center; justify-content: space-between; margin-top: var(--t20g-e3); }
+.t20g-chefe .t20g-chefe-recursos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--t20g-e2); }
+.t20g-chefe .t20g-chefe-recurso {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  height: auto; padding: var(--t20g-e3); margin: 0;
+  text-align: start; white-space: normal; line-height: 1.35;
+  background: var(--t20g-s1); color: var(--t20g-ink);
+  border: 1px solid var(--t20g-line); border-radius: var(--t20g-r2);
+  cursor: pointer; transition: border-color var(--t20g-transicao), background-color var(--t20g-transicao);
+}
+.t20g-chefe .t20g-chefe-recurso:hover { background: var(--t20g-s2); }
+.t20g-chefe .t20g-chefe-recurso--sel { border-color: var(--t20g-accent); background: var(--t20g-accent-fundo); }
+.t20g-chefe .t20g-chefe-recurso__nome { font-weight: 700; font-size: 0.88rem; }
+.t20g-chefe .t20g-chefe-recurso__nome i { color: var(--t20g-accent); }
+.t20g-chefe .t20g-chefe-recurso__texto { font-size: 0.78rem; color: var(--t20g-ink-2); }
+.t20g-chefe .t20g-chefe-rodape {
+  display: flex; justify-content: flex-end; gap: var(--t20g-e3);
+  padding: var(--t20g-e3) var(--t20g-e4);
+  border-top: 1px solid var(--t20g-line); background: var(--t20g-s1);
+}
+.t20g-chefe .t20g-chefe-rodape .t20g-btn { width: auto; flex: 0 0 auto; }
+
+/* Coroa: contorno = chefe só no cálculo; dourada cheia = aplicado na ficha. */
+.t20g-encontros .t20g-enc-simulado { color: var(--t20g-accent); }
+.t20g-chefe .t20g-chefe-modos { margin: 0; }
+.t20g-encontros .t20g-btn.t20g-enc-simulado { border: 1px dashed var(--t20g-accent-linha); }
+.t20g-encontros .t20g-btn[data-action="aplicarChefe"].t20g-enc-ativo {
+  background: var(--t20g-accent-fundo);
+  border: 1px solid var(--t20g-accent-linha);
+}
+
+/* ─── Tesouro do encontro ───────────────────────────────────────────────── */
+.t20g-encontros .t20g-enc-tesouro-cfg { display: flex; gap: var(--t20g-e2); }
+.t20g-encontros .t20g-enc-tesouro-cfg select { flex: 1 1 0; min-width: 0; }
+.t20g-encontros .t20g-enc-tesouro-total {
+  display: flex; align-items: center; gap: var(--t20g-e2);
+  padding: var(--t20g-e2) var(--t20g-e3);
+  background: var(--t20g-accent-fundo); border-radius: var(--t20g-r2);
+  font-weight: 600;
+}
+.t20g-encontros .t20g-enc-tesouro-total > .fa-coins { color: var(--t20g-accent); }
+.t20g-encontros .t20g-enc-tesouro-manual { display: flex; flex-direction: column; gap: var(--t20g-e2); border-top: 1px solid var(--t20g-line); padding-top: var(--t20g-e3); }
+.t20g-encontros .t20g-enc-tesouro-manual input[type="number"] { flex: 1 1 0; min-width: 0; }
+.t20g-encontros .t20g-enc-tesouro-manual .t20g-chip { align-self: flex-start; gap: 4px; }
+.t20g-encontros .t20g-enc-tesouro-manual .t20g-chip img { width: 16px; height: 16px; border: 0; }
+.t20g-encontros .t20g-enc-chip-x { all: unset; cursor: pointer; opacity: 0.6; padding-inline-start: 2px; }
+.t20g-encontros .t20g-enc-chip-x:hover { opacity: 1; }
+.t20g-encontros .t20g-enc-numeros .t20g-btn-grupo { flex-wrap: wrap; }
+.t20g-encontros .t20g-enc-numeros .t20g-btn-grupo .t20g-btn { width: auto; flex: 1 1 auto; }
+.t20g-enc-resumo-tesouro ul { margin: 4px 0 8px; padding-inline-start: 1.2em; }
+.t20g-enc-resumo-itens { list-style: none; padding: 0 !important; }
+.t20g-enc-resumo-itens img { width: 22px; height: 22px; border: 0; vertical-align: middle; margin-inline-end: 4px; }
+
+/* ─── Aplicador de Bando (reaproveita o layout do Chefe Final) ──────────── */
+.t20g-bando .t20g-bando-campos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--t20g-e3); }
+.t20g-bando .t20g-bando-nome { grid-column: 1 / -1; }
+.t20g-bando .window-content { max-height: 85vh; }
+
+/* Controles da linha nunca encolhem: o texto do chefe empurrava o "+" para baixo do botão seguinte. */
+.t20g-encontros .t20g-enc-ameaca > :not(.t20g-enc-ameaca__info) { flex-shrink: 0; }
+.t20g-encontros .t20g-enc-ameaca > .t20g-stepper { min-width: 92px; }
+
+/* Escolhas dos recursos do Chefe Final */
+.t20g-chefe .t20g-chefe-escolhas { display: flex; flex-direction: column; gap: var(--t20g-e3); margin-top: var(--t20g-e3); padding-top: var(--t20g-e3); border-top: 1px solid var(--t20g-line); }
+.t20g-chefe .t20g-chefe-escolha { display: flex; flex-direction: column; gap: var(--t20g-e2); font-size: 0.86rem; }
+.t20g-chefe .t20g-chefe-escolha > span:first-child i { color: var(--t20g-accent); }
+.t20g-chefe .t20g-chefe-escolhido { display: flex; align-items: center; gap: var(--t20g-e2); padding: 3px var(--t20g-e3); background: var(--t20g-s2); border-radius: var(--t20g-r1); }
+.t20g-chefe .t20g-chefe-escolhido small { color: var(--t20g-ink-3); margin-inline-start: auto; }
+.t20g-chefe .t20g-enc-chip-x { all: unset; cursor: pointer; opacity: 0.6; }
+.t20g-chefe .t20g-enc-montar__linha { display: flex; gap: var(--t20g-e2); }
+.t20g-chefe .t20g-enc-montar__linha select { flex: 1 1 0; min-width: 0; }
+.t20g-chefe .t20g-enc-montar__linha .t20g-btn { width: auto; flex: 0 0 auto; }
+
+/* ─── Tesouro: card e janela de edição ──────────────────────────────────── */
+.t20g-encontros .t20g-enc-tesouro-total--vazio { background: var(--t20g-s2); color: var(--t20g-ink-3); font-weight: 400; }
+.t20g-encontros .t20g-enc-tesouro-total .t20g-btn { width: auto; flex: 0 0 auto; }
+.t20g-tesouro-enc .t20g-tesouro-enc-moedas { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--t20g-e3); }
+.t20g-tesouro-enc .t20g-tesouro-enc-item img { width: 24px; height: 24px; border: 0; border-radius: var(--t20g-r1); }
+.t20g-tesouro-enc .t20g-tesouro-enc-item small { color: var(--t20g-ink-3); }
+.t20g-tesouro-enc .t20g-tesouro-enc-rolagem summary { font-size: 0.85rem; line-height: 1.4; }
+.t20g-tesouro-enc .t20g-tesouro-enc-rolagem ol { font-size: 0.82rem; }
+.t20g-tesouro-enc .t20g-enc-montar__linha input[type="text"] { flex: 1 1 0; }
+
+/* Áreas de soltar do Chefe Final */
+.t20g-chefe .t20g-chefe-solta {
+  display: flex; align-items: center; justify-content: center; gap: var(--t20g-e2);
+  min-height: 40px; padding: var(--t20g-e3);
+  border: 1px dashed var(--t20g-line-forte); border-radius: var(--t20g-r2);
+  color: var(--t20g-ink-3); font-size: 0.82rem;
+  transition: border-color var(--t20g-transicao), background-color var(--t20g-transicao);
+}
+.t20g-chefe .t20g-chefe-solta:hover,
+.t20g-chefe .t20g-chefe-solta--sobre { border-color: var(--t20g-accent); background: var(--t20g-accent-fundo); color: var(--t20g-ink); }
+.t20g-chefe .t20g-chefe-escolhido img { width: 22px; height: 22px; border: 0; border-radius: var(--t20g-r1); }
+
+/* Categoria de tesouro (manual) */
+.t20g-encontros .t20g-enc-tesouro-cat { display: flex; align-items: center; gap: var(--t20g-e2); font-size: 0.85rem; }
+.t20g-encontros .t20g-enc-tesouro-cat > select { width: auto; flex: 0 0 auto; max-width: 60%; }
+.t20g-encontros .t20g-enc-tesouro-cat > .t20g-rotulo { flex: 1 1 auto; }
+.t20g-encontros .t20g-enc-tesouro-cats { display: flex; flex-direction: column; gap: var(--t20g-e1); }
+
+/* Título do encontro: discreto, no cabeçalho da coluna */
+.t20g-encontros .t20g-enc-titulo {
+  flex: 1 1 auto; min-width: 80px; max-width: 220px; height: 24px;
+  padding: 0 var(--t20g-e2); font-size: 0.85rem;
+  background: transparent; border: 1px solid transparent; border-bottom-color: var(--t20g-line-forte); border-radius: var(--t20g-r1);
+  color: var(--t20g-ink);
+}
+.t20g-encontros .t20g-enc-titulo:hover,
+.t20g-encontros .t20g-enc-titulo:focus { border-color: var(--t20g-line-forte); background: var(--t20g-s2); }
+
+/* Prévia das categorias de tesouro das fichas */
+.t20g-encontros .t20g-enc-tesouro-previa { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 0.84rem; }
+.t20g-encontros .t20g-enc-tesouro-previa li { display: flex; align-items: center; gap: var(--t20g-e2); }
+.t20g-encontros .t20g-enc-cat { padding: 0 8px; border-radius: var(--t20g-r-pill); font-size: 0.76rem; font-weight: 600; background: var(--t20g-s3); }
+.t20g-encontros .t20g-enc-cat--nenhum { color: var(--t20g-ink-3); }
+.t20g-encontros .t20g-enc-cat--metade { color: var(--t20g-info); }
+.t20g-encontros .t20g-enc-cat--padrao { color: var(--t20g-ink-2); }
+.t20g-encontros .t20g-enc-cat--dobro,
+.t20g-encontros .t20g-enc-cat--triplo { color: var(--t20g-accent-forte); background: var(--t20g-accent-fundo); }

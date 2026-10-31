@@ -1,0 +1,49 @@
+<div class="t20g-chefe-raiz">
+<div class="t20g-chefe-corpo" data-rola>
+  <section class="t20g-painel">
+    <header class="t20g-painel__topo"><i class="fa-solid fa-coins"></i><span class="t20g-titulo">Dinheiro</span><span class="t20g-apoio t20g-espaco" data-total>{{#if total}}{{total}}{{else}}nenhum{{/if}}</span></header>
+    <div class="t20g-painel__corpo t20g-tesouro-enc-moedas">
+      {{#each moedas}}
+      <label class="t20g-enc-campo"><span class="t20g-rotulo">{{rotulo}}</span>
+        <input type="number" min="0" step="1" data-moeda="{{id}}" value="{{valor}}">
+      </label>
+      {{/each}}
+    </div>
+  </section>
+
+  <section class="t20g-painel">
+    <header class="t20g-painel__topo"><i class="fa-solid fa-gem"></i><span class="t20g-titulo">Itens</span><span class="t20g-chip">{{itens.length}}</span></header>
+    <div class="t20g-painel__corpo t20g-pilha">
+      {{#each itens}}
+      <div class="t20g-chefe-escolhido t20g-tesouro-enc-item">
+        <img src="{{img}}" alt=""> <span class="t20g-cresce">{{nome}}{{#if manual}} <small>(manual)</small>{{/if}}</span>
+        <button type="button" class="t20g-enc-chip-x" data-action="removerItem" data-id="{{id}}" data-tooltip="Remover"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      {{else}}
+      <p class="t20g-apoio">Nenhum item.</p>
+      {{/each}}
+      <div class="t20g-enc-montar__linha">
+        <input type="text" name="avulso" placeholder="Item avulso (só o nome)…">
+        <button type="button" class="t20g-btn t20g-btn--pequeno" data-action="itemAvulso"><i class="fa-solid fa-plus"></i></button>
+      </div>
+      <p class="t20g-apoio"><i class="fa-solid fa-hand-pointer"></i> Arraste itens do diretório ou de compêndios para esta janela.</p>
+    </div>
+  </section>
+
+  <section class="t20g-painel">
+    <header class="t20g-painel__topo"><i class="fa-solid fa-dice"></i><span class="t20g-titulo">Rolagens</span><span class="t20g-chip">{{rolagens.length}}</span></header>
+    <div class="t20g-painel__corpo t20g-pilha">
+      {{#each rolagens}}
+      <details class="t20g-enc-detalhe t20g-tesouro-enc-rolagem">
+        <summary><b>{{coluna}}</b> · {{rotulo}} → {{resultado}}</summary>
+        <ol>
+          {{#each passos}}<li>{{rotulo}} <span class="t20g-apoio">({{formula}})</span>: <b>{{total}}</b>{{#if temAjuste}} → <b>{{ajustado}}</b> (+20%){{/if}}</li>{{/each}}
+        </ol>
+      </details>
+      {{else}}
+      <p class="t20g-apoio">Nenhuma rolagem ainda.</p>
+      {{/each}}
+    </div>
+  </section>
+</div>
+</div>

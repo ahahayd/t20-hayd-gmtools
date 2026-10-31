@@ -24,7 +24,7 @@ const MARCADOR = '[class*="t20g-"], [class*="thm-"]';
 /** Janelas próprias do módulo, pelo nome da classe da aplicação. */
 const JANELAS_PROPRIAS = new Set(['PartySheetApp', 'PartyManagerApp', 'TesourosGeradorApp',
   'TesourosHomebrewApp', 'TesourosLivrosApp', 'TesourosVinculosApp',
-  'CriacaoAssistenteApp', 'CriacaoFontesApp', 'NiveisApp']);
+  'CriacaoAssistenteApp', 'CriacaoFontesApp', 'NiveisApp', 'EncontrosCalculadoraApp', 'ChefeFinalApp', 'BandoApp', 'TesouroEncontroApp']);
 
 function ehDialogo(app) {
   const V2 = foundry.applications?.api?.DialogV2;

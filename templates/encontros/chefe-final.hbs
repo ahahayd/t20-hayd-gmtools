@@ -1,0 +1,143 @@
+<div class="t20g-chefe-raiz">
+<div class="t20g-chefe-corpo" data-rola>
+  <header class="t20g-chefe-topo">
+    <img class="t20g-miniatura" src="{{img}}" alt="">
+    <div class="t20g-cresce">
+      <div class="t20g-chefe-nome">{{nome}}</div>
+      <div class="t20g-linha__apoio">ND {{nd}} · {{papel}} · {{patamar}}</div>
+    </div>
+    {{#if aplicado}}<span class="t20g-chip t20g-chip--accent"><i class="fa-solid fa-crown"></i> Chefe Final aplicado</span>{{/if}}
+  </header>
+
+  {{#if lacaio}}
+  <p class="t20g-chefe-aviso"><i class="fa-solid fa-triangle-exclamation"></i> Lacaios não servem como chefe final (AdA p. 368). Prefira um solo ou especial.</p>
+  {{/if}}
+  {{#if doCompendio}}
+  <p class="t20g-chefe-aviso"><i class="fa-solid fa-circle-info"></i> {{#if mundo}}Esta ficha está num compêndio: ao aplicar, uma cópia é importada para o mundo e recebe o Chefe Final. O compêndio não muda.{{else}}Esta ficha está num compêndio. Importe-a para o mundo antes de aplicar.{{/if}}</p>
+  {{/if}}
+  {{#if calculo}}
+  <p class="t20g-apoio t20g-chefe-modos"><b>Só no cálculo:</b> a calculadora conta PV dobrados e +2 ND para XP e tesouro, sem alterar a ficha (a pasta de encontro já sai com os ajustes). <b>Aplicar na ficha:</b> altera PV, PM e RD e escreve os poderes, a arena e os recursos; dá para desfazer.</p>
+  {{/if}}
+
+  <section class="t20g-painel">
+    <header class="t20g-painel__topo"><i class="fa-solid fa-crown"></i><span class="t20g-titulo">Ajustes do Chefe Final</span></header>
+    <div class="t20g-painel__corpo">
+      <table class="t20g-chefe-tabela">
+        {{#each ajustes}}<tr><td>{{rotulo}}</td><td>{{de}}</td><td><i class="fa-solid fa-arrow-right"></i></td><td><b>{{para}}</b></td></tr>{{/each}}
+      </table>
+      <p class="t20g-apoio">Ganha o poder <b>Maior que a Morte</b>{{#if semPM}}. A ficha não tem PM, então não recebe os +2 PM por ND{{/if}}. O ND na ficha não muda: o +2 vale só para XP e tesouro.</p>
+    </div>
+  </section>
+
+  <section class="t20g-painel">
+    <header class="t20g-painel__topo"><i class="fa-solid fa-chess-rook"></i><span class="t20g-titulo">Rei da Arena <small class="t20g-apoio">(opcional)</small></span></header>
+    <div class="t20g-painel__corpo t20g-pilha">
+      <p class="t20g-apoio">Ao fim do turno de cada PJ, o chefe ganha uma ação de movimento só para ativar um recurso. CD da arena e dos recursos: <b>{{cd}}</b>. Identificar um recurso: CD <b>{{cdIdentificar}}</b>.</p>
+      <label class="t20g-rotulo">Arena</label>
+      <select name="arena">
+        <option value="">Sem arena</option>
+        {{#each arenas}}<option value="{{id}}" {{#if sel}}selected{{/if}}>{{nome}}</option>{{/each}}
+      </select>
+      {{#if arenaSel}}<p class="t20g-chefe-texto">{{arenaSel}}</p>{{/if}}
+
+      <div class="t20g-chefe-recursos-topo">
+        <span class="t20g-rotulo">Recursos</span>
+        <span class="t20g-chip {{#if excedeu}}t20g-chip--perigo{{/if}}">{{escolhidos}} / {{limite}} (2 por patamar)</span>
+      </div>
+      <div class="t20g-chefe-recursos">
+        {{#each recursos}}
+        <button type="button" class="t20g-chefe-recurso {{#if sel}}t20g-chefe-recurso--sel{{/if}}" data-action="alternarRecurso" data-id="{{id}}" aria-pressed="{{sel}}">
+          <span class="t20g-chefe-recurso__nome"><i class="fa-solid {{icone}}"></i> {{nome}}{{#if sel}} <i class="fa-solid fa-check"></i>{{/if}}</span>
+          <span class="t20g-chefe-recurso__texto">{{texto}}</span>
+        </button>
+        {{/each}}
+      </div>
+
+      {{#if sub.algum}}
+      <div class="t20g-chefe-escolhas">
+        <span class="t20g-rotulo">Escolhas</span>
+
+        {{#if sub.templo}}
+        <label class="t20g-chefe-escolha"><span><i class="fa-solid fa-place-of-worship"></i> Templo — divindade</span>
+          <input type="text" name="templo" value="{{sub.templo.valor}}" placeholder="Ex.: Khalmyr">
+        </label>
+        {{/if}}
+
+        {{#if sub.lacaios}}
+        <div class="t20g-chefe-escolha"><span><i class="fa-solid fa-people-group"></i> Lacaios — 2 a 4, ND somado até {{sub.lacaios.limite}}
+            <span class="t20g-chip {{#if sub.lacaios.excedeu}}t20g-chip--perigo{{/if}}">soma {{sub.lacaios.soma}}</span></span>
+          {{#each sub.lacaios.escolhidos}}
+          <div class="t20g-chefe-escolhido"><img src="{{img}}" alt="">{{nome}} <small>ND {{ndRotulo}}</small>
+            <button type="button" class="t20g-enc-chip-x" data-action="removerEscolha" data-lista="lacaios" data-i="{{i}}"><i class="fa-solid fa-xmark"></i></button></div>
+          {{/each}}
+          {{#unless sub.lacaios.cheio}}<div class="t20g-chefe-solta" data-solta="lacaios"><i class="fa-solid fa-hand-pointer"></i> Arraste lacaios do diretório ou de um compêndio</div>{{/unless}}
+          {{#if sub.lacaios.poucos}}<small class="t20g-apoio">O recurso pede pelo menos 2.</small>{{/if}}
+        </div>
+        {{/if}}
+
+        {{#if sub.campeao}}
+        <div class="t20g-chefe-escolha"><span><i class="fa-solid fa-user-ninja"></i> Campeão Secreto — um lacaio de ND {{sub.campeao.nd}}</span>
+          {{#if sub.campeao.escolhido}}
+          <div class="t20g-chefe-escolhido"><img src="{{sub.campeao.escolhido.img}}" alt="">{{sub.campeao.escolhido.nome}} <small>ND {{sub.campeao.escolhido.ndRotulo}}</small>
+            <button type="button" class="t20g-enc-chip-x" data-action="removerEscolha" data-lista="campeao"><i class="fa-solid fa-xmark"></i></button></div>
+          {{else}}
+          <div class="t20g-chefe-solta" data-solta="campeao"><i class="fa-solid fa-hand-pointer"></i> Arraste o campeão do diretório ou de um compêndio</div>
+          {{/if}}
+        </div>
+        {{/if}}
+
+        {{#if sub.orbe}}
+        <div class="t20g-chefe-escolha"><span><i class="fa-solid fa-circle-radiation"></i> Orbe Elemental</span>
+          <div class="t20g-enc-montar__linha">
+            <select name="orbeElemento"><option value="">Elemento ignorado…</option>{{#each sub.orbe.tipos}}<option value="{{id}}" {{#if (eq id ../sub.orbe.elemento)}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+            <select name="orbeVulneravel"><option value="">Orbe vulnerável a…</option>{{#each sub.orbe.tipos}}<option value="{{id}}" {{#if (eq id ../sub.orbe.vulneravel)}}selected{{/if}}>{{rotulo}}</option>{{/each}}</select>
+          </div>
+        </div>
+        {{/if}}
+
+        {{#if sub.selo}}
+        <div class="t20g-chefe-escolha"><span><i class="fa-solid fa-star-of-david"></i> Selo Místico — magia de {{sub.selo.circulo}}º círculo</span>
+          {{#if sub.selo.escolhido}}
+          <div class="t20g-chefe-escolhido"><img src="{{sub.selo.escolhido.img}}" alt="">{{sub.selo.escolhido.nome}}
+            <button type="button" class="t20g-enc-chip-x" data-action="removerEscolha" data-lista="selo"><i class="fa-solid fa-xmark"></i></button></div>
+          {{else}}
+          <div class="t20g-chefe-solta" data-solta="selo"><i class="fa-solid fa-hand-pointer"></i> Arraste a magia do diretório ou de um compêndio</div>
+          {{/if}}
+        </div>
+        {{/if}}
+
+        {{#if sub.torreta}}
+        <label class="t20g-chefe-escolha"><span><i class="fa-solid fa-crosshairs"></i> Torreta — ataque copiado</span>
+          <select name="torreta">
+            <option value="">Escolha o ataque…</option>
+            {{#each sub.torreta.opcoes}}<option value="{{id}}" {{#if (eq id ../sub.torreta.atual)}}selected{{/if}}>{{nome}}</option>{{/each}}
+          </select>
+        </label>
+        {{/if}}
+
+        {{#if sub.arsenal}}
+        <div class="t20g-chefe-escolha"><span><i class="fa-solid fa-box-open"></i> Arsenal Escondido — até {{sub.arsenal.limite}} item(ns) mágico(s) menor(es)</span>
+          {{#each sub.arsenal.escolhidos}}
+          <div class="t20g-chefe-escolhido"><img src="{{img}}" alt="">{{nome}}
+            <button type="button" class="t20g-enc-chip-x" data-action="removerEscolha" data-lista="arsenal" data-i="{{i}}"><i class="fa-solid fa-xmark"></i></button></div>
+          {{/each}}
+          {{#unless sub.arsenal.cheio}}<div class="t20g-chefe-solta" data-solta="arsenal"><i class="fa-solid fa-hand-pointer"></i> Arraste itens do diretório ou de um compêndio</div>{{/unless}}
+        </div>
+        {{/if}}
+      </div>
+      {{/if}}
+    </div>
+  </section>
+</div>
+<footer class="t20g-chefe-rodape">
+  {{#if aplicado}}
+  <button type="button" class="t20g-btn t20g-btn--perigo" data-action="remover"><i class="fa-solid fa-rotate-left"></i> Remover Chefe Final</button>
+  {{/if}}
+  {{#if calculo}}{{#unless aplicado}}
+  <button type="button" class="t20g-btn" data-action="marcarCalculo"><i class="{{#if marcado}}fa-solid fa-xmark{{else}}fa-solid fa-calculator{{/if}}"></i> {{#if marcado}}Desmarcar do cálculo{{else}}Só no cálculo{{/if}}</button>
+  {{/unless}}{{/if}}
+  <button type="button" class="t20g-btn t20g-btn--primario" data-action="aplicar" {{#unless mundo}}disabled{{/unless}}>
+    <i class="fa-solid fa-crown"></i> {{#if aplicado}}Reaplicar com estas escolhas{{else}}Aplicar na ficha{{/if}}
+  </button>
+</footer>
+</div>

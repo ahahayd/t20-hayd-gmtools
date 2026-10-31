@@ -8,6 +8,7 @@
  */
 
 import { abrirGeradorTesouros } from './t20-hayd-tesouros.mjs';
+import { abrirCalculadoraEncontros } from './scripts/encontros/app-calculadora.mjs';
 import { ehV14, itemDeMenu } from './scripts/versao.mjs';
 
 // MODULE_ID continua "t20-hayd-management" — é o namespace de settings e
@@ -2104,6 +2105,7 @@ class PartySheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
       gmRest: PartySheetApp.#onGmRest,
       gmSkillTest: PartySheetApp.#onGmSkillTest,
       gmTreasure: PartySheetApp.#onGmTreasure,
+      gmEncounter: PartySheetApp.#onGmEncounter,
       editStashItem: PartySheetApp.#onEditStashItem,
       deleteStashItem: PartySheetApp.#onDeleteStashItem
     }
@@ -2444,6 +2446,10 @@ class PartySheetApp extends HandlebarsApplicationMixin(ApplicationV2) {
 
   static #onGmTreasure() {
     abrirGeradorTesouros({ estoqueFolderId: this.folderId });
+  }
+
+  static #onGmEncounter() {
+    abrirCalculadoraEncontros({ folderId: this.folderId });
   }
 
   static #onEditStashItem(event, target) {
