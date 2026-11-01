@@ -20,6 +20,20 @@ const SUFIXOS_POR_CATEGORIA = {
   material: ['']
 };
 
+/** A tabela do livro concorda com o item; o catálogo usa o nome oficial. */
+const CHAVES_DO_CATALOGO = {
+  'banhada-a-ouro': 'banhado-a-ouro',
+  'cravejada-de-gemas': 'cravejado-de-gemas',
+  discreta: 'discreto',
+  macabra: 'macabro',
+  usada: 'usado'
+};
+
+function chaveDoCatalogo(slug, item) {
+  if (slug === 'espinhos') return item?.system?.tipo === 'escudo' ? 'espinhoso-escudo' : 'espinhosa-armadura';
+  return CHAVES_DO_CATALOGO[slug] ?? slug;
+}
+
 export function itensSuperioresAtivo() {
   return game.modules.get(ID_ITENS)?.active === true;
 }
@@ -93,11 +107,14 @@ function apiItens() {
   return game.modules.get(ID_ITENS)?.api ?? null;
 }
 
-/** Tenta achar a chave do catálogo de t20-hayd-itens para uma melhoria/encanto/material do PDF. */
-export function resolverChaveItens(nomeOuChave, categoria) {
+/**
+ * Tenta achar a chave do catálogo de t20-hayd-itens para uma melhoria/encanto/
+ * material do PDF. `item` desfaz nomes que dependem do item que os recebe.
+ */
+export function resolverChaveItens(nomeOuChave, categoria, item = null) {
   const api = apiItens();
   if (!api?.catalogo?.obterEntrada) return null;
-  const base = slugify(nomeOuChave);
+  const base = chaveDoCatalogo(slugify(nomeOuChave), item);
   const sufixos = SUFIXOS_POR_CATEGORIA[categoria] ?? [''];
   for (const sufixo of sufixos) {
     const tentativa = `${base}${sufixo}`;
@@ -140,7 +157,7 @@ export async function aplicarEntradasNoItem(item, { melhorias = [], encantos = [
       continue;
     }
 
-    const chave = resolverChaveItens(entrada.chave ?? entrada.nome, categoria);
+    const chave = resolverChaveItens(entrada.chave ?? entrada.nome, categoria, item);
     if (!chave) { naoAplicadas.push(entrada); continue; }
     try {
       await api.efeitos.adicionarEntrada(item, chave);

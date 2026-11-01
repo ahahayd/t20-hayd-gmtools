@@ -5,7 +5,7 @@
  */
 import { MOEDAS, rotuloMoeda } from './constantes.mjs';
 import { ICONE_TESOURO_PADRAO } from './dados-icones.mjs';
-import { aplicarEntradasNoItem, aplicacaoAutomaticaDisponivel } from './integracao-itens.mjs';
+import { aplicarEntradasNoItem, aplicacaoAutomaticaDisponivel, itensSuperioresAtivo } from './integracao-itens.mjs';
 
 /* ─── Achatamento da árvore de resultado ───────────────────────────────── */
 
@@ -105,10 +105,9 @@ export async function materializarItem(node) {
       tipo: node.tipo, categoria: node.item.categoria, nivel: node.nivel ?? null,
       melhorias: node.melhorias ?? [], encantos: node.encantos ?? [],
       // Com o t20-hayd-itens ativo (ou, sem ele, pelo recurso nativo do
-      // Tormenta20 1.6.5 no v14) a lista NÃO entra na descrição, porque será
-      // aplicada de verdade depois. `pendente` marca que isso ainda não
-      // aconteceu — é o que permite aplicar quando o item vira um Document,
-      // inclusive saindo do estoque do grupo (que guarda só dado cru).
+      // Tormenta20 1.6.5 no v14) a lista entra na descrição só depois, junto
+      // da aplicação de verdade: ela diz o que foi aplicado e o que não foi.
+      // `pendente` marca que isso ainda não aconteceu.
       pendente: automatico
     });
     return base;
@@ -116,40 +115,83 @@ export async function materializarItem(node) {
   return dadosBaseDoNode(node);
 }
 
+/** Item → aplicação em andamento: ver `aplicarBuildPendente`. */
+const aplicacoes = new Map();
+
 /**
  * Aplica de verdade as melhorias/encantos NO ITEM JÁ CRIADO, a partir da flag
- * gravada por `materializarItem`.
+ * gravada por `materializarItem`, e lista na descrição o que entrou.
  *
  * Trabalha pela FLAG, e não pelo nó da rolagem, porque o item pode chegar aqui
- * muito depois — uma entrada de estoque do grupo é dado cru numa flag da
- * pasta, sem Document para atualizar na hora. A flag viaja com o item e a
- * aplicação acontece quando ele finalmente vira um Item de verdade na ficha.
+ * muito depois: a flag viaja com o item e continua valendo se ele ainda não
+ * tiver sido aplicado (ver `aplicarBuildNosDados`).
  *
- * Idempotente: baixa a marca `pendente` ANTES de aplicar, então a chamada
- * direta e o hook de criação nunca duplicam os efeitos.
+ * Idempotente. A marca `pendente` só cai quando o servidor responde, e a
+ * chamada direta chega logo depois do hook de criação: sem o `aplicacoes`, as
+ * duas passavam pela marca e cada melhoria virava dois efeitos.
  */
 export async function aplicarBuildPendente(itemDocumento) {
   const flag = itemDocumento?.getFlag?.('t20-hayd-gmtools', 'tesouroGerado');
   if (!flag?.pendente) return;
+  const uuid = itemDocumento.uuid;
+  if (!aplicacoes.has(uuid)) {
+    aplicacoes.set(uuid, executarBuild(itemDocumento, flag).finally(() => aplicacoes.delete(uuid)));
+  }
+  return aplicacoes.get(uuid);
+}
+
+async function executarBuild(itemDocumento, flag) {
   await itemDocumento.setFlag('t20-hayd-gmtools', 'tesouroGerado', { ...flag, pendente: false });
 
-  const melhorias = flag.tipo === 'itemSuperior' ? (flag.melhorias ?? []) : [];
-  const encantos = flag.tipo === 'itemMagico' ? (flag.encantos ?? []) : [];
+  const superior = flag.tipo === 'itemSuperior';
+  const melhorias = superior ? (flag.melhorias ?? []) : [];
+  const encantos = superior ? [] : (flag.encantos ?? []);
   if (!melhorias.length && !encantos.length) return;
 
-  const { naoAplicadas } = await aplicarEntradasNoItem(itemDocumento, {
+  const { aplicadas, naoAplicadas } = await aplicarEntradasNoItem(itemDocumento, {
     melhorias, encantos, categoria: flag.categoria
   });
-  if (naoAplicadas.length) {
-    const rotulo = flag.tipo === 'itemSuperior' ? 'Melhorias (aplicar manualmente)' : 'Encantos (aplicar manualmente)';
-    const atual = itemDocumento.system?.description?.value ?? '';
-    await itemDocumento.update({ 'system.description.value': atual + listaEntradas(rotulo, naoAplicadas) });
-  }
+  const rotulo = superior ? 'Melhorias' : 'Encantos';
+  const atual = itemDocumento.system?.description?.value ?? '';
+  await itemDocumento.update({
+    'system.description.value': atual + listaEntradas(rotulo, aplicadas) + listaEntradas(`${rotulo} (aplicar manualmente)`, naoAplicadas)
+  });
 }
 
 /** Compatibilidade: os caminhos diretos continuam chamando isto após criar o Item. */
 export async function finalizarPosCriacao(itemDocumento) {
   return aplicarBuildPendente(itemDocumento);
+}
+
+/**
+ * Para quem guarda dado cru, como o estoque do grupo: devolve os dados do item
+ * com as melhorias/encantos já aplicados, para ele aparecer completo mesmo
+ * antes de ir para uma ficha. A aplicação precisa de um Document, então passa
+ * por um item de mundo temporário. A marca `stashEdit` é a dos temporários do
+ * estoque: se a sessão cair aqui no meio, a limpeza do início apaga a sobra.
+ *
+ * Só com o t20-hayd-itens. Sem ele, no v14, o sistema cria os efeitos depois
+ * de o update terminar: os dados sairiam sem eles, e o item fica pendente até
+ * chegar a uma ficha.
+ */
+export async function aplicarBuildNosDados(dados) {
+  if (!dados?.flags?.['t20-hayd-gmtools']?.tesouroGerado?.pendente || !itensSuperioresAtivo()) return dados;
+
+  const copia = foundry.utils.deepClone(dados);
+  delete copia._id;
+  foundry.utils.setProperty(copia, 'flags.t20-hayd-gmtools.stashEdit', true);
+  const temporario = await Item.implementation.create(copia);
+  try {
+    await aplicarBuildPendente(temporario);
+    const pronto = temporario.toObject();
+    delete pronto._id;
+    delete pronto.folder;
+    delete pronto.sort;
+    delete pronto.flags['t20-hayd-gmtools'].stashEdit;
+    return pronto;
+  } finally {
+    await temporario.delete();
+  }
 }
 
 /* ─── Conceder a um ator ────────────────────────────────────────────────── */

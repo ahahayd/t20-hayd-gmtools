@@ -16,7 +16,8 @@ import { abrirGeradorTesouros } from './scripts/tesouros/app-gerador.mjs';
 import { abrirVinculosTesouros } from './scripts/tesouros/app-vinculos.mjs';
 import { abrirHomebrewTesouros } from './scripts/tesouros/app-homebrew.mjs';
 import { gerarTesouro } from './scripts/tesouros/motor.mjs';
-import { concederTesouro, postarCardTesouro, aplicarBuildPendente } from './scripts/tesouros/distribuicao.mjs';
+import { concederTesouro, postarCardTesouro, aplicarBuildPendente, aplicarBuildNosDados } from './scripts/tesouros/distribuicao.mjs';
+import { stashConverterItens } from './t20-hayd-management.mjs';
 // Liga o botão "Rolar" das mensagens de pedido de rolagem (Hooks.on própria).
 import './scripts/tesouros/rolagem-jogador.mjs';
 
@@ -94,17 +95,21 @@ Hooks.once('ready', () => {
       }
     };
   }
+
+  // Itens que entraram no estoque sem a build aplicada (versões anteriores).
+  // Fora do `ready`: a API do t20-hayd-itens nasce no `ready` dele, que roda
+  // depois deste.
+  if (game.user === game.users.activeGM) {
+    setTimeout(() => stashConverterItens(aplicarBuildNosDados).catch(err =>
+      console.error('T20 Hayd GMTools | Falha ao aplicar melhorias dos itens do estoque', err)
+    ));
+  }
 });
 
 /**
  * Aplica as melhorias/encantos de um item gerado assim que ele vira um Item de
- * verdade numa ficha.
- *
- * É aqui, e não só no momento de conceder, porque o estoque do grupo guarda
- * dado cru numa flag da pasta — não existe Document para aplicar efeito. O
- * item saía do gerador com as melhorias roladas, ficava no estoque, e ao ir
- * para a ficha de alguém chegava sem elas (e sem nem a lista na descrição,
- * porque o texto é omitido quando o t20-hayd-itens vai aplicá-las de verdade).
+ * verdade numa ficha. Rede de segurança para o que ainda estiver pendente: o
+ * gerador entrega os itens com a build aplicada, inclusive no estoque do grupo.
  *
  * Só o Mestre ativo executa: o hook dispara em todos os clientes, e aplicar em
  * paralelo duplicaria os efeitos.

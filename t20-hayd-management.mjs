@@ -448,6 +448,26 @@ export async function stashAddItem(folderId, sourceData, qty) {
   await setStashData(folderId, stash);
 }
 
+/**
+ * (GM) Passa as entradas do estoque de todos os grupos por `converter`, que
+ * devolve a própria entrada (nada a mudar) ou os dados que a substituem.
+ */
+export async function stashConverterItens(converter) {
+  for (const folderId of getPartyFolderIds()) {
+    await filaEstoque(folderId, async () => {
+      const stash = getStashData(folderId);
+      let mudou = false;
+      for (const [i, entrada] of stash.items.entries()) {
+        const nova = await converter(entrada);
+        if (nova === entrada) continue;
+        stash.items[i] = { ...nova, _id: entrada._id };
+        mudou = true;
+      }
+      if (mudou) await setStashData(folderId, stash);
+    });
+  }
+}
+
 /** (GM) Soma moedas ao estoque (usado pela distribuição de tesouro). */
 export async function stashAddMoney(folderId, coins) {
   const stash = getStashData(folderId);

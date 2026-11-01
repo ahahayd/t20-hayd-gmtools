@@ -13,7 +13,7 @@ import { SessaoDeRolagem, sessaoAutomatica, RolagemCancelada } from './sessao.mj
 import { jogadoresOnline, pedirRolagemAoJogador, capturarRolagemDeJogador } from './rolagem-jogador.mjs';
 import { resolverReferencia, definirOverride, tabelaAceitaVinculo } from './vinculo.mjs';
 import {
-  postarCardTesouro, totalDinheiro, itensGerados, materializarItem, finalizarPosCriacao
+  postarCardTesouro, totalDinheiro, itensGerados, materializarItem, finalizarPosCriacao, aplicarBuildNosDados
 } from './distribuicao.mjs';
 import { getPartyMembers, getPartyFolderIds, stashAddItem, stashAddMoney } from '../../t20-hayd-management.mjs';
 import { postarTrilhaNoChat } from './chat.mjs';
@@ -1131,7 +1131,7 @@ export class TesourosGeradorApp extends HandlebarsApplicationMixin(ApplicationV2
     const destino = destinos.find(d => d.id === destinoId);
     if (!destino) return;
     if (destino.estoque) {
-      await stashAddItem(destino.folderId, dados, Number(dados.system?.qtd) || 1);
+      await stashAddItem(destino.folderId, await aplicarBuildNosDados(dados), Number(dados.system?.qtd) || 1);
       return;
     }
     const actor = game.actors.get(String(destinoId).slice('actor:'.length));
