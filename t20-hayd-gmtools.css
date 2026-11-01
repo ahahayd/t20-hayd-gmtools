@@ -2213,6 +2213,43 @@ a.header-button.t20g-atr-header {
   font-size: 13px;
 }
 
+/* --- Manobra na janela de uso --------------------------------------------- */
+
+/* Linha em árvore saindo do marcador: o que está nela só vale na manobra. Sem
+   o tema, a cor cai para a do texto. */
+.aprimoramentos-list li.t20g-manobra-filha {
+  position: relative;
+  --t20g-manobra-galho: var(--t20a-cor-destaque, currentColor);
+}
+.aprimoramentos-list li.t20g-manobra-filha > .item-cost { padding-left: 22px; }
+.aprimoramentos-list li.t20g-manobra-filha::before,
+.aprimoramentos-list li.t20g-manobra-filha::after {
+  content: '';
+  position: absolute;
+  left: 23px;
+  background: var(--t20g-manobra-galho);
+  pointer-events: none;
+}
+/* Vertical: atravessa a linha inteira até a próxima filha. */
+.aprimoramentos-list li.t20g-manobra-filha::before { top: 0; bottom: 0; width: 2px; }
+.aprimoramentos-list li.t20g-manobra + li.t20g-manobra-filha::before { top: -8px; }
+.aprimoramentos-list li.t20g-manobra-filha.t20g-manobra-ultima::before { bottom: 50%; }
+/* Horizontal: o galho até a caixa de marcar. */
+.aprimoramentos-list li.t20g-manobra-filha::after { top: calc(50% - 1px); width: 12px; height: 2px; }
+
+select.t20g-manobra-tamanho { width: auto; height: 22px; margin-left: 4px; }
+
+/* Faixa no cartão do chat. */
+.t20g-manobra-aviso {
+  margin: 4px 0;
+  padding: 2px 6px;
+  border: 1px solid #e67e22;
+  border-radius: 4px;
+  color: #e67e22;
+  font-weight: 700;
+  text-align: center;
+}
+
 /* --- Preview de dano na janela de uso ------------------------------------ */
 
 /* Bloco recolhível, no tom da própria janela: fechado mostra só o resumo,

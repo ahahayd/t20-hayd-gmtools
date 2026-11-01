@@ -181,6 +181,20 @@ A ferramenta só aparece em cenas com grade quadrada — em grade hexagonal ou s
 
 Ao usar uma arma, magia, poder ou perícia, a janela de uso mostra logo abaixo do custo de mana o que vai ser rolado: o teste de acerto (com a margem e o multiplicador de crítico), o dano e o dano crítico. Em testes de perícia, mostra a rolagem do teste. A prévia já considera os aprimoramentos marcados na hora e os bônus do personagem, e usa o mesmo cálculo do sistema, então o que aparece é o que vai para o chat. Também há caixas para **maximizar** ou **minimizar** o dano.
 
+### Manobra na janela de uso
+
+A janela de uso de armas ganha o marcador **Manobra**, sempre na primeira linha da lista. Ao marcá-lo, aparecem os efeitos de uso com a opção **É um efeito de manobra?** ligada, que ficam escondidos no resto do tempo, e o modificador de tamanho de quem rola, já aplicado: Minúsculo −5, Pequeno −2, Grande +2, Enorme +5 e Colossal +10. O tamanho é um seletor na própria linha: a escolha vale para criaturas cujo modificador de manobra difere do tamanho e fica salva no ator para a próxima rolagem.
+
+Quando o uso pula a janela, os efeitos de manobra não são aplicados.
+
+### Flanqueamento automático
+
+Armas corpo a corpo ganham o efeito de uso **Flanqueando** (+2 no ataque), marcado sozinho quando o alvo está flanqueado: você e um aliado ao alcance dele, com uma linha entre os dois cruzando lados opostos do alvo. Vale também para inimigos. Criaturas maiores testam uma linha a partir de cada quadrado. Alcance: até Médio 1,5m, Grande 3m, Enorme 4,5m e Colossal 9m.
+
+Com seu token selecionado e um alvo marcado, passe o mouse em um deles (ou segure Alt) para ver as linhas de flanco no mapa.
+
+O efeito entra na ficha na primeira vez que a janela de uso de uma arma corpo a corpo é aberta; quem nunca ataca assim não recebe nada. Depois disso, edite-o para somar dano, margem de ameaça ou outros bônus de poderes e eles valem em todo flanco. Em token não vinculado, ele fica na ficha do ator original. Se for apagado, volta ao padrão de +2 no ataque na janela seguinte.
+
 ### Correção do custo de mana
 
 Na janela de uso de qualquer item com custo em PM (magia, poder, arma, equipamento ou consumível), o sistema soma só o custo dos aprimoramentos e ignora o custo base do próprio item. Com esta opção ligada, o *Custo de Mana Total* passa a incluir o custo base, para todos os jogadores do mundo. Recomendado ligar, a menos que a sua versão do sistema já tenha corrigido isso.

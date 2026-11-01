@@ -10,6 +10,11 @@ import './scripts/ui-base.mjs';
 import './t20-hayd-automacoes.mjs';
 // Régua opcional para efeitos (ignora diagonais). Mesmo motivo do import acima.
 import './t20-hayd-regua.mjs';
+// Marcador "Manobra" na janela de uso. Antes do custo e da prévia: os hooks deles
+// precisam ler a janela já sem as linhas de manobra. Mesmo motivo acima.
+import './t20-hayd-manobra.mjs';
+// Flanqueamento automático e linha no mapa. Mesmo motivo acima.
+import './t20-hayd-flanco.mjs';
 // Correção opcional do "Custo de Mana Total" do sistema. Mesmo motivo acima.
 import './t20-hayd-custo-pm.mjs';
 // Mensagens de dano/cura/mana com visual próprio e Desfazer. Mesmo motivo acima.
@@ -1547,7 +1552,7 @@ const CATEGORIAS_CONFIG = [
   { rotulo: 'CatParty',       icone: 'fa-users',          chaves: ['partyManager', 'partySheetEnabled', 'visibility', 'requireConfirmation', 'chatMode', 'lojaCompat'] },
   // Os atributos iniciais são a primeira etapa do assistente: uma categoria só.
   { rotulo: 'CatCriacao',     icone: 'fa-wand-magic-sparkles', chaves: ['criacaoAtivo', 'criacaoAoCriar', 'criacaoDinheiroInicial', 'criacaoFontesMenu', 'atributosMetodoPadrao', 'atributosPontos', 'atributosMultiNegativos', 'atributosCustosMenu', 'atributosConversaoMenu', 'niveisAtivo'] },
-  { rotulo: 'CatFerramentas', icone: 'fa-ruler-combined', chaves: ['reguaEfeitos', 'mensagensDano', 'previewDano'] },
+  { rotulo: 'CatFerramentas', icone: 'fa-ruler-combined', chaves: ['reguaEfeitos', 'mensagensDano', 'previewDano', 'manobraUso', 'flanqueamento'] },
   { rotulo: 'CatCorrecoes',   icone: 'fa-screwdriver-wrench', chaves: ['custoPmTotal', 'limparZeros'] }
 ];
 

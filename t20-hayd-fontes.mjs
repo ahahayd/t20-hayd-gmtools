@@ -26,6 +26,7 @@ import {
   zerosRemoviveis
 } from './scripts/fontes.mjs';
 import { ehV14, modoDaMudanca } from './scripts/versao.mjs';
+import { foraDoUsoSemJanela } from './t20-hayd-manobra.mjs';
 
 const MODULE_ID = 't20-hayd-gmtools';
 const SETTING = 'fontesRolagem';
@@ -188,7 +189,7 @@ function candidatosDeUso(item, ator, opcoes) {
       const automatico = ehV14()
         ? ef.system?.onuse && ef.system?.abilityUse?.automatic
         : ef.getFlag?.('tormenta20', 'onuse') && !ef.disabled;
-      if (automatico) aprs[ef.id] = { aplica: 1 };
+      if (automatico && !foraDoUsoSemJanela(ef)) aprs[ef.id] = { aplica: 1 };
     }
   }
   const candidatos = [];

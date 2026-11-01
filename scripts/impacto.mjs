@@ -83,6 +83,8 @@ export const FUNCOES = [
   { chave: 'reguaEfeitos', nivel: 'baixo' },
   { chave: 'criacaoAtivo', nivel: 'baixo' },
   { chave: 'niveisAtivo', nivel: 'baixo' },
+  { chave: 'manobraUso', nivel: 'baixo' },
+  { chave: 'flanqueamento', nivel: 'baixo' },
   { chave: 'custoPmTotal', nivel: 'baixo' },
   { chave: 'jogadoresReroll', nivel: 'baixo' },
   { chave: 'jogadoresManual', nivel: 'baixo' },
