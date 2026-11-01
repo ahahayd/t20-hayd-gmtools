@@ -12,6 +12,7 @@ import {
   multiplicarDados,
   dadoDaMarca,
   formulaDaMarca,
+  bonusDeEspreitar,
   aplicarPassosNasPartes,
   indiceDaMarca
 } from '../../scripts/automacoes/marca-da-presa.mjs';
@@ -131,6 +132,24 @@ test('catálogo: as quatro automações do Caçador existem e oferecem apagar os
   assert.equal(AUTOMACOES['tiro-de-abate'].usoSuspenso.multiplicaMarca, true);
   const tiro = AUTOMACOES['tiro-de-abate'].usoSuspenso.changes();
   assert.deepEqual(tiro.map((c) => [c.key, c.value]), [['ataque', '2'], ['criticoM', '-2']]);
+});
+
+test('Espreitar: +1, +1 por PM extra, e o Inimigo dobra o total', () => {
+  assert.equal(bonusDeEspreitar(), 1);
+  assert.equal(bonusDeEspreitar({ aumentos: 2 }), 3);
+  assert.equal(bonusDeEspreitar({ aumentos: 2, dobrado: true }), 6);
+  assert.equal(bonusDeEspreitar({ dobrado: true }), 2);
+  // O registro da marca serve direto, inclusive com valor vindo de formulário
+  assert.equal(bonusDeEspreitar({ item: 'a', aumentos: '4', dobrado: false }), 5);
+});
+
+test('catálogo: Espreitar vale em perícias e ataques com arma, sem custo nem suspensão', () => {
+  const def = AUTOMACOES.espreitar;
+  assert.equal(def.categoria, 'cacador');
+  assert.equal(def.apagarEfeitos, true);
+  assert.equal(def.usoSuspenso, undefined);
+  assert.deepEqual(def.espreitar.alvos, { attack: true, skill: true, pericia: true });
+  assert.deepEqual(def.espreitar.changes(3).map((c) => [c.key, c.value]), [['roll', '3'], ['ataque', '3']]);
 });
 
 /*

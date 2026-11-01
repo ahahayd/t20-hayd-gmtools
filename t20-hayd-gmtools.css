@@ -621,6 +621,10 @@ a.header-button.t20g-atr-header {
 
 .t20g-contadores-ajuda { margin: 0 0 var(--t20g-e1); }
 
+/* Sem isto a seção encolhe para caber na altura máxima e, com overflow hidden,
+   corta as linhas em vez de deixar a janela rolar. */
+.t20g-contadores-dialogo > .t20g-contadores-secao { flex-shrink: 0; }
+
 .t20g-contadores-secao > .t20g-painel__corpo > * + .t20g-contadores-linha,
 .t20g-contadores-secao .t20g-contadores-linha + .t20g-contadores-linha {
   border-top: 1px solid var(--t20g-line);
@@ -2122,6 +2126,67 @@ a.header-button.t20g-atr-header {
 .t20g-resist-veredito .fa-shield-halved { color: #2e7d32; }
 .t20g-resist-veredito .fa-skull { color: #782e22; }
 .t20g-resist-texto { opacity: 0.75; font-style: italic; }
+
+/* --- Venenos de dano contínuo ------------------------------------------- */
+
+.t20g-veneno-dialogo .t20g-veneno-resultado {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 6px;
+  margin: 0 0 8px;
+}
+
+/* A cor separa os dois resultados de relance, antes de ler o título. */
+.t20g-veneno-dialogo .t20g-veneno-resultado--sucesso { --t20g-veneno-cor: var(--t20g-sucesso, #4fae72); }
+.t20g-veneno-dialogo .t20g-veneno-resultado--falha { --t20g-veneno-cor: var(--t20g-perigo, #e05a4d); }
+
+.t20g-veneno-dialogo .t20g-veneno-resultado--sucesso,
+.t20g-veneno-dialogo .t20g-veneno-resultado--falha {
+  border-color: var(--t20g-veneno-cor);
+  background: color-mix(in oklab, var(--t20g-veneno-cor) 10%, transparent);
+}
+
+.t20g-veneno-dialogo .t20g-veneno-resultado > legend { color: var(--t20g-veneno-cor); }
+
+.t20g-veneno-dialogo .t20g-veneno-resultado label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85em;
+}
+
+.t20g-veneno-dialogo .t20g-veneno-erro {
+  margin: 6px 0 0;
+  color: var(--t20g-perigo, #b3402f);
+  font-size: 0.85em;
+}
+
+/* Os campos de edição ocupam uma segunda linha, sob o nome do veneno. */
+.t20g-contadores-linha.t20g-veneno-linha { cursor: default; }
+
+.t20g-veneno-linha .t20g-veneno-campos {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--t20g-e2) var(--t20g-e4);
+}
+
+.t20g-veneno-campos > label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--t20g-e2);
+  font-size: 0.6875rem;
+  color: var(--t20g-ink-2);
+}
+
+.t20g-ui .t20g-veneno-campos input[type="text"] { width: 92px; }
+
+/* A lista herda a cor do cartão: o fundo muda conforme a mensagem. */
+.t20g-veneno-turno ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
 
 /* --- Mensagens de dano, cura e mana ------------------------------------- */
 

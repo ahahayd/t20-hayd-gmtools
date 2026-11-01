@@ -155,6 +155,10 @@ O botão **Automação** nas fichas de item liga contadores e efeitos automátic
 
 Na aba **Efeitos** da ficha do personagem, o botão **Gerenciar automações** reúne os valores de todas essas automações e permite encerrar efeitos que ainda estejam ativos. Ali o proprietário da ficha ou o Mestre pode corrigir diretamente contadores comuns, o Sequencial do Golpe Pessoal e valores separados por inimigo de Combinações e Estudar o Adversário. A correção também sincroniza os efeitos e os cartões relacionados no chat.
 
+Em itens do tipo **Consumível**, a automação **Veneno de dano contínuo** pergunta o dano por rodada e a duração para sucesso e para falha no teste de resistência, além de **Ignora imunidade?**. O dano é sempre perda de PV: basta digitar `1d12`. Ao usar o item, o cartão traz um botão para cada resultado, que aplica o veneno nos tokens mirados; sem mira, nos alvos de quem rolou ou nos selecionados.
+
+Cada veneno aplicado conta as próprias rodadas, sem reiniciar os outros. No início do turno da criatura, o dano de todos os venenos sai numa rolagem só no chat, para o Mestre aplicar pelos botões do cartão. A condição Envenenado acompanha a lista: entra com o primeiro veneno e sai com o último, e tirá-la à mão encerra os venenos. Criaturas imunes não são afetadas, a menos que o veneno ignore imunidade. Em **Gerenciar automações** dá para ver cada veneno ativo e mudar dano, rodadas e imunidade, ou encerrá-lo. As rodadas só correm em combate. Se o Mestre voltar para antes do turno em que o veneno rolou, a duração volta junto; a perda de PV fica para a mesa desfazer pelo cartão da rolagem.
+
 ![Cabeçalho da ficha de item com o botão "Automação" destacado ao lado de "Sheet", e a janela "Automação do item" aberta mostrando um dropdown com a lista de automações disponíveis](docs/Localizacao%20do%20botao%20automacao.png)
 
 *O botão fica ao lado do "Sheet" no cabeçalho da ficha de item.*

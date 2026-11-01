@@ -36,6 +36,7 @@ import { ehV14, paraOSistema, mudancasV14, opcoesDeRoll, apagarChave, usoDe } fr
 import { criarBotao } from './ui.mjs';
 import { aura as auras } from './aura/index.mjs';
 import { engenhocas } from './engenhocas/index.mjs';
+import { venenos } from './venenos/index.mjs';
 import { escriba } from './escriba-arcano.mjs';
 import {
   grimorio, marcarMagiaNaoPreparada, injetarAvisoNaoPreparada, marcarMagiaNova,
@@ -81,6 +82,7 @@ import {
   normalizarMarca,
   dadoDaMarca,
   formulaDaMarca,
+  bonusDeEspreitar,
   aplicarPassosNasPartes,
   indiceDaMarca
 } from './marca-da-presa.mjs';
@@ -144,7 +146,7 @@ async function sincronizarEfeito(item) {
   // O Golpe Pessoal monta os efeitos a partir do golpe salvo no item
   if (def?.golpe) return sincronizarGolpe(item);
   // A marca depende da presa mirada; os de uso suspenso, só do poder
-  if (def?.marca) return sincronizarMarca(ator);
+  if (def?.marca || def?.espreitar) return sincronizarMarca(ator);
   if (def?.usoSuspenso) return sincronizarUsoSuspenso(item);
 
   const valor = valorContador(item);
@@ -377,6 +379,11 @@ async function abrirDialogoAutomacao(item) {
   });
 
   if (typeof escolha !== 'string') return; // cancelado
+
+  // Veneno: sem dano e duração não há o que ligar. Escolher de novo o veneno
+  // já ligado é como se edita a configuração dele.
+  if (AUTOMACOES[escolha]?.veneno && !(await venenos.configurar(item))) return;
+
   if (escolha === (atual ?? '')) return;   // sem mudança
 
   if (!escolha) {
@@ -385,11 +392,14 @@ async function abrirDialogoAutomacao(item) {
     await item.unsetFlag(MODULE_ID, FLAG_AUTOMACAO);
     await item.unsetFlag(MODULE_ID, FLAG_CONTADOR);
     await item.unsetFlag(MODULE_ID, FLAG_GOLPE);
+    await venenos.limparConfig(item);
     // Sem nenhuma Marca da Presa automatizada, as presas marcadas perdem o
     // sentido (e o Mestre tira os efeitos visuais delas).
     if (item.actor && !poderesDeMarca(item.actor).length && item.actor.getFlag(MODULE_ID, FLAG_MARCA)) {
       await item.actor.unsetFlag(MODULE_ID, FLAG_MARCA);
     }
+    // O Espreitar vive da marca: sem ela, o bônus sai da ficha.
+    if (poderesDeEspreitar(item.actor).length) await sincronizarMarca(item.actor);
     engenhocas.agendarSincronizacao(item.actor);
     return ui.notifications.info(game.i18n.localize('T20HaydGMTools.AutoRemovida'));
   }
@@ -2396,6 +2406,11 @@ function poderesInimigo(ator) {
   return ator?.items?.filter((i) => definicaoDe(i)?.marcador === 'inimigo') ?? [];
 }
 
+/** Poderes Espreitar do ator. Só o primeiro gera bônus. */
+function poderesDeEspreitar(ator) {
+  return ator?.items?.filter((i) => definicaoDe(i)?.espreitar) ?? [];
+}
+
 const indiceMarca = new IndiceAtoresAutomacoes(
   (ator) => poderesDeMarca(ator).length > 0
 );
@@ -2425,13 +2440,21 @@ function registroMarca(ator, tokenId) {
   return tokenId ? normalizarMarca(tudo[tokenId]) : null;
 }
 
-/** Dado (antes do dobro) e fórmula que a marca contra um token vale agora. */
+/**
+ * Dado (antes do dobro), fórmula e bônus do Espreitar (0 sem o poder) que a
+ * marca contra um token vale agora.
+ */
 function valorDaMarca(ator, tokenId) {
   const registro = registroMarca(ator, tokenId);
   const item = poderesDeMarca(ator)[0];
   if (!registro || !item) return null;
   const dado = dadoDaMarcaDoAtor(ator, item, registro.aumentos);
-  return { registro, dado, formula: formulaDaMarca(dado, { dobrado: registro.dobrado }) };
+  return {
+    registro,
+    dado,
+    formula: formulaDaMarca(dado, { dobrado: registro.dobrado }),
+    espreitar: poderesDeEspreitar(ator).length ? bonusDeEspreitar(registro) : 0
+  };
 }
 
 /** Primeira presa marcada entre os tokens mirados. */
@@ -2462,6 +2485,9 @@ function sincronizarMarca(ator) {
  */
 async function _sincronizarMarca(ator) {
   if (!ator?.isOwner) return;
+  const marca = marcaMirada(ator);
+  await sincronizarEspreitar(ator, marca);
+
   const [principal, ...repetidos] = poderesDeMarca(ator);
   for (const item of repetidos) {
     for (const ef of efeitosDoItem(ator, item.id)) await ef.delete();
@@ -2469,7 +2495,6 @@ async function _sincronizarMarca(ator) {
   if (!principal) return;
 
   const def = definicaoDe(principal);
-  const marca = marcaMirada(ator);
   const efeito = efeitoPorChave(ator, principal.id);
   if (!marca) {
     if (efeito) await efeito.delete();
@@ -2485,6 +2510,43 @@ async function _sincronizarMarca(ator) {
     changes,
     flags: {
       tormenta20: { onuse: true, custo: '0', ...def.marca.alvos },
+      [MODULE_ID]: { [FLAG_ORIGEM]: principal.id }
+    }
+  };
+  if (efeito) {
+    if (!efeitoEmDia(efeito, dados)) await efeito.update(paraOSistema(dados));
+  } else {
+    await criarEfeitoDoPoder(principal, dados);
+  }
+}
+
+/**
+ * Efeito de uso LIGADO do Espreitar, no mesmo molde da marca: acompanha a presa
+ * mirada e sai sem ela. Com dois poderes na ficha, só o primeiro dá bônus.
+ */
+async function sincronizarEspreitar(ator, marca) {
+  const [principal, ...repetidos] = poderesDeEspreitar(ator);
+  for (const item of repetidos) {
+    for (const ef of efeitosDoItem(ator, item.id)) await ef.delete();
+  }
+  if (!principal) return;
+
+  const efeito = efeitoPorChave(ator, principal.id);
+  if (!marca?.espreitar) {
+    if (efeito) await efeito.delete();
+    return;
+  }
+
+  const { alvos, changes: mudancas } = definicaoDe(principal).espreitar;
+  const changes = mudancas(marca.espreitar);
+  const dados = {
+    name: ehV14() ? principal.name : `${principal.name} (+${marca.espreitar} vs ${marca.token.name})`,
+    img: principal.img,
+    ...(ehV14() ? { description: descricaoDeUso(`Presa: ${marca.token.name}:`, `${textoDasMudancas(changes)}.`) } : {}),
+    disabled: false,
+    changes,
+    flags: {
+      tormenta20: { onuse: true, custo: '0', ...alvos },
       [MODULE_ID]: { [FLAG_ORIGEM]: principal.id }
     }
   };
@@ -2530,6 +2592,7 @@ async function abrirDialogoMarca(ator, item, nomeAlvo, anterior = null) {
       <span class="t20g-auto-nome">${esc(p.name)}
         <span class="notes">— ${game.i18n.localize('T20HaydGMTools.MarcaInimigoDica')}</span></span>
     </label>`).join('');
+  const temEspreitar = poderesDeEspreitar(ator).length > 0;
 
   const resposta = await DialogV2.wait({
     window: { title: game.i18n.format('T20HaydGMTools.MarcaTitulo', { alvo: nomeAlvo }), icon: 'fa-solid fa-crosshairs' },
@@ -2562,9 +2625,13 @@ async function abrirDialogoMarca(ator, item, nomeAlvo, anterior = null) {
       const el = dialogo.element;
       const resultado = el.querySelector('.t20g-marca-resultado b');
       const atualizar = () => {
-        const dado = el.querySelector('select[name="aumentos"]').selectedOptions[0]?.dataset.dado;
+        const select = el.querySelector('select[name="aumentos"]');
+        const dado = select.selectedOptions[0]?.dataset.dado;
         const dobrado = [...el.querySelectorAll('input[name="inimigo"]')].some((c) => c.checked);
-        resultado.textContent = `+${formulaDaMarca(dado, { dobrado })}`;
+        const espreitar = temEspreitar
+          ? ` · ${game.i18n.format('T20HaydGMTools.MarcaEspreitar', { n: bonusDeEspreitar({ aumentos: select.value, dobrado }) })}`
+          : '';
+        resultado.textContent = `+${formulaDaMarca(dado, { dobrado })}${espreitar}`;
       };
       el.addEventListener('change', atualizar);
       atualizar();
@@ -2740,6 +2807,9 @@ function montarBarraMarca(item, { completo, message }) {
     rotulo.append(': ');
     const numero = document.createElement('b');
     numero.textContent = valor ? `+${valor.formula}` : game.i18n.localize('T20HaydGMTools.MarcaNaoMarcada');
+    if (valor?.espreitar) {
+      numero.textContent += ` · ${game.i18n.format('T20HaydGMTools.MarcaEspreitar', { n: valor.espreitar })}`;
+    }
     rotulo.appendChild(numero);
     const nomeAlvo = document.createElement('span');
     nomeAlvo.className = 't20g-comb-alvo';
@@ -3297,6 +3367,29 @@ function ligarSincronizacaoDaMira() {
     return original.apply(this, args);
   };
   ClasseItem._t20gSincronizacaoDaMira = true;
+}
+
+/**
+ * v13: sem a janela de uso, o `rollPericia` escolhe os efeitos ligados, mas só
+ * a janela preenche `validOnUseEffects` — sem essa lista o sistema descarta
+ * todos eles. O `itemData` da rolagem copia os campos da perícia, então a lista
+ * entra por ali durante a rolagem. Só o Espreitar: é ele que precisa valer nos
+ * dois caminhos. O v14 já monta a lista antes de decidir pela janela.
+ */
+function ligarEspreitarSemJanela() {
+  const proto = CONFIG.Actor?.documentClass?.prototype;
+  if (ehV14() || !proto?.rollPericia || proto._t20gEspreitarSemJanela) return;
+  const original = proto.rollPericia;
+  proto.rollPericia = async function (chave, opcoes) {
+    const pericia = this.system?.pericias?.[chave];
+    const poder = automacoesAtivas() ? poderesDeEspreitar(this)[0] : null;
+    const efeito = poder ? efeitoPorChave(this, poder.id) : null;
+    if (!pericia || !efeito) return original.call(this, chave, opcoes);
+    pericia.validOnUseEffects = [efeito];
+    try { return await original.call(this, chave, opcoes); }
+    finally { delete pericia.validOnUseEffects; }
+  };
+  proto._t20gEspreitarSemJanela = true;
 }
 
 /**
@@ -3887,7 +3980,8 @@ function gruposDoPainelContadores(ator) {
 
 function temConteudoPainelContadores(ator) {
   return gruposDoPainelContadores(ator).length > 0
-    || automacoesAtivasCancelaveis(ator).length > 0;
+    || automacoesAtivasCancelaveis(ator).length > 0
+    || venenos.temVenenos(ator);
 }
 
 function htmlLinhaPainelContadores(linha) {
@@ -3926,6 +4020,7 @@ function htmlAutomacaoAtivaPainelContadores(linha) {
 function htmlPainelContadores(ator) {
   const grupos = gruposDoPainelContadores(ator);
   const ativas = automacoesAtivasCancelaveis(ator);
+  const linhasDeVeneno = venenos.htmlPainel(ator);
   const secao = (titulo, ajuda, corpo) => `<section class="t20g-painel t20g-contadores-secao">
       <header class="t20g-painel__topo"><span class="t20g-rotulo">${titulo}</span></header>
       <div class="t20g-painel__corpo t20g-painel__corpo--liso">
@@ -3939,6 +4034,11 @@ function htmlPainelContadores(ator) {
       game.i18n.localize('T20HaydGMTools.ContadoresEfeitosAtivos'),
       game.i18n.localize('T20HaydGMTools.ContadoresEfeitosAtivosAjuda'),
       ativas.map(htmlAutomacaoAtivaPainelContadores).join('')
+    ) : ''}
+    ${linhasDeVeneno ? secao(
+      game.i18n.localize('T20HaydGMTools.VenenoPainelTitulo'),
+      game.i18n.localize('T20HaydGMTools.VenenoPainelAjuda'),
+      linhasDeVeneno
     ) : ''}
     ${grupos.map((grupo) => secao(
       foundry.utils.escapeHTML(grupo.titulo),
@@ -4043,7 +4143,8 @@ async function abrirPainelContadores(ator) {
         default: true,
         callback: (_ev, botao) => ({
           edicoes: lerEdicoesPainelContadores(botao.form),
-          cancelamentos: lerCancelamentosPainelContadores(botao.form)
+          cancelamentos: lerCancelamentosPainelContadores(botao.form),
+          edicoesVenenos: venenos.lerPainel(botao.form)
         })
       },
       {
@@ -4054,10 +4155,11 @@ async function abrirPainelContadores(ator) {
     ]
   });
   if (!alteracoes || typeof alteracoes !== 'object') return;
-  const { edicoes = [], cancelamentos = [] } = alteracoes;
-  if (!edicoes.length && !cancelamentos.length) return;
+  const { edicoes = [], cancelamentos = [], edicoesVenenos = [] } = alteracoes;
+  if (!edicoes.length && !cancelamentos.length && !edicoesVenenos.length) return;
 
-  const total = await aplicarEdicoesPainelContadores(ator, edicoes);
+  const total = await aplicarEdicoesPainelContadores(ator, edicoes)
+    + await venenos.aplicarPainel(ator, edicoesVenenos);
   await aplicarCancelamentosPainelContadores(ator, cancelamentos);
   if (total) ui.notifications.info(
     game.i18n.format('T20HaydGMTools.ContadoresAtualizados', { total })
@@ -4910,6 +5012,15 @@ function paginaDaAutomacao(def) {
     comoFunciona = `
       <ul><li>Com este poder na ficha, a janela da Marca da Presa pergunta se a presa é do tipo
         escolhido. Marcando, os dados da marca dobram contra ela.</li></ul>`;
+  } else if (def.espreitar) {
+    comoFunciona = `
+      <ul>
+        <li>Com este poder e a Marca da Presa automatizados, a presa mirada dá +1 em testes de
+            perícia, +1 por PM extra gasto na marca. Inimigo de (Criatura) dobra o bônus.</li>
+        <li>O bônus entra sozinho nos testes de perícia e nos ataques com arma, e sai quando a
+            presa deixa de estar mirada.</li>
+        <li>Mudar os PM extras ou o Inimigo é só refazer a marca; o bônus acompanha.</li>
+      </ul>`;
   } else if (def.usoSuspenso) {
     const u = def.usoSuspenso;
     comoFunciona = `
@@ -4961,6 +5072,25 @@ function paginaDaAutomacao(def) {
   } else if (def.marcador === 'incremento2') {
     comoFunciona = `
       <ul><li>Com este poder na ficha, o botão <b>+</b> da contagem passa a somar 2.</li></ul>`;
+  } else if (def.veneno) {
+    comoFunciona = `
+      <ul>
+        <li>Ao escolher a automação, informe dano por rodada e duração para sucesso e para falha
+            no teste de resistência. O dano é sempre perda de PV. Para mudar depois, escolha a
+            automação de novo.</li>
+        <li>O cartão do item traz um botão para cada resultado. Ele aplica nos tokens mirados;
+            sem mira, nos alvos de quem rolou ou nos selecionados.</li>
+        <li>Cada veneno conta as próprias rodadas, sem reiniciar os outros. No início do turno da
+            criatura, o dano de todos sai numa rolagem só no chat, para aplicar pelos botões do
+            cartão. As rodadas só correm em combate.</li>
+        <li>Voltar o turno para antes da rolagem devolve a duração e rola de novo ao avançar. A
+            perda de PV fica para a mesa desfazer.</li>
+        <li>A condição Envenenado entra com o primeiro veneno e sai com o último. Tirá-la à mão
+            encerra os venenos.</li>
+        <li>Criaturas imunes não recebem o veneno, a menos que ele ignore imunidade.</li>
+        <li>Em <b>Gerenciar automações</b> (aba Efeitos) dá para mudar dano, rodadas e imunidade
+            de cada veneno, ou encerrá-lo.</li>
+      </ul>`;
   }
 
   return `
@@ -5031,6 +5161,20 @@ function paginaGolpePessoal(def, tipos) {
     ${tabela(GP_EFEITOS.filter((e) => e.reducao))}`;
 }
 
+/** Automações sem item próprio: funcionam sozinhas, sem o seletor da ficha. */
+function paginaOutrasAutomacoes() {
+  return `
+    <h2>Flanquear</h2>
+    <p>Se você e um aliado estiverem em lados opostos do alvo e ambos ao alcance dele, o efeito
+    <b>Flanqueando</b> (+2 no ataque) já vem marcado na janela de uso de armas corpo a corpo. Vale
+    para inimigos também.</p>
+    <p>Com seu token selecionado e um alvo marcado, passe o mouse em um deles ou segure Alt para ver
+    a linha do flanco no mapa.</p>
+    <p>O efeito entra na ficha na primeira vez que você abre essa janela. Tem um poder que melhora o
+    flanco? Edite o efeito e coloque o bônus lá. Em token não vinculado, ele fica na ficha do ator
+    original. Se apagar, ele volta ao +2 padrão na próxima janela.</p>`;
+}
+
 /** Conteúdo completo do diário (uma página por automação). */
 /**
  * Ordem das categorias no diário. A página compartilhada das Combinações
@@ -5045,7 +5189,9 @@ const CATEGORIAS = [
   { id: 'lutador', rotulo: 'T20HaydGMTools.DiarioCatLutador', abre: paginaCombinacoes },
   { id: 'paladino', rotulo: 'T20HaydGMTools.DiarioCatPaladino' },
   { id: 'combate', rotulo: 'T20HaydGMTools.DiarioCatCombate' },
-  { id: 'magia', rotulo: 'T20HaydGMTools.DiarioCatMagia' }
+  { id: 'magia', rotulo: 'T20HaydGMTools.DiarioCatMagia' },
+  { id: 'consumivel', rotulo: 'T20HaydGMTools.DiarioCatConsumivel' },
+  { id: 'outras', rotulo: 'T20HaydGMTools.DiarioCatOutras', conteudo: paginaOutrasAutomacoes }
 ];
 
 /**
@@ -5054,6 +5200,8 @@ const CATEGORIAS = [
  * uma página por poder deixava a navegação enorme.
  */
 function paginaDaCategoria(categoria) {
+  if (categoria.conteudo) return categoria.conteudo();
+
   const poderes = Object.values(AUTOMACOES)
     .filter((def) => def.categoria === categoria.id)
     .sort((a, b) =>
@@ -5169,6 +5317,7 @@ async function abrirDiario() {
  * `getItemSheetHeaderButtons`, que cobre ItemSheetT20 e RaceSheetT20.
  */
 registrarHooksAutomacoes({
+  venenos,
   grimorio: { aoMudarMagia, antesDeMudarMagia, garantirPreparo, injetarNaFichaDoSistema },
   marcarMagiaNaoPreparada,
   injetarAvisoNaoPreparada,
@@ -5272,10 +5421,12 @@ Hooks.once('init', () => {
 Hooks.once('ready', () => {
   // Fecha a corrida entre mudar a mira e rolar, inclusive sem abrir diálogo.
   ligarSincronizacaoDaMira();
+  ligarEspreitarSemJanela();
   // Conjurador: a magia do Golpe Pessoal precisa sair antes do ataque
   ligarConjurador();
   // Primeiro Sangue e Tiro de Abate mexem nos dados na hora de rolar o dano
   ligarPassosDeDano();
+  venenos.ligar();
   engenhocas.ligarFluxo();
   for (const ator of game.actors ?? []) engenhocas.agendarSincronizacao(ator);
 

@@ -8,6 +8,8 @@
  * - Inimigo de (Criatura) dobra os dados da marca contra o tipo escolhido.
  * - Tiro de Abate faz os dados da marca serem multiplicados no crítico.
  * - Primeiro Sangue aumenta todos os dados de dano em dois passos.
+ * - Espreitar dá +1 em testes de perícia contra a presa, +1 por PM extra gasto
+ *   na marca, e o bônus dobra com Inimigo de (Criatura).
  *
  * "Passo" depende do que está subindo:
  * - arma e a própria marca seguem a Tabela 3-2 (Dano de Armas): cada linha
@@ -173,6 +175,12 @@ export function formulaDaMarca(dado, { passos = 0, dobrado = false, multiplicado
   if (dobrado) formula = multiplicarDados(formula, 2);
   if (multiplicador > 1) formula = multiplicarDados(formula, multiplicador);
   return formula;
+}
+
+/** Bônus do Espreitar em testes de perícia contra uma presa marcada. */
+export function bonusDeEspreitar({ aumentos = 0, dobrado = false } = {}) {
+  const bonus = 1 + Math.max(0, Math.trunc(Number(aumentos) || 0));
+  return dobrado ? bonus * 2 : bonus;
 }
 
 /** Sobe todos os dados de uma fórmula ("1d6+2" → "1d10+2"), cada um com `subir`. */

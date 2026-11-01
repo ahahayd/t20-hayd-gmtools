@@ -21,8 +21,9 @@ automações sem quebrar itens e mundos existentes.
 - As flags `automacao`, `contador`, `combinacoes`, `automacaoOrigem`,
   `combDebuff`, `condicoesDeCombinacao`, `msgRetroativa`, `golpe`,
   `estudarAdversario`, `auras`, `auraEfeito`, `auraCura`, `alvosDaRolagem`,
-  `resistenciaResultado`, `engenhoca`, `marcaDaPresa`, `marcaConfig` e
-  `marcaVisual` não devem ser renomeadas sem uma
+  `resistenciaResultado`, `engenhoca`, `marcaDaPresa`, `marcaConfig`,
+  `marcaVisual`, `venenoConfig`, `veneno`, `venenos` e
+  `venenoHistorico` não devem ser renomeadas sem uma
   migração de mundo.
 - `t20-hayd-automacoes.mjs` é a fachada pública e deve manter os exports já
   publicados.
@@ -178,6 +179,17 @@ O bônus é um efeito de uso ligado, no molde do Estudar o Adversário: vale
 contra a presa mirada e sai sem alvo marcado. O tipo da presa (Inimigo de) não
 é detectado — quem marca decide na janela.
 
+Espreitar não tem estado próprio: o bônus sai do registro da marca (`aumentos` e
+`dobrado`) e vira um segundo efeito de uso ligado, sincronizado junto com o da
+marca, na mesma fila e pela mesma mira. O efeito leva `roll` e `ataque`: com as
+duas chaves o sistema pula `ataque` nas perícias, então uma só mudança não soma
+duas vezes. Ele carrega `skill` (janela de uso) e também `pericia`, que é a flag
+lida pelo `rollPericia` do v13 quando a janela é pulada; nesse caminho o sistema
+ainda descartaria o efeito por falta de `validOnUseEffects`, e por isso
+`ligarEspreitarSemJanela` entrega essa lista durante a rolagem. Fica fora de `power` e
+`spell`, onde `roll` acertaria também as rolagens de dano. "Testes de perícia"
+inclui os ataques, como nas condições do sistema (`system.pericias.*`).
+
 Primeiro Sangue e Tiro de Abate são efeitos de uso suspensos
 (`usoSuspenso` no catálogo). O que eles fazem com os dados não cabe numa
 mudança de efeito — o `passos` do sistema só sobe a primeira parte da arma —,
@@ -190,6 +202,51 @@ pela fórmula exata que o efeito dela colocou.
 No v13 o Tormenta20 liga `legacyTransferral`: criar o item copia os efeitos
 "transfer" dele para o ator. Por isso `sugerirApagarEfeitosOriginais` também
 oferece apagar as cópias com `origin` no item.
+
+## Venenos de dano contínuo
+
+`scripts/automacoes/venenos/regras.mjs` é puro; `index.mjs` faz a integração. A
+direção de import é motor → venenos.
+
+Estado:
+- `venenoConfig` no ITEM: dano e rodadas de cada resultado e `ignoraImunidade`.
+- `veneno` na MENSAGEM: cópia da configuração, com nome e imagem, gravada no
+  `preCreateChatMessage`. O cartão continua aplicando o veneno que foi usado
+  mesmo depois de o item mudar ou sumir.
+- `venenos` no ATOR: mapa por id, uma entrada por aplicação. Mapa em vez de
+  lista porque cada escrita toca só a própria chave, então dois clientes
+  aplicando ao mesmo tempo não sobrescrevem um ao outro.
+- `venenoHistorico` no ATOR: uma entrada por rolagem de início de turno, com a
+  posição no combate, quem seguiu contando e quem acabou nela.
+
+Veneno encerrado vira `null` no mapa em vez de sair dele: no v14, a primeira
+chave gravada no delta de um token não vinculado resiste a qualquer exclusão,
+inclusive `unsetFlag`, e o veneno seguiria rolando. `listarVenenos` ignora os
+nulos.
+
+O botão do cartão pode ser clicado por um jogador sem permissão na ficha do
+alvo. Nesse caso `pedirGravacao` pede ao Mestre ativo pelo `User#query` do
+Foundry, registrado em `CONFIG.queries`. A imunidade é conferida por quem
+grava. O efeito da condição é um só; quando algum veneno ignora imunidade, ele
+leva `flags.tormenta20.ignoreImunity` (v13) ou `system.status.ignoreImunity`
+(v14), e o sistema para de suprimi-lo.
+
+A rolagem do início do turno sai do `updateCombat`, em todos os clientes, e
+`souResponsavelPeloAtor` elege quem rola. A fórmula leva `[perda]` em cada termo porque `applyDamageV2` lê o
+tipo termo a termo; por isso o dano só aceita dados e números somados ou
+subtraídos.
+
+Voltar no combate desfaz as rolagens que ficaram adiante da posição atual
+(`desfazerTurnos`): devolve uma rodada a cada veneno e recria os que acabaram
+nelas, junto com a condição. A comparação é pela posição, não pelo sentido do
+movimento, porque `combate.previous` nem sempre existe no cliente que grava.
+Só a contagem é desfeita: veneno aplicado depois fica, e o encerrado à mão não
+volta. A perda de PV fica com a mesa. Avançar de novo rola de novo; voltar até
+o próprio turno da criatura não rola nem desfaz, porque o turno já começou.
+
+Apagar a condição por fora (à mão, fim de cena) encerra os venenos, pelo
+`deleteActiveEffect`. Sem isso a criatura seguiria rolando dano sem estar
+envenenada.
 
 ## Teste de Resistência automático
 

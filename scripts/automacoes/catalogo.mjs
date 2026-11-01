@@ -8,6 +8,21 @@ import { ehV14 } from '../versao.mjs';
  * Ao criar uma automação nova, decida se ela merece essa marca.
  */
 export const AUTOMACOES = {
+  'veneno-dano-continuo': {
+    categoria: 'consumivel',
+    nome: 'Veneno de dano contínuo',
+    fonte: 'Livro Básico',
+    icone: 'fa-solid fa-skull-crossbones',
+    tipos: ['consumivel'],
+    veneno: true,
+    resumo:
+      'Veneno que causa perda de PV por rodada. Dano de veneno é cumulativo e todo veneno '
+      + 'deixa a criatura Envenenada.',
+    comoUsar:
+      'Ao salvar, informe dano e duração para sucesso e falha no teste de resistência. Ao usar '
+      + 'o item, o cartão traz um botão para cada resultado, que aplica o veneno nos alvos.'
+  },
+
   'sangue-dos-inimigos': {
     categoria: 'barbaro',
     nome: 'Sangue dos Inimigos',
@@ -327,6 +342,33 @@ export const AUTOMACOES = {
       'Basta ter o poder na ficha. Ao marcar uma presa, a janela da Marca da Presa pergunta se '
       + 'ela é do tipo deste poder; marcando, os dados da marca dobram contra ela.',
     marcador: 'inimigo'
+  },
+
+  espreitar: {
+    categoria: 'cacador',
+    nome: 'Espreitar',
+    fonte: 'Heróis de Arton',
+    icone: 'fa-solid fa-eye',
+    tipos: ['poder'],
+    apagarEfeitos: true,
+    resumo:
+      'Quando usa a habilidade Marca da Presa, você recebe um bônus de +1 em testes de perícia '
+      + 'contra a criatura marcada. Esse bônus aumenta em +1 para cada PM adicional gasto na '
+      + 'habilidade e também dobra com a habilidade Inimigo de (Criatura).',
+    comoUsar:
+      'Basta ter o poder na ficha. Com a presa mirada, o bônus entra sozinho nos testes de '
+      + 'perícia, inclusive nos ataques; os PM extras e o Inimigo vêm do que foi escolhido ao marcar.',
+    espreitar: {
+      // "pericia": sem janela de uso, o v13 só aplica o efeito com esta flag.
+      // Sem power/spell: neles a chave "roll" pegaria também as rolagens de dano.
+      alvos: { attack: true, skill: true, pericia: true },
+      // Perícias usam "roll" e armas "ataque"; com as duas chaves no efeito, o
+      // sistema ignora "ataque" nas perícias e o bônus não soma duas vezes.
+      changes: (bonus) => [
+        { key: 'roll', mode: 2, value: String(bonus), priority: 20 },
+        { key: 'ataque', mode: 2, value: String(bonus), priority: 20 }
+      ]
+    }
   },
 
   'tiro-de-abate': {

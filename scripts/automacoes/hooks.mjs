@@ -63,6 +63,13 @@ export function registrarHooksAutomacoes(s) {
     });
   }
 
+  // Tirar a condição à mão encerra os venenos que dependiam dela
+  Hooks.on('deleteActiveEffect', (efeito) => {
+    if (!automacoesAtivas()) return;
+    s.venenos.aoRemoverCondicao(efeito).catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao encerrar os venenos`, err));
+  });
+
   Hooks.on('getItemSheetHeaderButtons', (app, buttons) => {
     if (!automacoesAtivas()) return;
     const item = app?.document ?? app?.object;
@@ -109,6 +116,7 @@ export function registrarHooksAutomacoes(s) {
       s.engenhocas.ligarBotoesChat(message, container);
       if (container) s.aura.ligarBotoes(message, container);
       s.injetarBotaoResistencia(message, container);
+      s.venenos.injetarBotoes(message, container);
       s.injetarAvisoNaoPreparada(message, container);
       // O veredito do teste de resistência é só para o Mestre — a marca some
       // do DOM de quem não é Mestre antes de aparecer na tela, mesmo que o
@@ -196,6 +204,11 @@ export function registrarHooksAutomacoes(s) {
 
       // Cada aplicação termina quando a iniciativa volta a quem usou o poder,
       // não simplesmente quando o número da rodada muda.
+      await s.venenos.aoMudarTurno(combate, {
+        recuou: novaRodada < velhaRodada
+          || (novaRodada === velhaRodada && novoTurno < velhoTurno)
+      });
+
       if (avancou) await s.expirarAplicacoesCombinacao(combate, {
         rodadaAnterior: velhaRodada,
         turnoAnterior: velhoTurno,
@@ -230,6 +243,8 @@ export function registrarHooksAutomacoes(s) {
     catch (err) { console.error(`${MODULE_ID} | Falha ao marcar alvos da rolagem`, err); }
     try { s.marcarMagiaNaoPreparada(message); }
     catch (err) { console.error(`${MODULE_ID} | Falha ao conferir o grimório`, err); }
+    try { s.venenos.marcarCartao(message); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao marcar o cartão do veneno`, err); }
   });
 
   Hooks.on('createChatMessage', (message, options, userId) => {
@@ -418,6 +433,11 @@ export function registrarHooksAutomacoes(s) {
       efeito.delete().catch((err) =>
         console.error(`${MODULE_ID} | Falha ao remover efeito da automação`, err)
       );
+    }
+    // Sem a marca, o Espreitar perde o bônus que dependia dela.
+    if (s.definicaoDe(item)?.marca) {
+      s.sincronizarMarca(ator).catch((err) =>
+        console.error(`${MODULE_ID} | Falha ao sincronizar as marcas da presa`, err));
     }
   });
 
