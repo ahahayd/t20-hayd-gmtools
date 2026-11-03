@@ -25,6 +25,14 @@ test('criatura grande traça uma linha por quadrado', () => {
   assert.equal(linhasDeFlanco(q(0, 3, 2), q(3, 1), q(2, 1), 100).length, 0);
 });
 
+test('quadrado fora do alcance do alvo não flanqueia', () => {
+  // Colossal 4x4 em (0,0); alvo em (4,5); aliado em (5,6). Só o canto (3,3)
+  // fica a 3 m: alcança com 9 m, não com 1,5 m.
+  const colossal = q(0, 0, 4);
+  assert.equal(linhasDeFlanco(colossal, q(5, 6), q(4, 5), 100, { metros: 1.5, alcanceA: 1.5 }).length, 0);
+  assert.ok(linhasDeFlanco(colossal, q(5, 6), q(4, 5), 100, { metros: 1.5, alcanceA: 9 }).length >= 1);
+});
+
 test('só lados opostos são inimigos', () => {
   assert.equal(saoInimigos(1, -1), true);
   assert.equal(saoInimigos(1, 1), false);

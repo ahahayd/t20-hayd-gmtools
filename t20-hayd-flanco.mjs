@@ -53,7 +53,11 @@ function flancos(token, alvo) {
   return canvas.tokens.placeables
     .filter((o) => o !== token && o.document.disposition === token.document.disposition
       && podeFlanquear(o, alvo))
-    .map((aliado) => linhasDeFlanco(retangulo(token), retangulo(aliado), retangulo(alvo), canvas.grid.size))
+    .map((aliado) => linhasDeFlanco(retangulo(token), retangulo(aliado), retangulo(alvo), canvas.grid.size, {
+      metros: canvas.grid.distance,
+      alcanceA: alcanceDoTamanho(token.actor.system?.tracos?.tamanho),
+      alcanceB: alcanceDoTamanho(aliado.actor.system?.tracos?.tamanho)
+    }))
     .filter((linhas) => linhas.length);
 }
 
@@ -146,6 +150,14 @@ function desenharLinha(de, para, cor) {
   }
 }
 
+function linhaCentral(linhas, centro) {
+  const distancia = ([de, para]) => {
+    const dx = para.x - de.x, dy = para.y - de.y;
+    return Math.abs(dy * (centro.x - de.x) - dx * (centro.y - de.y)) / (Math.hypot(dx, dy) || 1);
+  };
+  return linhas.reduce((melhor, l) => (distancia(l) < distancia(melhor) ? l : melhor));
+}
+
 /** O rótulo fica sobre a linha do meio, acompanhando a inclinação dela. */
 function desenharRotulo([de, para], cor) {
   const estilo = CONFIG.canvasTextStyle.clone();
@@ -184,8 +196,11 @@ function desenhar() {
           camada.eventMode = 'none';
           camada.interactiveChildren = false;
         }
-        for (const [de, para] of linhas) desenharLinha(de, para, cor);
-        desenharRotulo(linhas[Math.floor(linhas.length / 2)], cor);
+        // Criatura grande gera um leque de linhas: basta a que passa mais
+        // perto do centro do alvo.
+        const linha = linhaCentral(linhas, alvo.center);
+        desenharLinha(...linha, cor);
+        desenharRotulo(linha, cor);
       }
     }
   }

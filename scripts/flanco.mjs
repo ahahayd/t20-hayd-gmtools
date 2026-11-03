@@ -65,11 +65,22 @@ export function cruzaLadosOpostos(p, q, r) {
   return (cruza(p, q, tl, bl) && cruza(p, q, tr, br)) || (cruza(p, q, tl, tr) && cruza(p, q, bl, br));
 }
 
-/** Todas as linhas entre quadrados de A e B que flanqueiam o alvo. */
-export function linhasDeFlanco(a, b, alvo, grade) {
+/** Quadrados ocupados que alcançam o alvo. Sem `metros`, todos contam. */
+function quadradosAoAlcance(r, alvo, grade, metros, alcance) {
+  return centrosDosQuadrados(r, grade).filter((c) => metros === undefined
+    || distanciaEmMetros({ x: c.x - grade / 2, y: c.y - grade / 2, w: grade, h: grade, elevacao: r.elevacao },
+      alvo, grade, metros) <= alcance);
+}
+
+/**
+ * Todas as linhas entre quadrados de A e B que flanqueiam o alvo. Com
+ * `metros`, só valem os quadrados de onde cada um alcança o alvo.
+ */
+export function linhasDeFlanco(a, b, alvo, grade, { metros, alcanceA = 1.5, alcanceB = 1.5 } = {}) {
   const linhas = [];
-  for (const de of centrosDosQuadrados(a, grade)) {
-    for (const para of centrosDosQuadrados(b, grade)) {
+  const deB = quadradosAoAlcance(b, alvo, grade, metros, alcanceB);
+  for (const de of quadradosAoAlcance(a, alvo, grade, metros, alcanceA)) {
+    for (const para of deB) {
       if (cruzaLadosOpostos(de, para, alvo)) linhas.push([de, para]);
     }
   }
