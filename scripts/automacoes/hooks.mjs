@@ -18,6 +18,11 @@ export function registrarHooksAutomacoes(s) {
     s.indiceMarca.invalidar();
     s.aura.indice.invalidar();
   };
+  // Ator ou token apagado continuaria no índice e quebraria a sincronização
+  // de todos os outros; um novo, com poder já na ficha, ficaria de fora.
+  for (const hook of ['createActor', 'deleteActor', 'createToken', 'deleteToken']) {
+    Hooks.on(hook, invalidarIndices);
+  }
 
   /**
    * Geometria e ficha mudaram: as auras podem ter ganhado ou perdido alguém.

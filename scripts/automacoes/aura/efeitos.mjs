@@ -216,7 +216,7 @@ export async function sincronizarAura(fonte, { item, def, estado }) {
 
   // Sai de quem não está mais na área (ou da parte que deixou de existir)
   for (const { efeito, chave } of existentes) {
-    if (remover.includes(chave)) await efeito.delete();
+    if (remover.includes(chave)) await efeito.delete().catch(() => null);
   }
 
   // Entra em quem chegou
@@ -240,7 +240,7 @@ export async function sincronizarAura(fonte, { item, def, estado }) {
 /** Tira uma aura de todo mundo. */
 export async function limparAura(fonteId, itemId) {
   const existentes = await efeitosDaAura(fonteId, itemId);
-  for (const { efeito } of existentes) await efeito.delete();
+  for (const { efeito } of existentes) await efeito.delete().catch(() => null);
   return existentes.length;
 }
 
@@ -264,7 +264,8 @@ export async function limparOrfaos() {
         : false;
 
       if (!ativa) {
-        await efeito.delete();
+        // Já pode ter saído junto com o token apagado.
+        await efeito.delete().catch(() => null);
         removidos += 1;
       }
     }
