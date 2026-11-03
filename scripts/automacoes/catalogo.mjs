@@ -217,6 +217,19 @@ export const AUTOMACOES = {
     }
   },
 
+  'aura-modelo': {
+    categoria: 'outras',
+    nome: 'Modelo de Aura',
+    icone: 'fa-solid fa-circle-radiation',
+    tipos: ['poder', 'magia'],
+    // O `aura` vem da configuração do item (estado.mjs → aura/modelo.mjs).
+    auraModelo: true,
+    comoUsar:
+      'Monte uma aura própria: raio, efeitos passivos e de uso para aliados e/ou inimigos, '
+      + 'valores pelo atributo da fonte ou do alvo, condições, aprimoramentos por PM e custo '
+      + 'por rodada. Role o item e use <b>Ativar aura</b> no cartão.'
+  },
+
   'aura-poderosa': {
     categoria: 'paladino',
     nome: 'Aura Poderosa',

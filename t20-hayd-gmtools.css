@@ -2855,3 +2855,226 @@ table.t20g-fontes .t20g-fontes-sem td:first-child { font-style: italic; opacity:
 .t20g-gri-filtros input[type="search"] { flex: 2 1 0; }
 .t20g-gri-topo { display: flex; justify-content: flex-end; }
 .t20g-gri-topo > button { flex: none; white-space: nowrap; }
+
+/* ─── Modelo de Aura (montador) ──────────────────────────────────────────── */
+
+/* A janela cresce com os efeitos: o conteúdo rola, os botões ficam à vista. */
+.t20g-aura-modelo {
+  max-height: min(70vh, 720px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.t20g-aura-modelo fieldset {
+  margin: 0 0 8px;
+  padding: 6px 8px 8px;
+}
+
+.t20g-aura-modelo legend i { margin-right: 4px; }
+
+.t20g-aura-modelo-linha {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.t20g-aura-modelo-linha label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85em;
+  width: 140px;
+}
+
+.t20g-aura-modelo-checks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 2px 0 6px;
+}
+
+.t20g-aura-modelo-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.t20g-aura-modelo-check input { margin: 0; }
+
+.t20g-aura-modelo-efeito {
+  --t20g-aura-cor: var(--t20g-sucesso, #4fae72);
+  border: 1px solid var(--t20g-aura-cor);
+  border-left-width: 4px;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  background: color-mix(in oklab, var(--t20g-aura-cor) 7%, transparent);
+}
+
+.t20g-aura-modelo-efeito--uso { --t20g-aura-cor: #5b8fd6; }
+
+.t20g-aura-modelo-efeito-topo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 28px;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.t20g-aura-modelo-tipo {
+  font-weight: bold;
+  color: var(--t20g-aura-cor);
+  white-space: nowrap;
+}
+
+.t20g-aura-modelo-condicoes-caixa summary {
+  cursor: pointer;
+  font-size: 0.9em;
+  margin: 4px 0;
+}
+
+.t20g-aura-modelo-condicoes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.t20g-aura-modelo-condicoes img {
+  width: 18px;
+  height: 18px;
+  border: none;
+}
+
+.t20g-aura-modelo-mudanca {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1fr) 28px;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.t20g-aura-modelo button.t20g-aura-modelo-remover,
+.t20g-aura-modelo button.t20g-aura-modelo-remover-efeito,
+.t20g-aura-modelo button.t20g-aura-modelo-atalho {
+  line-height: 1;
+  padding: 2px 6px;
+  min-height: 0;
+}
+
+.t20g-aura-modelo-adicionar { margin: 2px 0 4px; }
+
+.t20g-aura-modelo-novos {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.t20g-aura-modelo-atalhos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.t20g-aura-modelo-atalhos .t20g-aura-modelo-atalho {
+  flex: 0 0 auto;
+  width: auto;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8em;
+}
+
+.t20g-aura-modelo-apr {
+  border: 1px dashed var(--color-border-light-tertiary, #999);
+  border-radius: 4px;
+  padding: 6px;
+  margin-bottom: 6px;
+}
+
+.t20g-aura-modelo-apr-topo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto 28px;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.t20g-aura-modelo-apr-topo label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.t20g-aura-modelo-apr-topo input[type="number"] { width: 48px; }
+
+/* Uma linha por bônus do aprimoramento: ação, efeito, campo, (método), valor. */
+.t20g-aura-modelo-apr-efeito {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.t20g-aura-modelo-apr-efeito > * { flex: 1 1 0; min-width: 0; }
+.t20g-aura-modelo-apr-efeito > [data-campo="key"] { flex-grow: 1.6; }
+.t20g-aura-modelo-apr-efeito > [data-campo="valor"] { flex-grow: 0.6; }
+.t20g-aura-modelo-apr-efeito > button { flex: 0 0 28px; }
+
+.t20g-aura-modelo button.t20g-aura-modelo-remover-apr {
+  line-height: 1;
+  padding: 2px 6px;
+  min-height: 0;
+}
+
+.t20g-aura-modelo-escolha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.t20g-aura-modelo-escolha input[type="number"] { width: 56px; }
+
+.t20g-aura-modelo-resistencia { margin-top: 4px; }
+
+.t20g-aura-modelo-res-campos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.t20g-aura-modelo-res-campos label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85em;
+}
+
+.t20g-aura-modelo-dano {
+  --t20g-aura-cor: var(--t20g-perigo, #e05a4d);
+  border: 1px solid var(--t20g-aura-cor);
+  border-left-width: 4px;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin-bottom: 8px;
+  background: color-mix(in oklab, var(--t20g-aura-cor) 7%, transparent);
+}
+
+.t20g-aura-modelo-dano-topo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 1.1fr) 28px;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.t20g-aura-modelo button.t20g-aura-modelo-remover-dano {
+  line-height: 1;
+  padding: 2px 6px;
+  min-height: 0;
+}
+
+.t20g-aura-dano-lista { margin: 4px 0 0; padding-left: 18px; }

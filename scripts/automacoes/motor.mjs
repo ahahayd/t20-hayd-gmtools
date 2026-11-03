@@ -37,6 +37,7 @@ import { criarBotao } from './ui.mjs';
 import { aura as auras } from './aura/index.mjs';
 import { engenhocas } from './engenhocas/index.mjs';
 import { venenos } from './venenos/index.mjs';
+import { configurarModelo, limparModelo } from './aura/modelo-ui.mjs';
 import { escriba } from './escriba-arcano.mjs';
 import {
   grimorio, marcarMagiaNaoPreparada, injetarAvisoNaoPreparada, marcarMagiaNova,
@@ -383,6 +384,8 @@ async function abrirDialogoAutomacao(item) {
   // Veneno: sem dano e duração não há o que ligar. Escolher de novo o veneno
   // já ligado é como se edita a configuração dele.
   if (AUTOMACOES[escolha]?.veneno && !(await venenos.configurar(item))) return;
+  // Modelo de Aura: mesmo esquema — escolher de novo abre o montador.
+  if (AUTOMACOES[escolha]?.auraModelo && !(await configurarModelo(item))) return;
 
   if (escolha === (atual ?? '')) return;   // sem mudança
 
@@ -393,6 +396,7 @@ async function abrirDialogoAutomacao(item) {
     await item.unsetFlag(MODULE_ID, FLAG_CONTADOR);
     await item.unsetFlag(MODULE_ID, FLAG_GOLPE);
     await venenos.limparConfig(item);
+    await limparModelo(item);
     // Sem nenhuma Marca da Presa automatizada, as presas marcadas perdem o
     // sentido (e o Mestre tira os efeitos visuais delas).
     if (item.actor && !poderesDeMarca(item.actor).length && item.actor.getFlag(MODULE_ID, FLAG_MARCA)) {
@@ -4962,6 +4966,30 @@ function paginaDaAutomacao(def) {
         <li>Não expira com o tempo: no fim do encontro sai um aviso no chat com um botão
             para zerar.</li>
       </ul>`;
+  } else if (def.auraModelo) {
+    comoFunciona = `
+      <ul>
+        <li>Ao escolher a automação abre o montador. Para editar depois, escolha a automação de
+            novo.</li>
+        <li><b>Alcance:</b> raio em metros, com opção de ignorar a diagonal dobrada (a área vira
+            um quadrado), ignorar paredes e alcançar tokens ocultos. Aura Poderosa não se aplica.</li>
+        <li><b>Efeitos:</b> quantos quiser, cada um passivo (vale sempre na área) ou de uso (opção
+            na janela de rolagem de quem está na área, nos tipos marcados). Cada efeito escolhe quem
+            afeta: aliados, neutros, inimigos e você. Assim uma aura pode dar bônus aos aliados e
+            penalidade aos inimigos.</li>
+        <li><b>Valor:</b> número ou fórmula. <code>@car</code>, <code>@nivel</code> e afins leem
+            a fonte da aura; <code>@alvo.car</code> lê quem recebe, e aí cada um ganha o seu.
+            Os valores acompanham a ficha na hora.</li>
+        <li><b>Condições</b> (efeitos passivos) entram em quem está na área e saem junto.</li>
+        <li><b>Dano:</b> quantos quiser, cada um com fórmula, tipo, quem atinge e teste de
+            resistência opcional (sucesso reduz à metade ou anula). Sai ao ativar, no início do seu
+            turno (se a aura se sustenta, ao clicar em <b>Manter aura</b>) ou no do alvo. O Mestre
+            rola como dano do sistema, com os botões de aplicar, e o cartão lista quem estava no
+            alcance e quanto sofre.</li>
+        <li><b>Aprimoramentos:</b> PM a mais escolhidos ao ativar. Cada um aprimora um campo de um
+            efeito ou cria uma linha nova nele, e pode ser comprado mais de uma vez.</li>
+        <li><b>Sustentar:</b> custo em PM por rodada e lembrete no início do turno, opcional.</li>
+      </ul>`;
   } else if (def.aura) {
     comoFunciona = `
       <ul>
@@ -5200,7 +5228,8 @@ const CATEGORIAS = [
  * uma página por poder deixava a navegação enorme.
  */
 function paginaDaCategoria(categoria) {
-  if (categoria.conteudo) return categoria.conteudo();
+  // Página fixa (Outras) abre o grupo; o que houver no catálogo vem depois
+  const fixa = categoria.conteudo ? categoria.conteudo() : '';
 
   const poderes = Object.values(AUTOMACOES)
     .filter((def) => def.categoria === categoria.id)
@@ -5217,7 +5246,7 @@ function paginaDaCategoria(categoria) {
     .map((def) => `<h2>${def.nome}</h2>${paginaDaAutomacao(def)}`)
     .join('\n');
 
-  return `${abertura}\n${secoes}`;
+  return `${fixa}\n${abertura}\n${secoes}`;
 }
 
 function paginasDoDiario() {

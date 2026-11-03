@@ -453,7 +453,9 @@ test('um ator nunca pode ficar com dois efeitos da mesma aura', async () => {
   // essa limpeza terminar antes de decidir o que criar/remover.
   const efeitosDaAura = efeitos.slice(
     efeitos.indexOf('async function efeitosDaAura'), efeitos.indexOf('/** Dados do efeito'));
-  assert.match(efeitosDaAura, /porAtor\.get\(ator\.uuid\)\.push/);
+  // Agrupa por ator E parte: o Modelo de Aura dá mais de um efeito por ator.
+  assert.match(efeitosDaAura, /chaveDe\(ator, marca\.parte/);
+  assert.match(efeitosDaAura, /porChave\.get\(chave\)\.push/);
   assert.match(efeitosDaAura, /for \(const \{ efeito \} of duplicatas\) await efeito\.delete\(\)/);
   assert.match(efeitos, /const existentes = await efeitosDaAura\(fonte\.id, item\.id\);/);
   assert.match(efeitos, /const existentes = await efeitosDaAura\(fonteId, itemId\);/);

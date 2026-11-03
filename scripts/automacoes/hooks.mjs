@@ -402,7 +402,9 @@ export function registrarHooksAutomacoes(s) {
     if (!automacoesAtivas()) return;
     // Ligar ou desligar Aura Poderosa (ou a própria aura) muda o raio agora,
     // não só no próximo movimento de alguém na cena.
-    if (mudouAutomacao && item.actor) aoMexerNaCena();
+    // Editar um Modelo de Aura (raio, alvos, fórmulas) também vale na hora.
+    const mudouModelo = foundry.utils.hasProperty(mudancas, `flags.${MODULE_ID}.auraModelo`);
+    if ((mudouAutomacao || mudouModelo) && item.actor) aoMexerNaCena();
 
     // Roda em TODOS os clientes: a contagem é visível para a mesa inteira, e
     // sem isto os espectadores ficariam com o valor congelado no cartão.

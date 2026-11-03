@@ -7,7 +7,9 @@
 import { MODULE_ID } from '../runtime.mjs';
 import { efeitoEmDia } from '../efeitos.mjs';
 import { ehV14, paraOSistema } from '../../versao.mjs';
-import { tokensNaAura } from './alcance.mjs';
+import { tokensNaAura, nomeDaDisposicao } from './alcance.mjs';
+import { efeitoAfeta } from './modelo.mjs';
+import { testar, registroDe, situacaoDoAlvo, gravarResistencias } from './resistencia.mjs';
 import {
   aurasDoAtor, raioDaAura, modificadorDeCura
 } from './estado.mjs';
@@ -44,29 +46,30 @@ function tokenVivoDaFonte(fonte, estado) {
 
 /**
  * Efeitos de uma aura específica espalhados pela mesa — no máximo um por
- * ator.
+ * ator e por parte (um Modelo de Aura pode dar um passivo E um de uso).
  *
  * Duas sincronizações sobrepostas (token arrastado por mais tempo que o
  * debounce, com a rodada anterior ainda gravando) podem cada uma decidir
  * "este aliado ainda não tem o efeito" antes de qualquer uma das duas
  * terminar de criar o dela, e o aliado acaba com dois. Aqui é onde isso se
- * corrige: se um ator tiver mais de um efeito desta aura, mantém só o mais
- * antigo e apaga o resto — assim nenhuma chamada seguinte de sincronizarAura
- * pode deixar uma duplicata viva por muito tempo.
+ * corrige: se um ator tiver mais de um efeito desta aura na mesma parte,
+ * mantém só o mais antigo e apaga o resto.
  */
 async function efeitosDaAura(fonteId, itemId) {
-  const porAtor = new Map();
+  const porChave = new Map();
   for (const ator of atoresAlcancaveis()) {
     for (const efeito of ator.effects ?? []) {
       const marca = efeito.getFlag(MODULE_ID, FLAG_AURA_EFEITO);
       if (marca?.fonte !== fonteId || marca?.item !== itemId) continue;
-      if (!porAtor.has(ator.uuid)) porAtor.set(ator.uuid, []);
-      porAtor.get(ator.uuid).push({ ator, efeito });
+      // Efeito gravado antes das partes existirem é o passivo
+      const chave = chaveDe(ator, marca.parte ?? 'passivo');
+      if (!porChave.has(chave)) porChave.set(chave, []);
+      porChave.get(chave).push({ ator, efeito, chave });
     }
   }
 
   const achados = [];
-  for (const lista of porAtor.values()) {
+  for (const lista of porChave.values()) {
     const [primeiro, ...duplicatas] = lista;
     achados.push(primeiro);
     for (const { efeito } of duplicatas) await efeito.delete().catch(() => null);
@@ -74,11 +77,32 @@ async function efeitosDaAura(fonteId, itemId) {
   return achados;
 }
 
+const chaveDe = (ator, parte) => `${ator.uuid}|${parte}`;
+
+/**
+ * Partes que a aura dá a um alvo. As auras do catálogo dão uma só, passiva,
+ * a partir de `valor`/`changes`; o Modelo de Aura monta as suas.
+ */
+function partesDaAura(def, vivo, alvo, estado) {
+  if (def.aura.partes) return def.aura.partes(vivo, alvo, estado?.aprimoramentos ?? {});
+  const valor = def.aura.valor(vivo);
+  return [{
+    parte: 'passivo',
+    rotulo: def.aura.rotuloValor?.(valor) ?? `+${valor}`,
+    changes: def.aura.changes(valor),
+    statuses: [],
+    flagsT20: { onuse: false, custo: '0' }
+  }];
+}
+
 /** Dados do efeito que o aliado deve ter neste instante. */
-function dadosDoEfeito(item, def, valor, fonteId) {
+function dadosDoEfeito(item, def, parte, fonteId) {
+  const base = parte.nome ?? item.name;
   return {
-    name: `${item.name} (${def.aura.rotuloValor?.(valor) ?? `+${valor}`})`,
+    name: parte.rotulo ? `${base} (${parte.rotulo})` : base,
     img: item.img,
+    // Modelo de Aura com condição: o token mostra o ícone dela também.
+    statuses: [...(parte.statuses ?? [])],
     disabled: false,
     // Ícone no token. Quem tira o efeito é sempre a geometria (sincronizarAura,
     // ao sair da área ou perder linha de visão).
@@ -90,12 +114,56 @@ function dadosDoEfeito(item, def, valor, fonteId) {
     ...(ehV14()
       ? { showIcon: CONST.ACTIVE_EFFECT_SHOW_ICON.ALWAYS, duration: { value: null, expiry: null } }
       : { duration: { rounds: 999 } }),
-    changes: def.aura.changes(valor),
+    changes: parte.changes,
     flags: {
-      tormenta20: { onuse: false, custo: '0' },
-      [MODULE_ID]: { [FLAG_AURA_EFEITO]: { fonte: fonteId, item: item.id, aura: def.id } }
+      // Parte de uso: entra na janela de rolagem de quem está na área.
+      tormenta20: parte.flagsT20,
+      [MODULE_ID]: {
+        [FLAG_AURA_EFEITO]: { fonte: fonteId, item: item.id, aura: def.id, parte: parte.parte }
+      }
     }
   };
+}
+
+/**
+ * Testes de resistência pendentes da sincronização: rola para quem acabou de
+ * entrar (efeitos "ao entrar") e esquece o teste de quem saiu, para que
+ * voltar à área teste de novo. Os testes por turno são rolados em
+ * `testarNoTurno`; aqui só são lidos.
+ *
+ * @returns {object} registros já atualizados, { [parte]: { [tokenId]: { passou } } }
+ */
+async function resolverResistencias(fonte, item, def, estado, candidatos) {
+  const registros = JSON.parse(JSON.stringify(estado?.resistencias ?? {}));
+  const resistiveis = candidatos.filter((c) => c.resiste);
+
+  const pendentes = resistiveis.filter(({ token, parte }) =>
+    situacaoDoAlvo(parte.resistencia, registroDe(estado, parte.parte, token.id)) === 'rolar');
+  for (const m of await testar(fonte, item, pendentes)) {
+    (registros[m.parte] ??= {})[m.token] = { passou: m.passou };
+  }
+
+  // Saiu da área (ou o efeito sumiu do modelo): o teste "ao entrar" é esquecido
+  const presentes = new Set(resistiveis.map(({ token, parte }) => `${parte.parte}|${token.id}`));
+  const efeitos = def.aura.modelo?.efeitos ?? [];
+  const esquecer = [];
+  for (const [parte, porToken] of Object.entries(registros)) {
+    const quando = efeitos.find((e) => e.id === parte)?.resistencia;
+    const porEntrada = !quando?.ativa || quando.quando === 'entrar';
+    for (const [token, reg] of Object.entries(porToken ?? {})) {
+      if (!reg || !porEntrada || presentes.has(`${parte}|${token}`)) continue;
+      esquecer.push({ parte, token, passou: null });
+      porToken[token] = null;
+    }
+  }
+  await gravarResistencias(fonte, item.id, esquecer);
+  return registros;
+}
+
+/** `efeitoEmDia` não olha condições; trocar a do modelo precisa regravar. */
+function mesmasCondicoes(efeito, dados) {
+  const atuais = [...(efeito.statuses ?? [])].sort().join(',');
+  return atuais === [...(dados.statuses ?? [])].sort().join(',');
 }
 
 /**
@@ -112,39 +180,61 @@ export async function sincronizarAura(fonte, { item, def, estado }) {
   // com posição e Carisma de antes.
   const vivo = tokenFonte.actor ?? fonte;
   const raio = raioDaAura(vivo, def);
-  const valor = def.aura.valor(vivo);
-  const dados = dadosDoEfeito(item, def, valor, fonte.id);
 
-  // Sem bônus nenhum não há efeito a manter (evita efeito vazio na ficha).
-  const alvos = def.aura.changes(valor).length
-    ? tokensNaAura(tokenFonte, def.aura, raio)
-    : [];
+  // O valor costuma ser o mesmo para todos (atributo da fonte). Só o Modelo
+  // de Aura com fórmula do alvo (`@alvo.car`) calcula um por aliado.
+  const comuns = def.aura.porAlvo ? null : partesDaAura(def, vivo, null, estado);
+  const partesPara = (ator) => (comuns ?? partesDaAura(def, vivo, ator, estado))
+    // Sem bônus nenhum não há efeito a manter (evita efeito vazio na ficha).
+    .filter((p) => p.changes.length || p.statuses?.length);
 
-  const desejados = alvos.map((t) => t.actor?.uuid).filter(Boolean);
+  const candidatos = [];
+  for (const token of tokensNaAura(tokenFonte, def.aura, raio)) {
+    if (!token.actor) continue;
+    // Cada efeito do Modelo de Aura tem o seu público (bônus aos aliados,
+    // penalidade aos inimigos…); os do catálogo não trazem `alvos`.
+    const quem = { disposicao: nomeDaDisposicao(token), ehFonte: token.id === tokenFonte.id };
+    for (const parte of partesPara(token.actor)) {
+      if (parte.alvos && !efeitoAfeta(parte.alvos, quem)) continue;
+      candidatos.push({ token, parte, resiste: !!parte.resistencia && !quem.ehFonte });
+    }
+  }
+
+  const registros = await resolverResistencias(fonte, item, def, estado, candidatos);
+
+  const desejado = new Map();
+  for (const { token, parte, resiste } of candidatos) {
+    // Efeito resistível só entra em quem falhou no último teste
+    if (resiste && situacaoDoAlvo(parte.resistencia, registros[parte.parte]?.[token.id]) !== 'aplicar') continue;
+    desejado.set(chaveDe(token.actor, parte.parte), {
+      ator: token.actor, dados: dadosDoEfeito(item, def, parte, fonte.id)
+    });
+  }
+
   const existentes = await efeitosDaAura(fonte.id, item.id);
-  const atuais = existentes.map(({ ator }) => ator.uuid);
+  const { criar, remover } = diferencaDeAlvos(existentes.map((e) => e.chave), [...desejado.keys()]);
 
-  const { criar, remover } = diferencaDeAlvos(atuais, desejados);
-
-  // Sai de quem não está mais na área
-  for (const { ator, efeito } of existentes) {
-    if (remover.includes(ator.uuid)) await efeito.delete();
+  // Sai de quem não está mais na área (ou da parte que deixou de existir)
+  for (const { efeito, chave } of existentes) {
+    if (remover.includes(chave)) await efeito.delete();
   }
 
   // Entra em quem chegou
-  for (const uuid of criar) {
-    const ator = alvos.find((t) => t.actor?.uuid === uuid)?.actor;
-    if (!ator) continue;
+  for (const chave of criar) {
+    const { ator, dados } = desejado.get(chave);
     await ator.createEmbeddedDocuments('ActiveEffect', [paraOSistema({ ...dados, origin: item.uuid })]);
   }
 
   // Acompanha o valor de quem já tinha (o Carisma da fonte pode ter mudado)
-  for (const { ator, efeito } of existentes) {
-    if (remover.includes(ator.uuid)) continue;
-    if (!efeitoEmDia(efeito, dados)) await efeito.update(paraOSistema(dados));
+  for (const { efeito, chave } of existentes) {
+    if (remover.includes(chave)) continue;
+    const { dados } = desejado.get(chave);
+    if (!efeitoEmDia(efeito, dados) || !mesmasCondicoes(efeito, dados)) {
+      await efeito.update(paraOSistema(dados));
+    }
   }
 
-  return desejados.length;
+  return new Set([...desejado.values()].map((d) => d.ator.uuid)).size;
 }
 
 /** Tira uma aura de todo mundo. */
@@ -231,4 +321,29 @@ export async function desfazerCuraDe(uuid, ganho) {
   const atual = ator.system.attributes.pv.value;
   await ator.update({ 'system.attributes.pv.value': desfazerCura(atual, ganho) });
   return true;
+}
+
+/**
+ * Testes "no início do turno": rola para os alvos na área que testam neste
+ * momento. `tokenId` restringe a um alvo (o dono do turno, em `turnoAlvo`).
+ * O efeito em si é posto em dia pela sincronização seguinte.
+ */
+export async function testarNoTurno(fonte, { item, def, estado }, { momento, tokenId = null }) {
+  if (!def.aura.partes) return;
+  const tokenFonte = tokenVivoDaFonte(fonte, estado);
+  if (!tokenFonte) return;
+  const vivo = tokenFonte.actor ?? fonte;
+
+  const pares = [];
+  for (const token of tokensNaAura(tokenFonte, def.aura, raioDaAura(vivo, def))) {
+    if (!token.actor || token.id === tokenFonte.id) continue;
+    if (tokenId && token.id !== tokenId) continue;
+    const quem = { disposicao: nomeDaDisposicao(token), ehFonte: false };
+    for (const parte of def.aura.partes(vivo, token.actor, estado?.aprimoramentos ?? {})) {
+      if (parte.resistencia?.quando !== momento) continue;
+      if (parte.alvos && !efeitoAfeta(parte.alvos, quem)) continue;
+      pares.push({ token, parte });
+    }
+  }
+  await testar(fonte, item, pares);
 }

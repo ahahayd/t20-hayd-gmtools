@@ -25,7 +25,21 @@ export function normalizarEstado(bruto) {
     aviso: marca(bruto.aviso),
     sustentada: marca(bruto.sustentada),
     pedido: bruto.pedido?.id ? { ...bruto.pedido, id: String(bruto.pedido.id) } : null,
-    feito: bruto.feito ? String(bruto.feito) : null
+    feito: bruto.feito ? String(bruto.feito) : null,
+    // Modelo de Aura: quantas vezes cada aprimoramento foi comprado na ativação
+    aprimoramentos: bruto.aprimoramentos && typeof bruto.aprimoramentos === 'object'
+      ? { ...bruto.aprimoramentos }
+      : {},
+    // Modelo de Aura: dano pedido pelo jogador (ao ativar, ao manter) e o
+    // último já causado pelo Mestre
+    danoPedido: bruto.danoPedido?.id
+      ? { id: String(bruto.danoPedido.id), momento: String(bruto.danoPedido.momento ?? 'ativar') }
+      : null,
+    danoFeito: bruto.danoFeito ? String(bruto.danoFeito) : null,
+    // Modelo de Aura: último teste de resistência, { [efeito]: { [tokenId]: { passou } } }
+    resistencias: bruto.resistencias && typeof bruto.resistencias === 'object'
+      ? JSON.parse(JSON.stringify(bruto.resistencias))
+      : {}
   };
 }
 

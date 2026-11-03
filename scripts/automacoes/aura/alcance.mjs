@@ -7,7 +7,7 @@
 import { dentroDoRaio, alvoElegivel } from './regras.mjs';
 
 /** Nome da disposição do token ('FRIENDLY', 'HOSTILE', 'NEUTRAL', 'SECRET'). */
-function nomeDaDisposicao(token) {
+export function nomeDaDisposicao(token) {
   const valor = token?.document?.disposition ?? token?.disposition;
   const tabela = CONST.TOKEN_DISPOSITIONS ?? {};
   return Object.keys(tabela).find((chave) => tabela[chave] === valor) ?? null;
@@ -76,8 +76,16 @@ function pontosDoToken(token) {
  * ignora a diagonal dobrada por completo) — as duas davam área maior do que
  * os 9 m reais em várias direções.
  */
-function distanciaReal(a, b) {
+function distanciaReal(a, b, spec = null) {
   const grade = canvas?.grid;
+  // Modelo de Aura que ignora a diagonal: toda casa vizinha, reta ou
+  // diagonal, conta 1 quadrado — a área vira um quadrado em vez de losango.
+  if (spec?.ignoraDiagonal && grade?.getOffset && !grade.isGridless) {
+    const de = grade.getOffset({ x: a.x, y: a.y });
+    const para = grade.getOffset({ x: b.x, y: b.y });
+    const casas = Math.max(Math.abs(de.i - para.i), Math.abs(de.j - para.j));
+    return casas * (grade.distance || 1);
+  }
   if (!grade?.measurePath) return null;
   // A aura é plana: mede só x/y. No v14 a grade é 3D — os espaços ocupados
   // pelo token trazem `k` e o centro vem com elevação, enquanto os quadrados
@@ -122,7 +130,7 @@ export function tokenDentroDaAura(fonte, alvo, spec, raio) {
   for (const ponto of pontosDoToken(alvo)) {
     let menor = Infinity;
     for (const a of origem) {
-      const d = distanciaReal(a, ponto);
+      const d = distanciaReal(a, ponto, spec);
       if (d !== null && d < menor) menor = d;
     }
 
@@ -183,7 +191,7 @@ export function quadradosNaAura(fonte, spec, raio) {
 
       let menor = Infinity;
       for (const a of origem) {
-        const d = distanciaReal(a, ponto);
+        const d = distanciaReal(a, ponto, spec);
         if (d !== null && d < menor) menor = d;
       }
       if (!dentroDoRaio(menor, raio)) continue;

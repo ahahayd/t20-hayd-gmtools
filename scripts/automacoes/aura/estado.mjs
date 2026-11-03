@@ -48,7 +48,9 @@ export function estadoDaAura(ator, itemId) {
 
 /** Raio final desta aura, já com Aura Poderosa e afins. */
 export function raioDaAura(ator, def) {
-  return raioEfetivo(def?.aura?.raio, modificadoresDeAura(ator));
+  // Um Modelo de Aura pode recusar Aura Poderosa e afins.
+  const mods = def?.aura?.aceitaModificadores === false ? [] : modificadoresDeAura(ator);
+  return raioEfetivo(def?.aura?.raio, mods);
 }
 
 /** Primeiro modificador de cura da ficha (Aura de Cura). */
@@ -71,7 +73,7 @@ async function gravar(ator, itemId, estado) {
 }
 
 /** Liga a aura. O efeito nos aliados é gravado pelo Mestre, ao ver a flag. */
-export async function ativarAura(item) {
+export async function ativarAura(item, { aprimoramentos = {} } = {}) {
   const ator = item?.actor;
   if (!ator) return null;
 
@@ -88,7 +90,12 @@ export async function ativarAura(item) {
     aviso: null,
     sustentada: null,
     pedido: null,
-    feito: null
+    feito: null,
+    aprimoramentos,
+    // O Mestre causa o dano "ao ativar" quando vê este id ainda não feito
+    danoPedido: definicaoDe(item)?.aura?.modelo?.danos?.some((d) => d.quando === 'ativar')
+      ? { id: foundry.utils.randomID(), momento: 'ativar' }
+      : null
   };
   await gravar(ator, item.id, estado);
 
@@ -128,6 +135,38 @@ export async function pedir(ator, itemId, tipo, dados = {}) {
   if (!estado) return;
   const pedido = { id: foundry.utils.randomID(), tipo, ...dados };
   await gravar(ator, itemId, { ...estado, pedido });
+}
+
+/**
+ * Grava resultados de testes de resistência (só o Mestre).
+ *
+ * `mudancas` = [{ parte, token, passou }]; `passou: null` esquece o teste
+ * (o alvo saiu da área). Grava por caminho, sem reescrever o estado todo, e
+ * apaga com null: no v14 a chave do delta de token não vinculado não some.
+ */
+export async function gravarResistencias(ator, itemId, mudancas) {
+  if (!ator || !mudancas.length) return;
+  const base = `flags.${MODULE_ID}.${FLAG_AURAS}.${itemId}.resistencias`;
+  const update = {};
+  for (const { parte, token, passou } of mudancas) {
+    update[`${base}.${parte}.${token}`] = passou === null ? null : { passou: !!passou };
+  }
+  await ator.update(update);
+}
+
+/**
+ * O jogador pede ao Mestre que cause os danos de um momento (hoje, os do
+ * início do turno, ao clicar em Manter aura).
+ */
+export async function pedirDano(ator, itemId, momento) {
+  await ator.update({
+    [`flags.${MODULE_ID}.${FLAG_AURAS}.${itemId}.danoPedido`]: { id: foundry.utils.randomID(), momento }
+  });
+}
+
+/** O Mestre marca o dano pedido como causado. */
+export async function marcarDanoFeito(ator, itemId, id) {
+  await ator.update({ [`flags.${MODULE_ID}.${FLAG_AURAS}.${itemId}.danoFeito`]: id });
 }
 
 /** O Mestre marca o pedido como executado e limpa a fila. */

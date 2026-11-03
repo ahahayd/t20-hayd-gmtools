@@ -84,6 +84,24 @@ function linhaDoCusto({ custo, gasto }) {
   return L('AuraManteveTexto', { custo, restam: gasto.restam });
 }
 
+/** Modelo de Aura ligada com aprimoramentos: quais e quanto PM custaram. */
+export async function anunciarAprimoramentos(fonte, item, { modelo, escolhas, custo, gasto }) {
+  const esc = foundry.utils.escapeHTML;
+  const itens = modelo.aprimoramentos
+    .filter((a) => escolhas[a.id])
+    .map((a) => `<li>${esc(a.nome || a.linhas[0]?.key)}${escolhas[a.id] > 1 ? ` ×${escolhas[a.id]}` : ''}</li>`)
+    .join('');
+  await ChatMessage.create({
+    speaker: ChatMessage.getSpeaker({ actor: fonte }),
+    whisper: paraQuem(fonte),
+    content: `<div class="t20g-aura-card">
+      <p><b><i class="fa-solid fa-bolt"></i> ${L('AuraModeloAprimoradaTitulo', { nome: item.name })}</b></p>
+      <ul>${itens}</ul>
+      <p class="notes">${linhaDoCusto({ custo, gasto })}</p>
+    </div>`
+  });
+}
+
 /** "Fulano manteve a aura" — e, com Aura de Cura, o botão de curar. */
 export async function anunciarSustentacao(fonte, item, { custo, cura, gasto = null }) {
   const botaoCura = cura > 0

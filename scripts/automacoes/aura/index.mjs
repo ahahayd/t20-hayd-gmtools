@@ -10,12 +10,18 @@ import { IndiceAtoresAutomacoes } from '../indice-atores.mjs';
 import { definicaoDe } from '../estado.mjs';
 import {
   FLAG_AURAS, poderesDeAura, aurasDoAtor, estadoDaAura, raioDaAura, modificadorDeCura,
-  ativarAura, desativarAura, marcarSustentada, marcarAviso, pedir, concluirPedido
+  ativarAura, desativarAura, marcarSustentada, marcarAviso, pedir, concluirPedido, marcarDanoFeito,
+  pedirDano
 } from './estado.mjs';
-import { sincronizarAura, limparAura, limparOrfaos, aplicarCura, desfazerCuraDe } from './efeitos.mjs';
+import {
+  sincronizarAura, limparAura, limparOrfaos, aplicarCura, desfazerCuraDe, testarNoTurno
+} from './efeitos.mjs';
 import { curaDaAura, precisaAvisar, pedidoPendente } from './regras.mjs';
 import { aoPassarMouse, limparPrevia } from './desenho.mjs';
 import * as chat from './chat.mjs';
+import { causarDanos } from './dano.mjs';
+import { custoDasEscolhas } from './modelo.mjs';
+import { escolherAprimoramentos } from './modelo-ui.mjs';
 
 /** Atores que têm algum poder de aura na ficha. */
 export const indiceAura = new IndiceAtoresAutomacoes(
@@ -85,8 +91,25 @@ export function agendarRecalculo() {
 /* ─── Ações do jogador ───────────────────────────────────────────────────── */
 
 async function ativar(item) {
-  const estado = await ativarAura(item);
-  if (estado) agendarRecalculo();
+  // Modelo de Aura com aprimoramentos: o jogador escolhe quanto PM a mais
+  // gasta antes de ligar. Fechar a janela não liga a aura.
+  const modelo = definicaoDe(item)?.aura?.modelo ?? null;
+  let aprimoramentos = {};
+  if (modelo?.aprimoramentos.length) {
+    const escolha = await escolherAprimoramentos(item, modelo);
+    if (!escolha) return;
+    aprimoramentos = escolha;
+  }
+
+  const estado = await ativarAura(item, { aprimoramentos });
+  if (!estado) return;
+  agendarRecalculo();
+
+  const custo = custoDasEscolhas(modelo, aprimoramentos);
+  if (custo > 0) {
+    const gasto = await descontarPM(item.actor, custo);
+    await chat.anunciarAprimoramentos(item.actor, item, { modelo, escolhas: aprimoramentos, custo, gasto });
+  }
 }
 
 async function cancelar(fonte, itemId) {
@@ -130,6 +153,11 @@ async function manter(fonte, itemId) {
 
   const custo = def.aura.custo ?? 0;
   const gasto = await descontarPM(fonte, custo);
+
+  // Modelo de Aura: manter é o que solta o dano do início do turno.
+  if (def.aura.modelo?.danos?.some((d) => d.quando === 'turnoFonte')) {
+    await pedirDano(fonte, itemId, 'turnoFonte');
+  }
   await chat.anunciarSustentacao(fonte, item, { custo, cura, gasto });
 }
 
@@ -145,6 +173,14 @@ async function atenderPedidos(ator) {
   if (!souGmAtivo()) return;
 
   for (const aura of aurasDoAtor(ator)) {
+    // Modelo de Aura: dano pedido pelo jogador (ao ativar, ao manter). Marca
+    // antes de rolar: a própria marcação dispara este hook de novo.
+    const dano = aura.estado.danoPedido;
+    if (dano && dano.id !== aura.estado.danoFeito) {
+      await marcarDanoFeito(ator, aura.item.id, dano.id);
+      await causarDanos(ator, aura, { momento: dano.momento });
+    }
+
     const pendente = pedidoPendente(aura.estado);
     if (pendente?.tipo !== 'cura') continue;
 
@@ -194,6 +230,40 @@ async function aoMudarEstado(ator) {
   agendarRecalculo();
 }
 
+/**
+ * Testes de resistência por turno (Modelo de Aura): no turno da fonte, todos
+ * na área que testam "no início do seu turno"; no turno de qualquer um, ele
+ * mesmo, se estiver numa aura que testa "no início do turno do alvo".
+ *
+ * Voltar e avançar o mesmo turno não rola de novo.
+ */
+const _turnosTestados = new Set();
+
+async function testesDoTurno(combate, atual) {
+  const marca = `${combate.id}|${combate.round}|${combate.turn}`;
+  if (_turnosTestados.has(marca)) return;
+  _turnosTestados.add(marca);
+
+  for (const aura of aurasDoAtor(atual)) {
+    await testarNoTurno(atual, aura, { momento: 'turnoFonte' });
+    // Aura que se sustenta: o dano do turno sai ao clicar em Manter aura.
+    if (!temLembrete(aura)) await causarDanos(atual, aura, { momento: 'turnoFonte' });
+  }
+  const tokenId = combate.combatant?.tokenId ?? null;
+  if (!tokenId) return;
+  for (const fonte of indiceAura.listar()) {
+    for (const aura of aurasDoAtor(fonte)) {
+      await testarNoTurno(fonte, aura, { momento: 'turnoAlvo', tokenId });
+      await causarDanos(fonte, aura, { momento: 'turnoAlvo', tokenId });
+    }
+  }
+}
+
+/** A aura pergunta no início do turno se quer mantê-la? */
+function temLembrete(aura) {
+  return aura.def.aura.lembrete !== false;
+}
+
 /** Início do turno da fonte: publica o lembrete de sustentar. */
 async function aoAvancarTurno(combate) {
   if (!souGmAtivo()) return;
@@ -201,8 +271,12 @@ async function aoAvancarTurno(combate) {
   const atual = combate?.combatant?.actor;
   if (!atual) return;
 
+  await testesDoTurno(combate, atual);
+
   const contexto = { combate: combate.id ?? null, rodada: Number(combate.round) || 0 };
   for (const aura of aurasDoAtor(atual)) {
+    // Modelo de Aura sem sustentação: fica ligada até alguém cancelar.
+    if (!temLembrete(aura)) continue;
     if (!precisaAvisar(aura.estado, contexto)) continue;
     await marcarAviso(atual, aura.item.id, contexto);
     await chat.pedirSustentacao(atual, aura.item, {
@@ -256,7 +330,10 @@ export function resumoDaAura(item) {
   return {
     ativa,
     raio: raioDaAura(ator, def),
-    valor: def.aura.valor(ator),
+    // O Modelo de Aura resume do seu jeito ("+3", "varia por alvo"…)
+    valor: def.aura.resumo
+      ? def.aura.resumo(ator, estadoDaAura(ator, item.id)?.aprimoramentos)
+      : `+${def.aura.valor(ator)}`,
     custo: def.aura.custo ?? 0
   };
 }

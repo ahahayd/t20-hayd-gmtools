@@ -62,7 +62,7 @@ test('a lista de origem é respeitada (magia não vira sugestão de poder)', () 
 });
 
 test('todas as automações têm categoria conhecida', () => {
-  const validas = new Set(['barbaro', 'cacador', 'guerreiro', 'inventor', 'lutador', 'paladino', 'arcanista', 'combate', 'magia', 'consumivel']);
+  const validas = new Set(['barbaro', 'cacador', 'guerreiro', 'inventor', 'lutador', 'paladino', 'arcanista', 'combate', 'magia', 'consumivel', 'outras']);
   for (const a of catalogo) {
     assert.ok(validas.has(a.categoria), `${a.nome} está sem categoria válida: ${a.categoria}`);
   }
@@ -78,6 +78,8 @@ test('a fonte nomeia só o livro, sem capítulo', () => {
   ]);
 
   for (const a of catalogo) {
+    // Construtores (Modelo de Aura) não são poder de livro nenhum
+    if (a.auraModelo) continue;
     assert.ok(a.fonte, `${a.nome} está sem fonte`);
     // A categoria já diz a classe; o capítulo deixava a linha longa à toa.
     assert.ok(LIVROS.has(a.fonte),
