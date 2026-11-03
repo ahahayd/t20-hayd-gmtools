@@ -10,6 +10,8 @@ import './scripts/ui-base.mjs';
 import './t20-hayd-automacoes.mjs';
 // Régua opcional para efeitos (ignora diagonais). Mesmo motivo do import acima.
 import './t20-hayd-regua.mjs';
+// Alt + roda do mouse muda o tamanho da área ao posicionar. Mesmo motivo do import acima.
+import './t20-hayd-area.mjs';
 // Marcador "Manobra" na janela de uso. Antes do custo e da prévia: os hooks deles
 // precisam ler a janela já sem as linhas de manobra. Mesmo motivo acima.
 import './t20-hayd-manobra.mjs';
