@@ -2314,6 +2314,9 @@ select.t20g-manobra-tamanho { width: auto; height: 22px; margin-left: 4px; }
   font-weight: 700;
   text-align: center;
 }
+.t20g-teste-oposto-lista { display: flex; flex-direction: column; gap: 4px; max-height: 60vh; overflow-y: auto; }
+.t20g-teste-oposto-ataque { display: flex; align-items: center; justify-content: flex-start; gap: 8px; }
+.t20g-teste-oposto-ataque img { width: 28px; height: 28px; border: none; object-fit: cover; }
 
 /* --- Preview de dano na janela de uso ------------------------------------ */
 

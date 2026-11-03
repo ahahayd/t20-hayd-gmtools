@@ -83,6 +83,9 @@ const liberado = (efeito, item) => filtrosDeEfeito.every((filtro) => filtro(efei
 /** Último uso confirmado como manobra, esperando virar cartão. */
 let manobraPendente = null;
 
+/** Ataque escolhido no "Teste oposto": a janela dele abre com a Manobra ligada. */
+let testeOpostoPendente = null;
+
 /* ─── Lista de efeitos do sistema ─────────────────────────────────────────── */
 
 /** v13: a lista é um getter; `_t20gJanelaDeUso` diz que a janela abriu. */
@@ -275,6 +278,14 @@ Hooks.on('renderAbilityUseDialog', (app, html) => {
 
   mostrarLinhas(linhas, false);
   recalcular();
+
+  const pendente = testeOpostoPendente;
+  // O clone que o sistema abre na janela pode vir sem id: casa pelo nome.
+  if (pendente && pendente.atorId === item?.actor?.id && pendente.nome === item?.name) {
+    const caixa = marcador.querySelector('input[type=checkbox]');
+    caixa.checked = true;
+    caixa.dispatchEvent(new Event('change'));
+  }
 });
 
 /* ─── Marca no chat ───────────────────────────────────────────────────────── */
@@ -299,7 +310,67 @@ Hooks.on('renderChatMessageHTML', (message, html) => {
   const primeiraRolagem = card.querySelector('.roll');
   if (primeiraRolagem) primeiraRolagem.before(aviso);
   else card.appendChild(aviso);
+
+  // Mesmo formato do botão de teste de resistência das automações.
+  const barra = document.createElement('footer');
+  barra.className = 't20g-auto-barra t20g-resist-barra t20g-teste-oposto-barra';
+  barra.innerHTML = `<div class="t20g-auto-linha">
+      <button type="button" class="t20g-auto-btn t20g-auto-btn-largo"><i class="fa-solid fa-dice-d20"></i> ${esc(t('TesteOposto'))}</button>
+    </div>`;
+  barra.querySelector('button').addEventListener('click', (evento) => {
+    evento.preventDefault();
+    abrirTesteOposto();
+  });
+  card.appendChild(barra);
 });
+
+/** Ator sem arma ganha o Ataque Desarmado do compêndio do sistema. */
+async function ataqueDesarmado(ator) {
+  if (!ator.isOwner) return null;
+  const pacote = game.packs.get('tormenta20.equipamentos');
+  const indice = await pacote?.getIndex();
+  const entrada = indice?.find((e) => e.type === 'arma' && /^ataque desarmado$/i.test(e.name.trim()));
+  if (!entrada) return null;
+  const doc = await pacote.getDocument(entrada._id);
+  const [criado] = await ator.createEmbeddedDocuments('Item', [game.items.fromCompendium(doc)]);
+  return criado ?? null;
+}
+
+/** Lista os ataques do token selecionado; o escolhido abre a janela com a Manobra ligada. */
+async function abrirTesteOposto() {
+  const ator = canvas?.tokens?.controlled?.[0]?.actor;
+  if (!ator) return ui.notifications.warn(t('TesteOpostoSemToken'));
+  let ataques = ator.items.filter((item) => item.type === 'arma');
+  if (!ataques.length) {
+    const desarmado = await ataqueDesarmado(ator);
+    if (!desarmado) return ui.notifications.warn(t('TesteOpostoSemAtaque', { nome: ator.name }));
+    ataques = [desarmado];
+  }
+
+  let escolhido = null;
+  const botoes = ataques.map((item) => `<button type="button" class="t20g-teste-oposto-ataque" data-item-id="${item.id}">
+      <img src="${esc(item.img)}" alt=""> <span>${esc(item.name)}</span></button>`).join('');
+  await foundry.applications.api.DialogV2.wait({
+    window: { title: t('TesteOpostoTitulo', { nome: ator.name }) },
+    classes: ['t20g-teste-oposto-janela'],
+    content: `<div class="t20g-teste-oposto-lista">${botoes}</div>`,
+    buttons: [{ action: 'cancelar', label: game.i18n.localize('Cancel') }],
+    render: (_evento, dialogo) => {
+      dialogo.element.querySelectorAll('.t20g-teste-oposto-ataque').forEach((botao) => botao.addEventListener('click', () => {
+        escolhido = botao.dataset.itemId;
+        dialogo.close();
+      }));
+    },
+    rejectClose: false
+  }).catch(() => null);
+
+  const item = escolhido ? ator.items.get(escolhido) : null;
+  if (!item) return;
+  testeOpostoPendente = { atorId: ator.id, nome: item.name };
+  // v14 lê o Shift do evento; sem ele o uso quebra. O v13 ignora.
+  try { await item.roll({ configureDialog: true, event: new MouseEvent('click') }); }
+  finally { testeOpostoPendente = null; }
+}
 
 /* ─── Ficha do efeito ─────────────────────────────────────────────────────── */
 
