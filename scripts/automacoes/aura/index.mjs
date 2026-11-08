@@ -10,7 +10,7 @@ import { IndiceAtoresAutomacoes } from '../indice-atores.mjs';
 import { definicaoDe } from '../estado.mjs';
 import {
   FLAG_AURAS, poderesDeAura, aurasDoAtor, estadoDaAura, raioDaAura, modificadorDeCura,
-  ativarAura, desativarAura, marcarSustentada, marcarAviso, pedir, concluirPedido, marcarDanoFeito,
+  ativarAura, desativarAura, mudarDeCena, marcarSustentada, marcarAviso, pedir, concluirPedido, marcarDanoFeito,
   pedirDano
 } from './estado.mjs';
 import {
@@ -115,6 +115,8 @@ async function ativar(item) {
 async function cancelar(fonte, itemId) {
   const estavaAtiva = !!estadoDaAura(fonte, itemId);
   const item = fonte?.items?.get(itemId);
+  // Aura permanente: uma vez ativa, só sai junto com o item.
+  if (item && ehPermanente(item)) return;
   await desativarAura(fonte, itemId);
   agendarRecalculo();
   if (estavaAtiva && item) await chat.anunciarFim(fonte, item);
@@ -259,6 +261,11 @@ async function testesDoTurno(combate, atual) {
   }
 }
 
+/** Aura do Modelo marcada como permanente: não se sustenta nem se cancela. */
+function ehPermanente(item) {
+  return !!definicaoDe(item)?.aura?.permanente;
+}
+
 /** A aura pergunta no início do turno se quer mantê-la? */
 function temLembrete(aura) {
   return aura.def.aura.lembrete !== false;
@@ -298,7 +305,10 @@ async function aoTrocarCena(cenaId) {
     for (const aura of aurasDoAtor(ator)) {
       if (aura.estado.cena && aura.estado.cena !== cenaId) {
         await limparAura(ator.id, aura.item.id);
-        await desativarAura(ator, aura.item.id);
+        // Permanente acompanha a fonte: passa a valer no token desta cena.
+        // Sem token aqui, fica esperando a fonte voltar ou entrar numa cena.
+        if (ehPermanente(aura.item)) await mudarDeCena(ator, aura.item.id, cenaId);
+        else await desativarAura(ator, aura.item.id);
       }
     }
   }
@@ -334,7 +344,8 @@ export function resumoDaAura(item) {
     valor: def.aura.resumo
       ? def.aura.resumo(ator, estadoDaAura(ator, item.id)?.aprimoramentos)
       : `+${def.aura.valor(ator)}`,
-    custo: def.aura.custo ?? 0
+    custo: def.aura.custo ?? 0,
+    permanente: !!def.aura.permanente
   };
 }
 

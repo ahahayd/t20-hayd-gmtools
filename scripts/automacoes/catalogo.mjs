@@ -294,6 +294,51 @@ export const AUTOMACOES = {
     }
   },
 
+  'bola-de-fogo': {
+    categoria: 'magia',
+    nome: 'Bola de Fogo',
+    fonte: 'Livro Básico',
+    icone: 'fa-solid fa-fire',
+    tipos: ['magia'],
+    resumo:
+      'Aprimoramento (+2 PM): muda a área para efeito de esfera flamejante com tamanho Médio e a '
+      + 'duração para cena. Em vez do normal, cria uma esfera flamejante com 1,5m de diâmetro que '
+      + 'causa 3d6 pontos de dano a qualquer criatura no mesmo espaço. Você pode gastar uma ação de '
+      + 'movimento para fazer a esfera voar 9m em qualquer direção. Ela é imune a dano, mas pode ser '
+      + 'apagada com água. Uma criatura só pode sofrer dano da esfera uma vez por rodada.',
+    comoUsar:
+      'Lance a magia com o aprimoramento da esfera flamejante. Embaixo da magia, na ficha, aparece '
+      + '<b>Esfera flamejante</b> com o dano: clique para rolar de novo, use o ajuste para mudar o '
+      + 'que entra e o X para apagar a esfera.',
+    // Mesmo motor do Modelo de dano contínuo, com a configuração fixa.
+    danoContinuo: {
+      rotulo: 'Esfera flamejante',
+      gatilho: 'aprimoramento',
+      aprimoramento: 'esfera flamejante',
+      origem: 'original',
+      bonusRepetem: false,
+      usos: 0,
+      umaVezPorRodada: true,
+      fimCena: true,
+      nota: 'Ação de movimento: a esfera voa 9 m. Causa dano a quem estiver no mesmo espaço; '
+        + 'cada criatura sofre dano dela uma vez por rodada. Imune a dano; água a apaga.'
+    }
+  },
+
+  'dano-continuo-modelo': {
+    categoria: 'outras',
+    nome: 'Modelo de dano contínuo',
+    icone: 'fa-solid fa-fire-flame-curved',
+    tipos: ['poder', 'magia'],
+    // A configuração vem do próprio item (dano-continuo/index.mjs).
+    danoContinuoModelo: true,
+    comoUsar:
+      'Para magias e poderes que seguem causando dano depois de usados (Flecha Ácida, Espírito '
+      + 'Balístico, esferas e afins). Escolha se o dano repete a rolagem original ou usa uma '
+      + 'fórmula própria, se depende de um aprimoramento, quantas vezes se repete e se é uma vez '
+      + 'por rodada. O dano fica embaixo do item na ficha e é rolado com um clique.'
+  },
+
   'golpe-pessoal': {
     categoria: 'guerreiro',
     nome: 'Golpe Pessoal',

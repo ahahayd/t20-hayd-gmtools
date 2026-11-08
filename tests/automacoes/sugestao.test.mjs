@@ -79,7 +79,7 @@ test('a fonte nomeia só o livro, sem capítulo', () => {
 
   for (const a of catalogo) {
     // Construtores (Modelo de Aura) não são poder de livro nenhum
-    if (a.auraModelo) continue;
+    if (a.auraModelo || a.danoContinuoModelo) continue;
     assert.ok(a.fonte, `${a.nome} está sem fonte`);
     // A categoria já diz a classe; o capítulo deixava a linha longa à toa.
     assert.ok(LIVROS.has(a.fonte),

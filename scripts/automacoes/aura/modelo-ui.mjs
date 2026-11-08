@@ -99,7 +99,11 @@ function blocoDeEfeito(e, item) {
     ${ehUso ? `<div class="t20g-aura-modelo-checks">
         <span class="notes" data-tooltip="${t('AuraModeloUsoDica')}">${t('AuraModeloUsoOnde')}</span>
         ${USOS.map((u) => marca(`usos.${u}`, e.usos[u], rotuloUso(u))).join('')}
-      </div>` : ''}
+      </div>
+      <label class="t20g-aura-modelo-itens" data-tooltip="${t('AuraModeloItensDica')}">
+        <span>${game.i18n.localize('T20.SpecificItems')}</span>
+        <input type="text" data-campo="itens" value="${esc(e.itens)}" autocomplete="off">
+      </label>` : ''}
     <div class="t20g-aura-modelo-mudancas">
       ${(e.mudancas.length ? e.mudancas : [undefined]).map(linhaDeMudanca).join('')}
     </div>
@@ -273,6 +277,7 @@ function conteudo(c, item) {
           <input type="number" name="custo" min="0" step="1" value="${c.custo}"></label>
       </div>
       <div class="t20g-aura-modelo-checks">
+        ${marcador('permanente', c.permanente, t('AuraModeloPermanente'), t('AuraModeloPermanenteDica'))}
         ${marcador('lembrete', c.lembrete, t('AuraModeloLembrete'), t('AuraModeloLembreteDica'))}
       </div>
     </fieldset>
@@ -293,6 +298,7 @@ function lerEfeito(bloco, item) {
     tipo: bloco.dataset.tipo,
     alvos: Object.fromEntries(PUBLICO.map(([k]) => [k, marcado(`alvos.${k}`)])),
     usos: Object.fromEntries(USOS.map((u) => [u, marcado(`usos.${u}`)])),
+    itens: campo(bloco, 'itens')?.value ?? '',
     condicoes: [...bloco.querySelectorAll('[data-campo="condicao"]:checked')].map((i) => i.value),
     resistencia: {
       ativa: marcado('res.ativa'),
@@ -319,6 +325,7 @@ function lerModelo(form, item) {
     ocultos: !!el.ocultos?.checked,
     custo: el.custo?.value,
     lembrete: !!el.lembrete?.checked,
+    permanente: !!el.permanente?.checked,
     efeitos: [...form.querySelectorAll('.t20g-aura-modelo-efeito')].map((b) => lerEfeito(b, item)),
     danos: [...form.querySelectorAll('.t20g-aura-modelo-dano')].map((bloco) => {
       const nome = String(campo(bloco, 'nome').value ?? '').trim();
@@ -491,6 +498,15 @@ export async function configurarModelo(item) {
           conferir();
         }
       });
+      // Permanente não se sustenta: custo e lembrete ficam travados.
+      const travarSustentar = () => {
+        const fixa = !!form.elements.permanente?.checked;
+        for (const nome of ['custo', 'lembrete']) {
+          if (form.elements[nome]) form.elements[nome].disabled = fixa;
+        }
+      };
+      form.elements.permanente?.addEventListener('change', travarSustentar);
+      travarSustentar();
       el.addEventListener('input', conferir);
       el.addEventListener('change', conferir);
       conferir();

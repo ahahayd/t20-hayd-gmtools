@@ -273,3 +273,42 @@ test('dano: normaliza, conta como aura válida e resolve fórmula e CD', async (
   assert.equal(danoFinal(9, { ativa: true, sucesso: 'anula' }, false), 9);
   assert.equal(danoFinal(9, null, null), 9);
 });
+
+test('itens específicos vão para o efeito de uso como no sistema', () => {
+  const so = specDoModelo({
+    raio: 9, efeitos: [efeito({ tipo: 'uso', usos: {}, itens: 'Espada Longa', mudancas: [{ key: 'ataque', valor: '1' }] })]
+  }, { lerDados });
+  // Sem tipo marcado, só os itens nomeados
+  assert.deepEqual(so.partes(fonte)[0].flagsT20, { onuse: true, custo: '0', items: 'Espada Longa' });
+
+  const junto = specDoModelo({
+    raio: 9, efeitos: [efeito({ tipo: 'uso', usos: { spell: true }, itens: 'Arco', mudancas: [{ key: 'ataque', valor: '1' }] })]
+  }, { lerDados });
+  assert.deepEqual(junto.partes(fonte)[0].flagsT20, { onuse: true, custo: '0', spell: true, items: 'Arco' });
+
+  // Passivo não carrega o campo
+  assert.equal(normalizarModelo({ efeitos: [{ tipo: 'passivo', itens: 'x' }] }).efeitos[0].itens, '');
+});
+
+test('aura permanente não se sustenta nem cobra por turno', () => {
+  const config = normalizarModelo({ ...modeloPadrao(), permanente: true, custo: 3, lembrete: true });
+  assert.equal(config.permanente, true);
+  assert.equal(config.lembrete, false);
+  const spec = specDoModelo(config, { lerDados });
+  assert.equal(spec.permanente, true);
+  assert.equal(spec.lembrete, false);
+  assert.equal(spec.custo, 0);
+
+  // Sem a marca, continua como antes
+  const comum = specDoModelo(normalizarModelo({ ...modeloPadrao(), custo: 2 }), { lerDados });
+  assert.equal(comum.permanente, false);
+  assert.equal(comum.lembrete, true);
+  assert.equal(comum.custo, 2);
+});
+
+test('aura permanente não cancela pelo jogador e acompanha a troca de cena', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const fonteIndex = await readFile(new URL('../../scripts/automacoes/aura/index.mjs', import.meta.url), 'utf8');
+  assert.match(fonteIndex, /if \(item && ehPermanente\(item\)\) return;/);
+  assert.match(fonteIndex, /ehPermanente\(aura\.item\)\) await mudarDeCena/);
+});

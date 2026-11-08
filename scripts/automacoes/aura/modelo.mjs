@@ -169,6 +169,7 @@ export function modeloPadrao() {
     ocultos: false,
     custo: 0,
     lembrete: true,
+    permanente: false,
     efeitos: [{
       ...efeitoPadrao('passivo'),
       id: 'ef0',
@@ -220,6 +221,8 @@ function normalizarEfeito(e, i) {
     tipo,
     alvos: normalizarAlvos(e?.alvos),
     usos: Object.fromEntries(USOS.map((u) => [u, !!e?.usos?.[u]])),
+    // "Itens específicos" do sistema: nomes de itens em que a opção aparece
+    itens: tipo === 'uso' ? String(e?.itens ?? '').trim() : '',
     mudancas: normalizarLinhas(e?.mudancas),
     // Condição numa opção de rolagem não faz sentido: só no passivo.
     condicoes: tipo === 'passivo' && Array.isArray(e?.condicoes)
@@ -281,7 +284,9 @@ export function normalizarModelo(bruto) {
     ignoraDiagonal: !!bruto.ignoraDiagonal,
     ocultos: !!(bruto.ocultos ?? bruto.alvos?.ocultos),
     custo: Math.max(0, Math.trunc(num(bruto.custo))),
-    lembrete: bruto.lembrete !== false,
+    // Permanente: ativada uma vez, nunca se sustenta nem se cancela.
+    lembrete: bruto.permanente ? false : bruto.lembrete !== false,
+    permanente: !!bruto.permanente,
     efeitos,
     danos: lista(bruto.danos).map(normalizarDano)
       .filter((d) => d.formula && (d.alvos.aliados || d.alvos.neutros || d.alvos.inimigos || d.alvos.fonte)),
@@ -509,10 +514,13 @@ export function specDoModelo(bruto, { lerDados = () => ({}), condicao = () => nu
   const flagsDe = (e) => {
     if (e.tipo !== 'uso') return { onuse: false, custo: '0' };
     const marcados = USOS.filter((u) => e.usos[u]);
+    // Com itens específicos e nenhum tipo marcado, vale só para aqueles itens.
+    const tipos = marcados.length || e.itens ? marcados : USOS;
     return {
       onuse: true,
       custo: '0',
-      ...Object.fromEntries((marcados.length ? marcados : USOS).map((u) => [u, true]))
+      ...Object.fromEntries(tipos.map((u) => [u, true])),
+      ...(e.itens ? { items: e.itens } : {})
     };
   };
 
@@ -545,8 +553,9 @@ export function specDoModelo(bruto, { lerDados = () => ({}), condicao = () => nu
     ignoraDiagonal: config.ignoraDiagonal,
     // Aura Poderosa é do paladino: só amplia as auras do catálogo.
     aceitaModificadores: false,
-    custo: config.custo,
+    custo: config.permanente ? 0 : config.custo,
     lembrete: config.lembrete,
+    permanente: config.permanente,
     disposicoes: disposicoesDe(publico),
     incluirFonte: publico.fonte,
     ocultos: config.ocultos,

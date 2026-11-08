@@ -111,6 +111,23 @@ export async function desativarAura(ator, itemId) {
   await gravar(ator, itemId, null);
 }
 
+/**
+ * Aura permanente: troca a cena e o token da fonte, sem desligar. Sem token
+ * na cena nova, a aura continua presa à anterior (o recálculo a ignora).
+ */
+export async function mudarDeCena(ator, itemId, cenaId) {
+  const token = ator?.getActiveTokens?.().find((t) => t.document?.parent?.id === cenaId)
+    ?? canvas?.tokens?.placeables?.find((t) => t.actor?.uuid === ator?.uuid)
+    ?? null;
+  if (!token) return;
+  await ator.update({
+    [`flags.${MODULE_ID}.${FLAG_AURAS}.${itemId}.cena`]: cenaId,
+    [`flags.${MODULE_ID}.${FLAG_AURAS}.${itemId}.token`]: token.id,
+    // Os testes da cena anterior eram de outros tokens
+    [`flags.${MODULE_ID}.${FLAG_AURAS}.${itemId}.resistencias`]: null
+  });
+}
+
 /** Marca que o jogador confirmou a manutenção nesta rodada. */
 export async function marcarSustentada(ator, itemId, { combate, rodada }) {
   const estado = estadoDaAura(ator, itemId);

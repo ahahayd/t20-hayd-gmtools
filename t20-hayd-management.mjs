@@ -1293,6 +1293,185 @@ async function openSendMoneyDialog(actor) {
   });
 }
 
+/** Botão da ficha: escolhe entre enviar moedas ou itens. */
+async function openSendChoiceDialog(actor) {
+  if (!getPartyFolderIdOf(actor)) return ui.notifications.warn(loc("THM.NoPartyForUser"));
+  const choice = await foundry.applications.api.DialogV2.wait({
+    window: { title: loc("THM.SendWhat"), icon: "fa-solid fa-paper-plane" },
+    content: `<div class="thm-dialog"><p class="thm-hint">${loc("THM.SendWhatHint")}</p></div>`,
+    rejectClose: false,
+    buttons: [
+      { action: "money", icon: "fa-solid fa-coins", label: loc("THM.SendChoiceMoney"), default: true },
+      { action: "items", icon: "fa-solid fa-box-open", label: loc("THM.SendChoiceItems") }
+    ]
+  });
+  if (choice === "money") return openSendMoneyDialog(actor);
+  if (choice === "items") return new SendItemsApp(actor).render(true);
+}
+
+/**
+ * Janela de envio de vários itens: o jogador arrasta itens da lista (ou da
+ * própria ficha) para o pacote, ajusta as quantidades e envia tudo de uma vez.
+ * Cada item vira uma transferência normal (mesma validação/confirmação).
+ * O DOM é atualizado à mão (sem re-render) para não resetar a rolagem.
+ */
+class SendItemsApp extends foundry.applications.api.ApplicationV2 {
+  static DEFAULT_OPTIONS = {
+    classes: ["thm-send-items"],
+    window: { icon: "fa-solid fa-box-open", resizable: true },
+    position: { width: 400, height: 420 }
+  };
+
+  constructor(actor) {
+    super({ id: `thm-send-items-${actor.id}` });
+    this.actor = actor;
+    /** itemId -> qtd escolhida */
+    this.pacote = new Map();
+    this.enviando = false;
+    // Mudanças no inventário (por fora desta janela) atualizam as listas
+    this._hooks = ["createItem", "updateItem", "deleteItem"].map((h) => [
+      h,
+      Hooks.on(h, (item) => { if (item.parent?.id === this.actor.id) this.#desenhar(); })
+    ]);
+  }
+
+  async close(options) {
+    for (const [h, id] of this._hooks ?? []) Hooks.off(h, id);
+    this._hooks = null;
+    return super.close(options);
+  }
+
+  get title() {
+    return loc("THM.SendItemsTitle", { name: this.actor.name });
+  }
+
+  #qtdDe(item) {
+    return Math.max(1, Number(item.system?.qtd ?? 1) || 1);
+  }
+
+  async _renderHTML() {
+    const folderId = getPartyFolderIdOf(this.actor);
+    const members = folderId ? getMembers(folderId).filter((a) => a.id !== this.actor.id) : [];
+    const div = document.createElement("div");
+    div.className = "thm-dialog thm-send-items-corpo";
+    div.innerHTML = `
+      <div class="form-group">
+        <label>${loc("THM.SendToTarget")}</label>
+        <select name="target">${memberOptionsHtml(members)}<option value="stash">${loc("THM.PartyStash")}</option></select>
+      </div>
+      <ol class="thm-send-items-lista thm-send-items-pacote" data-lista="pacote"></ol>
+      <footer class="form-footer">
+        <button type="button" data-acao="enviar"><i class="fa-solid fa-paper-plane"></i> ${loc("THM.Send")}</button>
+        <button type="button" data-acao="cancelar"><i class="fa-solid fa-xmark"></i> ${loc("THM.Cancel")}</button>
+      </footer>`;
+    return div;
+  }
+
+  _replaceHTML(result, content) {
+    content.replaceChildren(result);
+    this.#ligar(result);
+    this.#desenhar();
+  }
+
+  #ligar(root) {
+    const pacote = root.querySelector('[data-lista="pacote"]');
+    pacote.addEventListener("dragover", (ev) => { ev.preventDefault(); pacote.classList.add("thm-alvo"); });
+    pacote.addEventListener("dragleave", () => pacote.classList.remove("thm-alvo"));
+    pacote.addEventListener("drop", (ev) => {
+      ev.preventDefault();
+      pacote.classList.remove("thm-alvo");
+      let data = null;
+      try { data = JSON.parse(ev.dataTransfer.getData("text/plain")); } catch { return; }
+      if (data?.type !== "Item" || !data.uuid) return;
+      const item = fromUuidSync(data.uuid);
+      if (!item || item.parent?.id !== this.actor.id || !INVENTORY_TYPES.includes(item.type)) {
+        return ui.notifications.warn(loc("THM.SendItemsNotOwn"));
+      }
+      this.#adicionar(item.id);
+    });
+    pacote.addEventListener("click", (ev) => {
+      const btn = ev.target.closest("[data-remover]");
+      if (!btn) return;
+      this.pacote.delete(btn.dataset.remover);
+      this.#desenhar();
+    });
+    pacote.addEventListener("change", (ev) => {
+      const input = ev.target.closest("input[data-qtd]");
+      const item = input && this.actor.items.get(input.dataset.qtd);
+      if (!item) return;
+      const q = Math.min(this.#qtdDe(item), Math.max(1, Math.floor(Number(input.value) || 1)));
+      input.value = q;
+      this.pacote.set(item.id, q);
+    });
+    root.querySelector('[data-acao="enviar"]').addEventListener("click", () => this.#enviar(root));
+    root.querySelector('[data-acao="cancelar"]').addEventListener("click", () => this.close());
+  }
+
+  #adicionar(itemId) {
+    const item = this.actor.items.get(itemId);
+    if (!item || this.pacote.has(itemId)) return;
+    this.pacote.set(itemId, this.#qtdDe(item));
+    this.#desenhar();
+  }
+
+  /** Redesenha as listas preservando a rolagem de cada uma. */
+  #desenhar() {
+    const root = this.element;
+    if (!root) return;
+    const pacote = root.querySelector('[data-lista="pacote"]');
+    const rolPacote = pacote.scrollTop;
+
+    // Itens que sumiram da ficha saem do pacote
+    for (const id of [...this.pacote.keys()]) {
+      const it = this.actor.items.get(id);
+      if (!it) this.pacote.delete(id);
+      else if (this.pacote.get(id) > this.#qtdDe(it)) this.pacote.set(id, this.#qtdDe(it));
+    }
+
+    const linha = (item, extra = "") => `
+      <img src="${esc(item.img)}" alt="">
+      <span class="thm-send-items-nome">${esc(item.name)}</span>${extra}`;
+
+    const escolhidos = [...this.pacote.entries()].map(([id, q]) => [this.actor.items.get(id), q]);
+    pacote.innerHTML = escolhidos.length
+      ? escolhidos.map(([i, q]) => `<li data-item-id="${i.id}">${linha(i, `
+          <input type="number" data-qtd="${i.id}" value="${q}" min="1" max="${this.#qtdDe(i)}" step="1">
+          <a data-remover="${i.id}" data-tooltip="${loc("THM.Cancel")}"><i class="fa-solid fa-xmark"></i></a>`)}</li>`).join("")
+      : `<li class="thm-hint thm-send-items-dica">${loc("THM.SendItemsDropHint")}</li>`;
+
+    pacote.scrollTop = rolPacote;
+  }
+
+  async #enviar(root) {
+    if (this.enviando) return;
+    if (!this.pacote.size) return ui.notifications.warn(loc("THM.SendItemsNone"));
+    const folderId = getPartyFolderIdOf(this.actor);
+    if (!folderId) return ui.notifications.warn(loc("THM.NoPartyForUser"));
+    const value = root.querySelector('select[name="target"]').value;
+    if (!value) return ui.notifications.warn(loc("THM.InvalidTarget"));
+    const target = value === "stash" ? { stashFolderId: folderId } : { actorId: value.slice(2) };
+    const source = actorEndpoint(this.actor);
+
+    this.enviando = true;
+    const botao = root.querySelector('[data-acao="enviar"]');
+    botao.disabled = true;
+    const lista = [...this.pacote.entries()];
+    let ok = 0;
+    try {
+      for (const [itemId, qty] of lista) {
+        const r = await requestTransfer({ kind: "item", source, target, itemId, qty });
+        if (r?.ok) { ok++; this.pacote.delete(itemId); }
+      }
+    } finally {
+      this.enviando = false;
+      botao.disabled = false;
+    }
+    if (lista.length > 1) ui.notifications.info(loc("THM.SendItemsDone", { ok, total: lista.length }));
+    if (!this.pacote.size) this.close();
+    else this.#desenhar();
+  }
+}
+
 /* ============================================================
    PARTY SHEET
 ============================================================ */
@@ -2779,7 +2958,7 @@ function registerTransferUiHooks() {
       li.innerHTML = `<a class="thm-send-money-btn" data-tooltip="${loc("THM.SendMoney")}"><i class="fa-solid fa-paper-plane"></i></a>`;
       li.querySelector("a").addEventListener("click", (ev) => {
         ev.preventDefault();
-        openSendMoneyDialog(actor);
+        openSendChoiceDialog(actor);
       });
       currency.appendChild(li);
     }

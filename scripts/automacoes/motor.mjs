@@ -38,6 +38,7 @@ import { aura as auras } from './aura/index.mjs';
 import { engenhocas } from './engenhocas/index.mjs';
 import { venenos } from './venenos/index.mjs';
 import { configurarModelo, limparModelo } from './aura/modelo-ui.mjs';
+import { danoContinuo } from './dano-continuo/index.mjs';
 import { escriba } from './escriba-arcano.mjs';
 import {
   grimorio, marcarMagiaNaoPreparada, injetarAvisoNaoPreparada, marcarMagiaNova,
@@ -386,6 +387,8 @@ async function abrirDialogoAutomacao(item) {
   if (AUTOMACOES[escolha]?.veneno && !(await venenos.configurar(item))) return;
   // Modelo de Aura: mesmo esquema — escolher de novo abre o montador.
   if (AUTOMACOES[escolha]?.auraModelo && !(await configurarModelo(item))) return;
+  // Modelo de dano contínuo: idem.
+  if (AUTOMACOES[escolha]?.danoContinuoModelo && !(await danoContinuo.configurar(item))) return;
 
   if (escolha === (atual ?? '')) return;   // sem mudança
 
@@ -397,6 +400,8 @@ async function abrirDialogoAutomacao(item) {
     await item.unsetFlag(MODULE_ID, FLAG_GOLPE);
     await venenos.limparConfig(item);
     await limparModelo(item);
+    await danoContinuo.limparConfig(item);
+    await danoContinuo.aoPerderItem(item, game.user.id);
     // Sem nenhuma Marca da Presa automatizada, as presas marcadas perdem o
     // sentido (e o Mestre tira os efeitos visuais delas).
     if (item.actor && !poderesDeMarca(item.actor).length && item.actor.getFlag(MODULE_ID, FLAG_MARCA)) {
@@ -3870,7 +3875,8 @@ function automacoesAtivasCancelaveis(ator) {
     if (!def?.aura) return [];
 
     const resumo = auras.resumoDaAura(item);
-    if (!resumo?.ativa) return [];
+    // Aura permanente não se encerra pelo painel
+    if (!resumo?.ativa || resumo.permanente) return [];
     return [{
       tipo: 'aura', chave: item.id, nome: item.name, icone: def.icone,
       detalhe: game.i18n.format('T20HaydGMTools.AuraAtiva', {
@@ -4309,6 +4315,8 @@ function montarBarra(item, { completo }) {
         criarBotao(item, 'zerar', 'fa-rotate-left', game.i18n.localize('T20HaydGMTools.AutoZerar'))
       );
     }
+  } else if (resumoAura?.ativa && resumoAura.permanente) {
+    // Aura permanente: ativa para sempre, sem botão de cancelar.
   } else if (resumoAura) {
     const acao = resumoAura.ativa ? 'aura-cancelar' : 'aura-ativar';
     const icone = resumoAura.ativa ? 'fa-solid fa-ban' : 'fa-solid fa-sun';
@@ -4646,6 +4654,11 @@ function atualizarBarrasAura(ator) {
 
       const botao = barra.querySelector('.t20g-auto-btn[data-acao^="aura-"]');
       if (!botao) continue;
+      // Aura permanente que acabou de ligar: o botão some, não vira "Cancelar".
+      if (resumo.ativa && resumo.permanente) {
+        botao.remove();
+        continue;
+      }
 
       const texto = game.i18n.localize(resumo.ativa
         ? 'T20HaydGMTools.AuraCancelar'
@@ -4965,6 +4978,20 @@ function paginaDaAutomacao(def) {
             mirado.</li>
         <li>Não expira com o tempo: no fim do encontro sai um aviso no chat com um botão
             para zerar.</li>
+      </ul>`;
+  } else if (def.danoContinuo || def.danoContinuoModelo) {
+    comoFunciona = `
+      <ul>
+        <li>Ao lançar o item${def.danoContinuo ? ' com o aprimoramento' : ''}, o dano fica embaixo
+            dele na ficha: <b>nome e dado</b>, um botão de ajuste e um X para encerrar.</li>
+        <li>Clicar no nome rola o dano como uma rolagem comum do chat: dá para rerolar, inserir
+            resultado e aplicar dano pelo menu de clique direito.</li>
+        <li>O dano repetido sai da primeira rolagem. Cada parcela dela (dado do item,
+            aprimoramentos, Arcano de Batalha, campo Bônus…) vira uma linha no ajuste, para marcar,
+            desmarcar e editar. Bônus que valem só na primeira rolagem vêm desmarcados.</li>
+        <li>Em combate, "uma vez por rodada" pergunta antes de rolar de novo na mesma rodada; o dano
+            some quando o Mestre encerra a cena.</li>
+        ${def.danoContinuoModelo ? '<li>Ao escolher a automação abre a configuração: gatilho (sempre ou um aprimoramento), dano original ou fórmula própria, tipo, se os bônus se repetem, quantas vezes e lembrete. Para editar, escolha a automação de novo.</li>' : ''}
       </ul>`;
   } else if (def.auraModelo) {
     comoFunciona = `
@@ -5347,6 +5374,7 @@ async function abrirDiario() {
  */
 registrarHooksAutomacoes({
   venenos,
+  danoContinuo,
   grimorio: { aoMudarMagia, antesDeMudarMagia, garantirPreparo, injetarNaFichaDoSistema },
   marcarMagiaNaoPreparada,
   injetarAvisoNaoPreparada,

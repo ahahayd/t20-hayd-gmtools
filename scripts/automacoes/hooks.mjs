@@ -110,6 +110,8 @@ export function registrarHooksAutomacoes(s) {
     catch (err) { console.error(`${MODULE_ID} | Falha ao montar o painel de engenhocas`, err); }
     try { s.grimorio.injetarNaFichaDoSistema(app, html); }
     catch (err) { console.error(`${MODULE_ID} | Falha ao montar o grimório na ficha`, err); }
+    try { s.danoContinuo.injetarNaFicha(app, html); }
+    catch (err) { console.error(`${MODULE_ID} | Falha ao mostrar o dano contínuo na ficha`, err); }
   });
 
   Hooks.on('renderChatMessageHTML', (message, html) => {
@@ -270,9 +272,13 @@ export function registrarHooksAutomacoes(s) {
       // ficha ser gravada exatamente uma vez, inclusive as dos jogadores.
       s.engenhocas.resetarSupressores().catch((err) =>
         console.error(`${MODULE_ID} | Falha ao resetar supressores`, err));
+      s.danoContinuo.aoEncerrarCena().catch((err) =>
+        console.error(`${MODULE_ID} | Falha ao encerrar os danos contínuos`, err));
     }
 
     if (userId !== game.user.id) return;
+    s.danoContinuo.aoCriarMensagem(message, userId).catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao criar o dano contínuo`, err));
     s.registrarMensagemRetroativa(message).catch((err) =>
       console.error(`${MODULE_ID} | Falha ao registrar mensagem retroativa`, err)
     );
@@ -436,6 +442,8 @@ export function registrarHooksAutomacoes(s) {
     if (!ator?.isOwner) return;
     s.aura.cancelarPorItem(ator, item.id).catch((err) =>
       console.error(`${MODULE_ID} | Falha ao encerrar aura do item apagado`, err));
+    s.danoContinuo.aoPerderItem(item, userId).catch((err) =>
+      console.error(`${MODULE_ID} | Falha ao encerrar o dano contínuo do item apagado`, err));
     for (const efeito of s.efeitosDoItem(ator, item.id)) {
       efeito.delete().catch((err) =>
         console.error(`${MODULE_ID} | Falha ao remover efeito da automação`, err)

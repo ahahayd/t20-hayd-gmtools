@@ -110,7 +110,7 @@ function casar(ator, caminho, valores) {
  * Mesma soma do `prepareSkill` do sistema, com nome em cada pedaço. O
  * resultado vira um número só na rolagem; estes são os detalhes dele.
  */
-function detalharPericia(ator, chave, atributo) {
+function detalharPericia(ator, chave, atributo, penalidade) {
   const sistema = ator?.system;
   const pericia = sistema?.pericias?.[chave];
   if (!pericia) return [];
@@ -129,7 +129,8 @@ function detalharPericia(ator, chave, atributo) {
   somar(rotuloAtributo(atr), `@${atr}`);
   if (pericia.treinado) somar(t('FonteTreino'), '@treino');
   somarTodos(`system.pericias.${chave}.bonus`, pericia.bonus);
-  if (pericia.pda && dados.pda) somar(t('FontePenalidade'), '@pda');
+  // `penalidade`: escolha da janela de uso (t20-hayd-penalidade); sem ela, a da ficha.
+  if ((penalidade ?? pericia.pda) && dados.pda) somar(t('FontePenalidade'), '@pda');
   if (pericia.size && dados.tamanho) somar(t('FonteTamanho'), '@tamanho');
   if (pericia.outros) somar(t('FonteOutros'), pericia.outros);
   if (pericia.condi) somar(t('FonteCondicoes'), pericia.condi);
@@ -302,7 +303,7 @@ export function registrarPericia(roll, itemData, ator, opcoes) {
   const chave = itemData?.id;
   const parcelas = [
     parcelaDoDado(parts[0]),
-    { fonte: rotuloPericia(ator, chave), formula: parts[1], detalhes: detalharPericia(ator, chave) },
+    { fonte: rotuloPericia(ator, chave), formula: parts[1], detalhes: detalharPericia(ator, chave, undefined, itemData?._t20gPda) },
     ...rotularExtras(parts.slice(2), candidatosDeUso(itemData, ator, opcoes), opcoesDeRotulo(opcoes?.bonus)),
     { fonte: t('FonteBonus'), formula: '@bonus' }
   ];
