@@ -2367,7 +2367,6 @@ select.t20g-manobra-tamanho { width: auto; height: 22px; margin-left: 4px; }
 }
 .t20g-preview-extra {
   opacity: 0.75;
-  font-size: 0.85em;
   white-space: nowrap;
 }
 .t20g-preview-modos {
@@ -3140,3 +3139,20 @@ table.t20g-fontes .t20g-fontes-sem td:first-child { font-style: italic; opacity:
 .t20g-dc-previa { margin: 6px 0; }
 .t20g-dc-flavor .t20g-dc-origem { opacity: 0.7; font-size: 0.9em; }
 .t20g-dc-nota { margin: 2px 0 0; font-size: 0.85em; }
+
+/* Seta de expandir: o summary é flex e perde o marcador nativo, então nada
+   indicava que o bloco abre. Gira para cima quando aberto. */
+.t20g-preview > summary { list-style: none; align-items: center; }
+.t20g-preview > summary::-webkit-details-marker { display: none; }
+.t20g-preview > summary::after {
+  content: "\f078";
+  font-family: "Font Awesome 6 Pro", "Font Awesome 6 Free";
+  font-weight: 900;
+  font-size: 0.75em;
+  opacity: 0.6;
+  transition: transform 150ms ease, opacity 150ms ease;
+}
+.t20g-preview > summary:hover::after { opacity: 1; }
+.t20g-preview[open] > summary::after { transform: rotate(180deg); }
+
+
