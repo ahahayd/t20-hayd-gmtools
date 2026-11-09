@@ -71,7 +71,19 @@ Hooks.once('setup', () => {
     const configuracao = await original.call(this, item, ...resto);
     const ativacao = item?.system?.ativacao;
     if (!item?._t20gPreview && ativacao && configuracao?.[CAMPO_AJUSTE] !== undefined) {
-      ativacao.custo = custoAjustado(ativacao.custo, configuracao[CAMPO_AJUSTE]);
+      const extra = ajusteInteiro(configuracao[CAMPO_AJUSTE]);
+      const antes = Number(ativacao.custo) || 0;
+      ativacao.custo = custoAjustado(antes, extra);
+      // Linha nos efeitos de uso do cartão: "-2 PM: Ajuste manual". Só quando
+      // o ajuste mudou o custo (negativo num item grátis não faz nada).
+      if (extra && ativacao.custo !== antes) {
+        if (!Array.isArray(configuracao.onUseEffects)) configuracao.onUseEffects = [];
+        configuracao.onUseEffects.push({
+          description: game.i18n.localize('T20HaydGMTools.AjustePmManual'),
+          cost: ativacao.custo - antes,
+          qty: 1
+        });
+      }
     }
     return configuracao;
   };

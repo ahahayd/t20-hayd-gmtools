@@ -37,7 +37,9 @@ function titulo(texto) {
 
 Hooks.on('renderAbilityUseDialog', (app, html) => {
   const item = app?.item;
-  if (item?.type !== 'arma') return;
+  // Armas: "Melhorias e encantos"; magias: "Aprimoramentos" (os da própria magia).
+  const rotulo = { arma: 'CategoriaMelhorias', magia: 'CategoriaAprimoramentos' }[item?.type];
+  if (!rotulo) return;
   const raiz = html?.[0] ?? html;
   const form = raiz?.querySelector?.('#ability-use-form') ?? raiz;
   const lista = form?.querySelector?.('.aprimoramentos-list');
@@ -54,5 +56,5 @@ Hooks.on('renderAbilityUseDialog', (app, html) => {
   }
   if (!melhorias.length || !outros.length) return;
 
-  lista.append(titulo(t('CategoriaMelhorias')), ...melhorias, titulo(t('CategoriaOutros')), ...outros);
+  lista.append(titulo(t(rotulo)), ...melhorias, titulo(t('CategoriaOutros')), ...outros);
 });
