@@ -29,7 +29,8 @@
   "socket": true,
   "esmodules": [
     "t20-hayd-gmtools.mjs",
-    "t20-hayd-atributos.mjs"
+    "t20-hayd-atributos.mjs",
+    "t20-hayd-categorias-uso.mjs"
   ],
   "styles": [
     "t20-hayd-gmtools.css",

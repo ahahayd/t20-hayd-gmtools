@@ -3155,4 +3155,21 @@ table.t20g-fontes .t20g-fontes-sem td:first-child { font-style: italic; opacity:
 .t20g-preview > summary:hover::after { opacity: 1; }
 .t20g-preview[open] > summary::after { transform: rotate(180deg); }
 
+/* Títulos de categoria na lista de aprimoramentos: rótulo pequeno e apagado,
+   sem fundo, para separar sem ocupar espaço. */
+.aprimoramentos-list > li.t20g-categoria {
+  display: block;
+  padding: 5px 8px 1px;
+  margin: 0;
+  background: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  list-style: none;
+}
+.aprimoramentos-list > li.t20g-categoria + li { border-top: 0; }
 
