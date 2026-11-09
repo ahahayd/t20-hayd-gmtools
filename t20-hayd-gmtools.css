@@ -3173,3 +3173,10 @@ table.t20g-fontes .t20g-fontes-sem td:first-child { font-style: italic; opacity:
 }
 .aprimoramentos-list > li.t20g-categoria + li { border-top: 0; }
 
+/* Ajuste manual de PM, ao lado do Custo de Mana Total. */
+#ability-use-form .total-cost .t20g-ajuste-pm {
+  flex: 0 0 56px;
+  max-width: 56px;
+  margin-left: 6px;
+  text-align: center;
+}

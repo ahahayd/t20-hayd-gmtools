@@ -45,3 +45,18 @@ test('entrada malformada não quebra a janela', () => {
   assert.equal(custoTotalDePM('3', [null, undefined, {}], undefined), 3);
   assert.equal(custoTotalDePM(NaN, []), 0);
 });
+
+test('ajuste de PM: só inteiros com sinal', async () => {
+  const { ajusteInteiro, custoAjustado } = await import('../scripts/custo-pm.mjs');
+  assert.equal(ajusteInteiro('3'), 3);
+  assert.equal(ajusteInteiro('+3'), 3);
+  assert.equal(ajusteInteiro('-3'), -3);
+  assert.equal(ajusteInteiro('1d6'), 0);
+  assert.equal(ajusteInteiro('2.5'), 0);
+  assert.equal(ajusteInteiro(''), 0);
+  assert.equal(custoAjustado(5, '3'), 8);
+  assert.equal(custoAjustado(5, '-10'), 1);
+  assert.equal(custoAjustado(0, '-2'), 0);
+  assert.equal(custoAjustado(0, '2'), 2);
+  assert.equal(custoTotalDePM(0, [], 2), 2);
+});

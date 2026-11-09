@@ -14,6 +14,25 @@
  * @param {any} ajuste     Campo "ajuste de custo" da janela
  * @returns {number}
  */
+export function ajusteInteiro(valor) {
+  // Só número inteiro, com sinal opcional: "3", "+3", "-3". Fórmula, dado ou
+  // texto valem 0 (parseInt aceitaria "3d6" como 3).
+  const texto = String(valor ?? '').trim();
+  return /^[+-]?\d+$/.test(texto) ? Number(texto) : 0;
+}
+
+/**
+ * Custo em PM que o uso realmente gasta depois do ajuste manual: aplica o
+ * ajuste ao custo já somado pelo sistema (base + aprimoramentos).
+ */
+export function custoAjustado(custo, ajuste) {
+  const atual = Number(custo) || 0;
+  const extra = ajusteInteiro(ajuste);
+  if (!extra) return atual;
+  if (atual <= 0 && extra <= 0) return atual;
+  return Math.max(atual + extra, 1);
+}
+
 export function custoTotalDePM(base, parcelas = [], ajuste = 0) {
   let total = Number(base) || 0;
   let temCusto = total > 0;
@@ -31,7 +50,10 @@ export function custoTotalDePM(base, parcelas = [], ajuste = 0) {
     temCusto = true;
   }
 
-  total += Number(ajuste) || 0;
+  const extra = ajusteInteiro(ajuste);
+  total += extra;
+  // Um ajuste positivo cobra PM mesmo de um item que não custava nada.
+  if (extra > 0) temCusto = true;
 
   // Um uso que custa PM nunca fica abaixo de 1 — mesma regra que o sistema já
   // aplica quando um aprimoramento reduz o custo.

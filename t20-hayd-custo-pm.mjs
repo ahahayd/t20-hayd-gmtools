@@ -23,10 +23,12 @@
  * nisso descontaria PM duas vezes.
  */
 
-import { custoTotalDePM } from './scripts/custo-pm.mjs';
+import { custoTotalDePM, custoAjustado, ajusteInteiro } from './scripts/custo-pm.mjs';
 
 const MODULE_ID = 't20-hayd-gmtools';
 const SETTING = 'custoPmTotal';
+/** Ajuste manual de PM, ao lado do Custo de Mana Total. */
+const CAMPO_AJUSTE = 't20gAjustePm';
 
 /** Lê as parcelas de aprimoramento da janela, no formato de `custoTotalDePM`. */
 function parcelasDaJanela(form) {
@@ -58,26 +60,56 @@ Hooks.once('init', () => {
   });
 });
 
-Hooks.on('renderAbilityUseDialog', (app, html) => {
-  if (!game.settings.get(MODULE_ID, SETTING)) return;
+// O ajuste manual entra no PM gasto, não só no que a janela mostra: o sistema
+// desconta `ativacao.custo`, que o `applyOnUseEffects` já somou dentro do
+// `create`. Somando aqui, depois dele, o desconto bate com o total exibido.
+Hooks.once('setup', () => {
+  const Dialogo = game.tormenta20?.applications?.AbilityUseDialog;
+  if (!Dialogo || Dialogo._t20gAjustePm) return;
+  const original = Dialogo.create;
+  Dialogo.create = async function (item, ...resto) {
+    const configuracao = await original.call(this, item, ...resto);
+    const ativacao = item?.system?.ativacao;
+    if (!item?._t20gPreview && ativacao && configuracao?.[CAMPO_AJUSTE] !== undefined) {
+      ativacao.custo = custoAjustado(ativacao.custo, configuracao[CAMPO_AJUSTE]);
+    }
+    return configuracao;
+  };
+  Dialogo._t20gAjustePm = true;
+});
 
+Hooks.on('renderAbilityUseDialog', (app, html) => {
   const raiz = html?.[0] ?? html;
   const form = raiz?.querySelector?.('#ability-use-form') ?? raiz;
-  const campo = form?.querySelector?.('.total-cost .cost');
-  if (!campo) return;
+  const linha = form?.querySelector?.('.total-cost');
+  const campo = linha?.querySelector('.cost');
+  if (!campo || linha.querySelector('.t20g-ajuste-pm')) return;
 
-  const base = custoBase(app?.item);
+  // Ajuste manual, ao lado do total: só inteiro com sinal ("3", "-3").
+  const ajuste = document.createElement('input');
+  ajuste.type = 'text';
+  ajuste.inputMode = 'numeric';
+  ajuste.name = CAMPO_AJUSTE;
+  ajuste.className = 't20g-ajuste-pm';
+  ajuste.placeholder = '±0';
+  ajuste.addEventListener('input', () => {
+    const limpo = ajuste.value.replace(/[^\d+-]/g, '').replace(/(?!^)[+-]/g, '');
+    if (limpo !== ajuste.value) ajuste.value = limpo;
+  });
+  // Enter no campo não dispara o uso por engano.
+  ajuste.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+  campo.after(ajuste);
+
+  const corrigir = game.settings.get(MODULE_ID, SETTING);
+  const base = corrigir ? custoBase(app?.item) : Number(campo.dataset.initialCost) || 0;
 
   // O recálculo do sistema lê daqui; corrigindo o dado, o caminho dele também
   // passa a somar o custo base.
-  campo.dataset.initialCost = String(base);
+  if (corrigir) campo.dataset.initialCost = String(base);
 
   const atualizar = () => {
-    campo.value = custoTotalDePM(
-      base,
-      parcelasDaJanela(form),
-      form.querySelector('input[name=ajustecusto]')?.value
-    );
+    const doSistema = ajusteInteiro(form.querySelector('input[name=ajustecusto]')?.value);
+    campo.value = custoTotalDePM(base, parcelasDaJanela(form), doSistema + ajusteInteiro(ajuste.value));
   };
 
   // setTimeout para rodar DEPOIS do recálculo do sistema: os botões +/- dele
