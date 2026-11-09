@@ -504,7 +504,27 @@ Hooks.once('setup', () => {
 
     const dano = item.rollDamage;
     item.rollDamage = async function (args = {}) {
-      const saida = await dano.call(this, args);
+      // O T20 1.6.7 só troca o atributo "padrao" em armas leves ou ágeis; nas
+      // outras ele vai cru para o Roll ("Unresolved StringTerm padrao"). Ele
+      // aparece salvo assim depois de qualquer edição na ficha da arma, cujo
+      // select mostra Padrão quando o campo está vazio. Resolvemos antes,
+      // com a regra que o sistema sempre usou, só durante a rolagem.
+      const rolagens = this.system?.rolls;
+      const armaPesada = this.type === 'arma' && this.actor
+        && this.system.empunhadura !== 'leve' && !this.system.propriedades?.agi;
+      const comPadrao = armaPesada && rolagens?.some((r) => r.type === 'dano'
+        && r.parts?.some(([d, tipo]) => d === 'padrao' && !['curatpv', 'curapm', 'curatpm', 'perda'].includes(tipo)));
+      if (comPadrao) {
+        const atributo = atributoPadrao(this);
+        this.system.rolls = rolagens.map((r) => (r.type !== 'dano' ? r : {
+          ...r,
+          parts: r.parts.map(([d, tipo, extra]) => [
+            d === 'padrao' && !['curatpv', 'curapm', 'curatpm', 'perda'].includes(tipo) ? atributo : d, tipo, extra])
+        }));
+      }
+      let saida;
+      try { saida = await dano.call(this, args); }
+      finally { if (comPadrao) this.system.rolls = rolagens; }
       semFalhar(() => {
         // O damageRoll recebe `...options` por último: um `critical` nas
         // opções (a prévia manda) vence o que o rollDamage decidiu.
