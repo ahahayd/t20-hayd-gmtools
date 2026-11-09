@@ -183,6 +183,11 @@ export function bonusDeEspreitar({ aumentos = 0, dobrado = false } = {}) {
   return dobrado ? bonus * 2 : bonus;
 }
 
+/** Ponto Fraco: +2 na margem de ameaça contra a presa; dobra com Inimigo de. */
+export function bonusDePontoFraco({ dobrado = false } = {}) {
+  return dobrado ? 4 : 2;
+}
+
 /** Sobe todos os dados de uma fórmula ("1d6+2" → "1d10+2"), cada um com `subir`. */
 function subirDadosDaFormula(formula, subir) {
   return String(formula).replace(/(\d+)d(\d+)/gi, (dado) => subir(dado.toLowerCase()));

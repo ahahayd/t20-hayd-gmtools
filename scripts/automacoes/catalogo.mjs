@@ -429,6 +429,26 @@ export const AUTOMACOES = {
     }
   },
 
+  'ponto-fraco': {
+    categoria: 'cacador',
+    nome: 'Ponto Fraco',
+    fonte: 'Heróis de Arton',
+    icone: 'fa-solid fa-bullseye',
+    tipos: ['poder'],
+    apagarEfeitos: true,
+    resumo:
+      'Quando usa a habilidade Marca da Presa, seus ataques contra a criatura marcada recebem '
+      + '+2 na margem de ameaça. Esse bônus dobra com a habilidade Inimigo.',
+    comoUsar:
+      'Basta ter o poder na ficha. Com a presa marcada e mirada, a margem de ameaça dos ataques '
+      + 'melhora sozinha; o Inimigo vem do que foi escolhido ao marcar.',
+    pontoFraco: {
+      alvos: { attack: true },
+      // criticoM negativo = margem de ameaça maior (como no Tiro de Abate)
+      changes: (bonus) => [{ key: 'criticoM', mode: 2, value: String(-bonus), priority: 20 }]
+    }
+  },
+
   'tiro-de-abate': {
     categoria: 'cacador',
     nome: 'Tiro de Abate',

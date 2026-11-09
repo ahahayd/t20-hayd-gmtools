@@ -85,6 +85,7 @@ import {
   dadoDaMarca,
   formulaDaMarca,
   bonusDeEspreitar,
+  bonusDePontoFraco,
   aplicarPassosNasPartes,
   indiceDaMarca
 } from './marca-da-presa.mjs';
@@ -148,7 +149,7 @@ async function sincronizarEfeito(item) {
   // O Golpe Pessoal monta os efeitos a partir do golpe salvo no item
   if (def?.golpe) return sincronizarGolpe(item);
   // A marca depende da presa mirada; os de uso suspenso, só do poder
-  if (def?.marca || def?.espreitar) return sincronizarMarca(ator);
+  if (def?.marca || def?.espreitar || def?.pontoFraco) return sincronizarMarca(ator);
   if (def?.usoSuspenso) return sincronizarUsoSuspenso(item);
 
   const valor = valorContador(item);
@@ -408,7 +409,7 @@ async function abrirDialogoAutomacao(item) {
       await item.actor.unsetFlag(MODULE_ID, FLAG_MARCA);
     }
     // O Espreitar vive da marca: sem ela, o bônus sai da ficha.
-    if (poderesDeEspreitar(item.actor).length) await sincronizarMarca(item.actor);
+    if (poderesDeEspreitar(item.actor).length || poderesDePontoFraco(item.actor).length) await sincronizarMarca(item.actor);
     engenhocas.agendarSincronizacao(item.actor);
     return ui.notifications.info(game.i18n.localize('T20HaydGMTools.AutoRemovida'));
   }
@@ -2420,6 +2421,11 @@ function poderesDeEspreitar(ator) {
   return ator?.items?.filter((i) => definicaoDe(i)?.espreitar) ?? [];
 }
 
+/** Poderes Ponto Fraco do ator. Só o primeiro gera bônus. */
+function poderesDePontoFraco(ator) {
+  return ator?.items?.filter((i) => definicaoDe(i)?.pontoFraco) ?? [];
+}
+
 const indiceMarca = new IndiceAtoresAutomacoes(
   (ator) => poderesDeMarca(ator).length > 0
 );
@@ -2462,7 +2468,8 @@ function valorDaMarca(ator, tokenId) {
     registro,
     dado,
     formula: formulaDaMarca(dado, { dobrado: registro.dobrado }),
-    espreitar: poderesDeEspreitar(ator).length ? bonusDeEspreitar(registro) : 0
+    espreitar: poderesDeEspreitar(ator).length ? bonusDeEspreitar(registro) : 0,
+    pontoFraco: poderesDePontoFraco(ator).length ? bonusDePontoFraco(registro) : 0
   };
 }
 
@@ -2496,6 +2503,7 @@ async function _sincronizarMarca(ator) {
   if (!ator?.isOwner) return;
   const marca = marcaMirada(ator);
   await sincronizarEspreitar(ator, marca);
+  await sincronizarPontoFraco(ator, marca);
 
   const [principal, ...repetidos] = poderesDeMarca(ator);
   for (const item of repetidos) {
@@ -2567,6 +2575,43 @@ async function sincronizarEspreitar(ator, marca) {
 }
 
 /**
+ * Efeito de uso LIGADO do Ponto Fraco: margem de ameaça maior contra a presa
+ * mirada, no mesmo molde do Espreitar.
+ */
+async function sincronizarPontoFraco(ator, marca) {
+  const [principal, ...repetidos] = poderesDePontoFraco(ator);
+  for (const item of repetidos) {
+    for (const ef of efeitosDoItem(ator, item.id)) await ef.delete();
+  }
+  if (!principal) return;
+
+  const efeito = efeitoPorChave(ator, principal.id);
+  if (!marca?.pontoFraco) {
+    if (efeito) await efeito.delete();
+    return;
+  }
+
+  const { alvos, changes: mudancas } = definicaoDe(principal).pontoFraco;
+  const changes = mudancas(marca.pontoFraco);
+  const dados = {
+    name: ehV14() ? principal.name : `${principal.name} (+${marca.pontoFraco} ameaça vs ${marca.token.name})`,
+    img: principal.img,
+    ...(ehV14() ? { description: descricaoDeUso(`Presa: ${marca.token.name}:`, `+${marca.pontoFraco} na margem de ameaça.`) } : {}),
+    disabled: false,
+    changes,
+    flags: {
+      tormenta20: { onuse: true, custo: '0', ...alvos },
+      [MODULE_ID]: { [FLAG_ORIGEM]: principal.id }
+    }
+  };
+  if (efeito) {
+    if (!efeitoEmDia(efeito, dados)) await efeito.update(paraOSistema(dados));
+  } else {
+    await criarEfeitoDoPoder(principal, dados);
+  }
+}
+
+/**
  * Janela de marcar: PM extras (a tabela da classe) e, para cada poder
  * "Inimigo de", se a presa é daquele tipo. O módulo não tenta descobrir o
  * tipo da criatura — quem marca decide.
@@ -2602,6 +2647,7 @@ async function abrirDialogoMarca(ator, item, nomeAlvo, anterior = null) {
         <span class="notes">— ${game.i18n.localize('T20HaydGMTools.MarcaInimigoDica')}</span></span>
     </label>`).join('');
   const temEspreitar = poderesDeEspreitar(ator).length > 0;
+  const temPontoFraco = poderesDePontoFraco(ator).length > 0;
 
   const resposta = await DialogV2.wait({
     window: { title: game.i18n.format('T20HaydGMTools.MarcaTitulo', { alvo: nomeAlvo }), icon: 'fa-solid fa-crosshairs' },
@@ -2640,7 +2686,10 @@ async function abrirDialogoMarca(ator, item, nomeAlvo, anterior = null) {
         const espreitar = temEspreitar
           ? ` · ${game.i18n.format('T20HaydGMTools.MarcaEspreitar', { n: bonusDeEspreitar({ aumentos: select.value, dobrado }) })}`
           : '';
-        resultado.textContent = `+${formulaDaMarca(dado, { dobrado })}${espreitar}`;
+        const pontoFraco = temPontoFraco
+          ? ` · ${game.i18n.format('T20HaydGMTools.MarcaPontoFraco', { n: bonusDePontoFraco({ dobrado }) })}`
+          : '';
+        resultado.textContent = `+${formulaDaMarca(dado, { dobrado })}${espreitar}${pontoFraco}`;
       };
       el.addEventListener('change', atualizar);
       atualizar();
@@ -2818,6 +2867,9 @@ function montarBarraMarca(item, { completo, message }) {
     numero.textContent = valor ? `+${valor.formula}` : game.i18n.localize('T20HaydGMTools.MarcaNaoMarcada');
     if (valor?.espreitar) {
       numero.textContent += ` · ${game.i18n.format('T20HaydGMTools.MarcaEspreitar', { n: valor.espreitar })}`;
+    }
+    if (valor?.pontoFraco) {
+      numero.textContent += ` · ${game.i18n.format('T20HaydGMTools.MarcaPontoFraco', { n: valor.pontoFraco })}`;
     }
     rotulo.appendChild(numero);
     const nomeAlvo = document.createElement('span');
@@ -5067,6 +5119,13 @@ function paginaDaAutomacao(def) {
     comoFunciona = `
       <ul><li>Com este poder na ficha, a janela da Marca da Presa pergunta se a presa é do tipo
         escolhido. Marcando, os dados da marca dobram contra ela.</li></ul>`;
+  } else if (def.pontoFraco) {
+    comoFunciona = `
+      <ul>
+        <li>Com este poder e a Marca da Presa automatizados, a presa mirada dá +2 na margem de
+            ameaça dos seus ataques. Inimigo de (Criatura) dobra o bônus (+4).</li>
+        <li>O bônus entra sozinho na janela de ataque e sai quando a presa deixa de estar mirada.</li>
+      </ul>`;
   } else if (def.espreitar) {
     comoFunciona = `
       <ul>

@@ -536,6 +536,7 @@
     "MarcaInimigoDica": "a presa é deste tipo (dobra os dados)",
     "MarcaResultado": "Bônus contra a presa:",
     "MarcaEspreitar": "+{n} em testes de perícia",
+    "MarcaPontoFraco": "Margem de ameaça +{n}",
     "MarcaMarcar": "Marcar",
     "MarcaMarcarAlvo": "Marcar {alvo} como presa",
     "MarcaRefazer": "Refazer a marca em {alvo}",
