@@ -2,7 +2,7 @@
   "id": "t20-hayd-gmtools",
   "title": "T20 Hayd GMTools",
   "description": "Ferramentas de Mestre para Tormenta20: oculta rolagens e criaturas dos jogadores, cria personagens, gera tesouros e gerencia o grupo.",
-  "version": "2.8.0",
+  "version": "2.9.0",
   "compatibility": {
     "minimum": "13",
     "verified": "13",
@@ -56,7 +56,7 @@
   },
   "url": "https://github.com/ahahayd/t20-hayd-gmtools",
   "manifest": "https://github.com/ahahayd/t20-hayd-gmtools/releases/latest/download/module.json",
-  "download": "https://github.com/ahahayd/t20-hayd-gmtools/releases/download/v2.8.0/module.zip",
+  "download": "https://github.com/ahahayd/t20-hayd-gmtools/releases/download/v2.9.0/module.zip",
   "readme": "https://github.com/ahahayd/t20-hayd-gmtools/blob/main/README.md",
   "bugs": "https://github.com/ahahayd/t20-hayd-gmtools/issues",
   "license": "MIT",
