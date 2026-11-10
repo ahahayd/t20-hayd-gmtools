@@ -85,9 +85,40 @@ function instalarRegua() {
       const path = this.path;
       if (this.#cache.path === path) return this.#cache.medicao;
       const grade = gradeSemDiagonal();
-      const medicao = grade ? grade.measurePath(path) : null;
+      // Só o plano: a grade conta a elevação como 3º eixo e o total viraria
+      // max(horizontal, altura). A altura já tem o próprio campo no rótulo.
+      const medicao = grade ? grade.measurePath(path.map(({ x, y }) => ({ x, y }))) : null;
       this.#cache = { path, medicao };
       return medicao;
+    }
+
+    /** Usa a cópia do rótulo do núcleo com o campo da linha reta. */
+    static WAYPOINT_LABEL_TEMPLATE = `modules/${MODULE_ID}/templates/regua/waypoint-label.hbs`;
+
+    /**
+     * Distância em linha reta até o ponto `indice`, somando trecho a trecho
+     * √(horizontal² + altura²). A horizontal é a da régua para efeitos medida
+     * sem elevação (a grade conta a elevação como 3º eixo, então precisa sair).
+     * Null se nenhum trecho até aqui muda de altura — aí ela repetiria o total.
+     */
+    #cacheReta = { path: null, valores: null };
+    #linhaReta(indice) {
+      const path = this.path;
+      if (this.#cacheReta.path !== path) {
+        let valores = null;
+        const grade = gradeSemDiagonal();
+        if (grade && path.some((p, i) => i > 0 && p.elevation !== path[i - 1].elevation)) {
+          const plano = grade.measurePath(path.map(({ x, y }) => ({ x, y })));
+          valores = [0];
+          for (let i = 1; i < path.length; i++) {
+            const h = plano.waypoints[i].backward?.distance ?? 0;
+            const v = (path[i].elevation ?? 0) - (path[i - 1].elevation ?? 0);
+            valores.push(valores[i - 1] + Math.hypot(h, v));
+          }
+        }
+        this.#cacheReta = { path, valores };
+      }
+      return this.#cacheReta.valores?.[indice] ?? null;
     }
 
     /** @inheritDoc — troca a distância do rótulo pela versão sem diagonal. */
@@ -100,6 +131,12 @@ function instalarRegua() {
         context.distance = { total: medida.distance.toNearest(0.01).toLocaleString(game.i18n.lang) };
         // Igual ao núcleo: o delta por trecho só aparece a partir do 2º trecho.
         if (waypoint.index >= 2) context.distance.delta = medida.backward.distance.toNearest(0.01).signedString();
+      }
+
+      // Terceiro valor: a diagonal real entre os pontos quando há altura.
+      const reta = this.#linhaReta(waypoint.index);
+      if (reta !== null) {
+        context.reta = { total: reta.toNearest(0.01).toLocaleString(game.i18n.lang), icon: 'fa-solid fa-slash' };
       }
 
       // Marca visual para não confundir com a régua padrão.

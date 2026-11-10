@@ -17,6 +17,7 @@
     "SettingReguaEfeitosName": "Régua para efeitos (não contabiliza diagonal)",
     "SettingReguaEfeitosHint": "Segunda régua na barra de tokens. Diagonais valem 1,5 m. A régua padrão continua disponível.",
     "ReguaEfeitosTool": "Régua para efeitos (ignora diagonais)",
+    "ReguaLinhaReta": "Distância em linha reta, contando a altura",
     "SettingCustoPmName": "Corrigir o \"Custo de Mana Total\" da janela de uso",
     "SettingCustoPmHint": "Inclui o custo base do item no total de PM da janela de uso. O sistema soma só os aprimoramentos.",
     "AjustePmManual": "Ajuste manual",
